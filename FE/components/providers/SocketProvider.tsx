@@ -108,6 +108,51 @@ export const SocketProvider = ({
     };
   }, []);
 
+  // Periodic Heartbeat ping every 20 seconds
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+    const interval = setInterval(() => {
+      socket.emit("heartbeat");
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [socket, isConnected]);
+
+  // User Activity Monitoring (Idle detection after 5 minutes)
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    let isIdle = false;
+    let timeout: NodeJS.Timeout;
+
+    const resetIdleTimeout = () => {
+      clearTimeout(timeout);
+      
+      if (isIdle) {
+        isIdle = false;
+        socket.emit("user_idle", { is_idle: false });
+      }
+
+      timeout = setTimeout(() => {
+        isIdle = true;
+        socket.emit("user_idle", { is_idle: true });
+      }, 5 * 60 * 1000); // 5 minutes
+    };
+
+    resetIdleTimeout();
+
+    const events = ["mousemove", "keydown", "scroll", "touchstart", "click"];
+    events.forEach((event) => {
+      window.addEventListener(event, resetIdleTimeout);
+    });
+
+    return () => {
+      clearTimeout(timeout);
+      events.forEach((event) => {
+        window.removeEventListener(event, resetIdleTimeout);
+      });
+    };
+  }, [socket, isConnected]);
+
   return (
     <SocketContext.Provider
       value={{

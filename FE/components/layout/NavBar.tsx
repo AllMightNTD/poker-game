@@ -1,5 +1,6 @@
 "use client";
 import { contacts, currentUser } from "@/lib/mockData";
+import { useMiniChat } from "@/components/chat/MiniChatContext";
 import {
   Bell,
   Home,
@@ -32,6 +33,7 @@ export default function Navbar({
   const [activeTab, setActiveTab] = useState("home");
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const messagesRef = useRef<HTMLDivElement>(null);
+  const { openPopup } = useMiniChat();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -144,6 +146,15 @@ export default function Navbar({
                 {contacts.map((contact) => (
                   <button
                     key={contact.id}
+                    onClick={() => {
+                      openPopup({
+                        id: contact.id,
+                        name: contact.name,
+                        avatar: contact.avatar,
+                        status: contact.online ? "online" : "offline",
+                      });
+                      setIsMessagesOpen(false);
+                    }}
                     className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
                   >
                     <div className="relative shrink-0">

@@ -10,6 +10,7 @@ import { WsConnection } from '../entities/ws_connection.entity';
 import { MessageReaction } from '../entities/message_reaction.entity';
 import { DeviceType, PresenceStatus, MessageType } from 'src/constants/enums';
 import { SendMessageDto } from './dto/send-message.dto';
+import { Friend } from '../entities/friend.entity';
 
 @Injectable()
 export class ChatService implements OnModuleInit {
@@ -30,6 +31,8 @@ export class ChatService implements OnModuleInit {
     private readonly postRepo: Repository<Post>,
     @InjectRepository(MessageReaction)
     private readonly reactionRepo: Repository<MessageReaction>,
+    @InjectRepository(Friend)
+    private readonly friendRepo: Repository<Friend>,
   ) {}
 
   async onModuleInit() {
@@ -63,11 +66,13 @@ export class ChatService implements OnModuleInit {
       }
       presence.status = PresenceStatus.ONLINE;
       presence.last_seen_at = new Date();
-      await this.userPresenceRepo.save(presence);
+      const savedPresence = await this.userPresenceRepo.save(presence);
 
       this.logger.log(`User ${userId} connected with socket ${socketId}`);
+      return savedPresence;
     } catch (error) {
       this.logger.error(`Error in handleConnection for user ${userId}: ${error.message}`);
+      return null;
     }
   }
 
@@ -239,5 +244,46 @@ export class ChatService implements OnModuleInit {
 
     await this.conversationRepo.update({ id: conversationId }, { background_image: bgUrl || null });
     return bgUrl;
+  }
+
+  // ---- NEW PRESENCE SYSTEM HELPERS ----
+
+  async getFriendUserIds(userId: string): Promise<string[]> {
+    const friendships = await this.friendRepo.find({
+      where: [
+        { user_id: userId },
+        { friend_id: userId },
+      ],
+    });
+    const friendIds = friendships.map((f) => (f.user_id === userId ? f.friend_id : f.user_id));
+    return Array.from(new Set(friendIds));
+  }
+
+  async getUserPresence(userId: string): Promise<UserPresence | null> {
+    return this.userPresenceRepo.findOne({ where: { user_id: userId } });
+  }
+
+  async countActiveConnections(userId: string): Promise<number> {
+    return this.wsConnectionRepo.count({ where: { user_id: userId } });
+  }
+
+  async updateUserPresenceStatus(userId: string, status: PresenceStatus): Promise<UserPresence> {
+    let presence = await this.userPresenceRepo.findOne({ where: { user_id: userId } });
+    if (!presence) {
+      presence = this.userPresenceRepo.create({ user_id: userId });
+    }
+    presence.status = status;
+    presence.last_seen_at = new Date();
+    return this.userPresenceRepo.save(presence);
+  }
+
+  async updateUserVisibility(userId: string, isInvisible: boolean): Promise<UserPresence> {
+    let presence = await this.userPresenceRepo.findOne({ where: { user_id: userId } });
+    if (!presence) {
+      presence = this.userPresenceRepo.create({ user_id: userId });
+    }
+    presence.is_invisible = isInvisible;
+    presence.last_seen_at = new Date();
+    return this.userPresenceRepo.save(presence);
   }
 }

@@ -3,7 +3,8 @@ import { pages } from "@/lib/mockData";
 import { getRightSidebarData } from "@/lib/right-sidebar-api";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils";
-import ChatBox from "../chat/ChatBox";
+import { useMiniChat } from "../chat/MiniChatContext";
+import { useSocket } from "../providers/SocketProvider";
 
 // Types for friend API response
 interface FriendProfile {
@@ -15,11 +16,18 @@ interface FriendProfile {
   bio: string | null;
 }
 
+interface FriendPresence {
+  status: "online" | "away" | "busy" | "offline";
+  last_seen_at?: Date | string;
+  is_invisible?: boolean;
+}
+
 interface FriendUser {
   id: string;
   email: string;
   status: string;
   profile: FriendProfile | null;
+  presence?: FriendPresence;
 }
 
 interface FriendItem {
@@ -103,13 +111,44 @@ function StatusDot({ online, away }: { online?: boolean; away?: boolean }) {
 }
 
 export default function RightSidebar({ currentUser }: { currentUser?: any }) {
-  const [activeChat, setActiveChat] = useState<{ id: string; name: string; avatar: string } | null>(null);
+  const { openPopup } = useMiniChat();
   const [friends, setFriends] = useState<FriendItem[]>([]);
   const [loadingFriends, setLoadingFriends] = useState(true);
   const [userGroups, setUserGroups] = useState<GroupMemberItem[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(true);
 
+  const { socket } = useSocket();
   const fetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handlePresenceChange = (data: { userId: string; status: string; last_seen_at: string }) => {
+      setFriends((prevFriends) =>
+        prevFriends.map((f) => {
+          if (f.friend_id === data.userId) {
+            return {
+              ...f,
+              friend_user: {
+                ...f.friend_user,
+                presence: {
+                  status: data.status as any,
+                  last_seen_at: data.last_seen_at,
+                },
+              },
+            };
+          }
+          return f;
+        })
+      );
+    };
+
+    socket.on("userPresenceChange", handlePresenceChange);
+
+    return () => {
+      socket.off("userPresenceChange", handlePresenceChange);
+    };
+  }, [socket]);
 
   useEffect(() => {
     if (fetchedRef.current) return;
@@ -160,11 +199,37 @@ export default function RightSidebar({ currentUser }: { currentUser?: any }) {
                 const profile = f.friend_user?.profile;
                 const displayName = profile?.full_name || f.friend_user?.email || "Unknown";
                 const avatarUrl = profile?.avatar_url || undefined;
+                const presence = f.friend_user?.presence;
+                const isOnline = presence?.status === "online";
+                const isAway = presence?.status === "away";
+
+                const formatLastActive = (dateStr?: string | Date) => {
+                  if (!dateStr) return "";
+                  const date = new Date(dateStr);
+                  const now = new Date();
+                  const diffMs = now.getTime() - date.getTime();
+                  const diffMins = Math.floor(diffMs / 60000);
+                  const diffHours = Math.floor(diffMins / 60);
+                  const diffDays = Math.floor(diffHours / 24);
+
+                  if (diffMins < 1) return "Vừa hoạt động";
+                  if (diffMins < 60) return `${diffMins} phút trước`;
+                  if (diffHours < 24) return `${diffHours} giờ trước`;
+                  if (diffDays === 1) return "Hôm qua";
+                  return `${diffDays} ngày trước`;
+                };
 
                 return (
                   <button
                     key={f.friend_id}
-                    onClick={() => setActiveChat({ id: f.friend_id, name: displayName, avatar: avatarUrl || "" })}
+                    onClick={() =>
+                      openPopup({
+                        id: f.friend_id,
+                        name: displayName,
+                        avatar: avatarUrl || "",
+                        status: isOnline ? "online" : isAway ? "away" : "offline",
+                      })
+                    }
                     className="w-full flex items-center justify-between px-2 py-2 rounded-xl hover:bg-slate-50 transition-colors group"
                   >
                     <div className="flex items-center gap-2.5">
@@ -174,13 +239,25 @@ export default function RightSidebar({ currentUser }: { currentUser?: any }) {
                           alt={displayName}
                           fallback={displayName.charAt(0).toUpperCase()}
                         />
-                        <StatusDot online={f.friend_user?.status === "active"} />
+                        <StatusDot online={isOnline} away={isAway} />
                       </div>
-                      <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900 truncate max-w-[120px]">
-                        {displayName}
-                      </span>
+                      <div className="flex flex-col items-start text-left truncate">
+                        <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900 truncate max-w-[120px]">
+                          {displayName}
+                        </span>
+                        {!isOnline && !isAway && presence?.last_seen_at && (
+                          <span className="text-[10px] text-slate-400">
+                            {formatLastActive(presence.last_seen_at)}
+                          </span>
+                        )}
+                        {isAway && (
+                          <span className="text-[10px] text-amber-500 font-medium">
+                            Tạm vắng
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    {f.friend_user?.status === "active" && (
+                    {isOnline && (
                       <span className="w-2 h-2 rounded-full bg-green-400" />
                     )}
                   </button>
@@ -296,14 +373,6 @@ export default function RightSidebar({ currentUser }: { currentUser?: any }) {
           </div>
         </div>
       </aside>
-
-      {activeChat && (
-        <ChatBox
-          contact={activeChat}
-          currentUser={currentUser}
-          onClose={() => setActiveChat(null)}
-        />
-      )}
     </>
   );
 }

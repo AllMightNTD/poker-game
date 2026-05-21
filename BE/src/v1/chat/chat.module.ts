@@ -11,6 +11,7 @@ import { UserPresence } from '../entities/user_presence.entity';
 import { Post } from '../entities/post.entity';
 import { MessageReaction } from '../entities/message_reaction.entity';
 import { UserModule } from '../user/user.module';
+import { Friend } from '../entities/friend.entity';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UserModule } from '../user/user.module';
       UserPresence,
       Post,
       MessageReaction,
+      Friend,
     ]),
     forwardRef(() => UserModule),
   ],

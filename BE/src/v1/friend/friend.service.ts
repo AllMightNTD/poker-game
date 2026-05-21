@@ -28,7 +28,7 @@ export class FriendService {
     console.log(userId);
     const [friends, total] = await this.friendRepo.findAndCount({
       where: { user_id: userId },
-      relations: ['friend_user', 'friend_user.profile'],
+      relations: ['friend_user', 'friend_user.profile', 'friend_user.presence'],
       skip: (page - 1) * limit,
       take: limit,
       order: { created_at: 'DESC' },

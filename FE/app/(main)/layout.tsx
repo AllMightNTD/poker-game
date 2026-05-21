@@ -11,6 +11,8 @@ import Navbar from "@/components/layout/NavBar";
 import RightSidebar from "@/components/layout/RightSidebar";
 import SettingsModal from "@/components/layout/SettingsModal";
 import PersonalPage from "@/components/profile/PersonalPage";
+import MiniChatContainer from "@/components/chat/MiniChatContainer";
+import { MiniChatProvider } from "@/components/chat/MiniChatContext";
 import api from "@/lib/axios";
 import { posts } from "@/lib/mockData";
 import Cookies from "js-cookie";
@@ -218,6 +220,7 @@ export default function MainLayout({
   }
 
   return (
+    <MiniChatProvider>
     <div className="min-h-screen bg-slate-50 font-sans">
       <Navbar
         onMenuToggle={() => setMobileMenuOpen(true)}
@@ -297,6 +300,10 @@ export default function MainLayout({
         {/* Right Sidebar */}
         <RightSidebar currentUser={currentUser} />
       </div>
+
+      {/* Mini Chat Popups - fixed bottom right */}
+      <MiniChatContainer currentUser={currentUser} />
     </div>
+    </MiniChatProvider>
   );
 }

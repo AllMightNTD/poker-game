@@ -13,6 +13,7 @@ import { Server, Socket } from 'socket.io';
 
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
+import { PresenceStatus } from 'src/constants/enums';
 
 @WebSocketGateway({
   cors: {
@@ -60,7 +61,7 @@ export class ChatGateway
         id: userId,
       };
 
-      await this.chatService.handleConnection(
+      const presence = await this.chatService.handleConnection(
         userId,
         client.id,
       );
@@ -74,6 +75,12 @@ export class ChatGateway
       this.logger.log(
         `Client connected: ${client.id} (User: ${userId})`,
       );
+
+      // Broadcast presence status to friends
+      if (presence) {
+        const broadcastStatus = presence.is_invisible ? PresenceStatus.OFFLINE : PresenceStatus.ONLINE;
+        await this.broadcastPresenceUpdate(userId, broadcastStatus, presence.last_seen_at);
+      }
     } catch (error) {
       this.logger.error(`SOCKET AUTH ERROR: ${error.message}`);
       client.emit("error", {
@@ -84,10 +91,20 @@ export class ChatGateway
   }
 
   async handleDisconnect(client: Socket) {
+    const userId = client.data?.user?.id;
     await this.chatService.handleDisconnect(client.id);
     this.logger.log(
       `Socket disconnected: ${client.id}`,
     );
+
+    if (userId) {
+      const activeConnections = await this.chatService.countActiveConnections(userId);
+      if (activeConnections === 0) {
+        const presence = await this.chatService.getUserPresence(userId);
+        const lastSeen = presence?.last_seen_at || new Date();
+        await this.broadcastPresenceUpdate(userId, PresenceStatus.OFFLINE, lastSeen);
+      }
+    }
   }
 
   @SubscribeMessage('ping')
@@ -237,5 +254,87 @@ export class ChatGateway
     } else {
       client.emit('error', { message: 'Unauthorized or failed to update background image' });
     }
+  }
+
+  // ---- NEW PRESENCE SYSTEM WEBSOCKET HANDLERS ----
+
+  async broadcastPresenceUpdate(userId: string, status: string, lastSeenAt: Date) {
+    try {
+      const friendIds = await this.chatService.getFriendUserIds(userId);
+      for (const friendId of friendIds) {
+        this.server.to(`user_${friendId}`).emit('userPresenceChange', {
+          userId,
+          status,
+          last_seen_at: lastSeenAt,
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Error broadcasting presence for user ${userId}: ${error.message}`);
+    }
+  }
+
+  @SubscribeMessage('heartbeat')
+  async handleHeartbeat(@ConnectedSocket() client: Socket) {
+    const userId = client.data?.user?.id;
+    if (userId) {
+      await this.chatService.updateLastPing(client.id);
+      client.emit('heartbeatAck', { time: new Date() });
+    }
+  }
+
+  @SubscribeMessage('user_idle')
+  async handleUserIdle(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { is_idle: boolean },
+  ) {
+    const userId = client.data?.user?.id;
+    if (userId) {
+      const newStatus = data.is_idle ? PresenceStatus.AWAY : PresenceStatus.ONLINE;
+      const presence = await this.chatService.updateUserPresenceStatus(userId, newStatus);
+      if (presence) {
+        const broadcastStatus = presence.is_invisible ? PresenceStatus.OFFLINE : newStatus;
+        await this.broadcastPresenceUpdate(userId, broadcastStatus, presence.last_seen_at);
+      }
+    }
+  }
+
+  @SubscribeMessage('change_visibility')
+  async handleChangeVisibility(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { is_invisible: boolean },
+  ) {
+    const userId = client.data?.user?.id;
+    if (userId) {
+      const presence = await this.chatService.updateUserVisibility(userId, data.is_invisible);
+      if (presence) {
+        const broadcastStatus = presence.is_invisible ? PresenceStatus.OFFLINE : presence.status;
+        await this.broadcastPresenceUpdate(userId, broadcastStatus, presence.last_seen_at);
+        client.emit('visibilityChanged', { is_invisible: presence.is_invisible });
+      }
+    }
+  }
+
+  @SubscribeMessage('typing_start')
+  async handleTypingStart(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { conversation_id: string },
+  ) {
+    const userId = client.data.user.id;
+    client.to(`conversation_${data.conversation_id}`).emit('user_typing_start', {
+      conversation_id: data.conversation_id,
+      user_id: userId,
+    });
+  }
+
+  @SubscribeMessage('typing_stop')
+  async handleTypingStop(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { conversation_id: string },
+  ) {
+    const userId = client.data.user.id;
+    client.to(`conversation_${data.conversation_id}`).emit('user_typing_stop', {
+      conversation_id: data.conversation_id,
+      user_id: userId,
+    });
   }
 }

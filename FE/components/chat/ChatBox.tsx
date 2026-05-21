@@ -1,6 +1,7 @@
 "use client";
 
 import { useSocket } from "@/components/providers/SocketProvider";
+import { useMediaUpload } from "@/hooks/useMediaUpload";
 import api from "@/lib/axios";
 import { cn } from "@/lib/utils";
 import {
@@ -182,25 +183,27 @@ export default function ChatBox({ contact, currentUser, onClose }: ChatBoxProps)
   const [myNicknameInput, setMyNicknameInput] = useState("");
   const [friendNicknameInput, setFriendNicknameInput] = useState("");
 
-  // Emoji Picker & Media Upload States
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [emojiSearch, setEmojiSearch] = useState("");
-  const [uploadingFiles, setUploadingFiles] = useState<{
-    id: string;
-    file: File;
-    name: string;
-    previewUrl: string;
-    type: "image" | "video";
-    progress: number;
-    status: "uploading" | "success" | "failed";
-    url: string | null;
-  }[]>([]);
+  // Typing Indicator States
+  const [isOpponentTyping, setIsOpponentTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isCurrentlyTypingRef = useRef(false);
 
   // Reply Message State
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
 
   // Zoomed Image
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+  // Emoji Picker States
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiSearch, setEmojiSearch] = useState("");
+
+  // Media Upload (shared hook)
+  const { uploadingFiles, handleFileChange, handleRetry: handleRetryUpload } = useMediaUpload({
+    conversationId,
+    socket,
+    replyToId: replyingTo?.id,
+  });
 
   const activeTheme = THEME_MAP[themeColor] || THEME_MAP.blue;
 
@@ -256,7 +259,26 @@ export default function ChatBox({ contact, currentUser, onClose }: ChatBoxProps)
   useEffect(() => {
     if (!socket || !conversationId) return;
 
+    // Reset opponent typing when conversation changes
+    setIsOpponentTyping(false);
+    isCurrentlyTypingRef.current = false;
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
     socket.emit("joinConversation", { conversation_id: conversationId });
+
+    socket.on("user_typing_start", (data: { conversation_id: string; user_id: string }) => {
+      if (data.conversation_id === conversationId && data.user_id !== currentUser?.id) {
+        setIsOpponentTyping(true);
+      }
+    });
+
+    socket.on("user_typing_stop", (data: { conversation_id: string; user_id: string }) => {
+      if (data.conversation_id === conversationId && data.user_id !== currentUser?.id) {
+        setIsOpponentTyping(false);
+      }
+    });
 
     socket.on("newMessage", (message: ChatMessage) => {
       setMessages((prev) => {
@@ -292,7 +314,8 @@ export default function ChatBox({ contact, currentUser, onClose }: ChatBoxProps)
           updated[idx] = { ...message, status: "sent" };
           return updated;
         }
-        return [...prev, { ...message, status: "sent" }];
+        // Do NOT append here — newMessage event already handles adding new messages
+        return prev;
       });
     });
 
@@ -347,6 +370,8 @@ export default function ChatBox({ contact, currentUser, onClose }: ChatBoxProps)
       socket.off("mainEmojiChanged");
       socket.off("backgroundImageChanged");
       socket.off("nicknameChanged");
+      socket.off("user_typing_start");
+      socket.off("user_typing_stop");
     };
   }, [socket, conversationId, currentUser?.id]);
 
@@ -379,6 +404,13 @@ export default function ChatBox({ contact, currentUser, onClose }: ChatBoxProps)
   const handleSendMessage = (customText?: string) => {
     const contentToSend = customText !== undefined ? customText : text;
     if (!contentToSend.trim() || !socket || !conversationId) return;
+
+    // Stop typing indicator on send
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    isCurrentlyTypingRef.current = false;
+    socket.emit("typing_stop", { conversation_id: conversationId });
 
     // Gửi optimistic message
     const tempId = "temp-" + Date.now();
@@ -414,82 +446,6 @@ export default function ChatBox({ contact, currentUser, onClose }: ChatBoxProps)
     handleSendMessage(mainEmoji);
   };
 
-  // Xử lý Upload Media
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0 || !conversationId) return;
-
-    const newFiles = Array.from(files).map((file, idx) => {
-      const isVideo = file.type.startsWith("video/");
-      return {
-        id: `upload-${Date.now()}-${idx}`,
-        file,
-        name: file.name,
-        previewUrl: URL.createObjectURL(file),
-        type: (isVideo ? "video" : "image") as "image" | "video",
-        progress: 0,
-        status: "uploading" as const,
-        url: null,
-      };
-    });
-
-    setUploadingFiles((prev) => [...prev, ...newFiles]);
-
-    newFiles.forEach(async (item) => {
-      if (item.type === "video" && item.file.size > 500 * 1024 * 1024) {
-        setUploadingFiles((prev) =>
-          prev.map((f) => (f.id === item.id ? { ...f, status: "failed" as const } : f))
-        );
-        return;
-      }
-      if (item.type === "image" && item.file.size > 5 * 1024 * 1024) {
-        setUploadingFiles((prev) =>
-          prev.map((f) => (f.id === item.id ? { ...f, status: "failed" as const } : f))
-        );
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("files", item.file);
-
-      try {
-        const res = await api.post("/api/v1/chat/upload", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-          onUploadProgress: (pe) => {
-            const percent = Math.round((pe.loaded * 100) / (pe.total || 1));
-            setUploadingFiles((prev) =>
-              prev.map((f) => (f.id === item.id ? { ...f, progress: percent } : f))
-            );
-          },
-        });
-
-        const uploadedUrl = res.data.metadata[0].file_url;
-        setUploadingFiles((prev) =>
-          prev.map((f) => (f.id === item.id ? { ...f, status: "success" as const, url: uploadedUrl } : f))
-        );
-
-        if (socket) {
-          const payload = {
-            conversation_id: conversationId,
-            content: uploadedUrl,
-            type: item.type,
-            reply_to_id: replyingTo?.id || null,
-          };
-          socket.emit("sendMessage", payload);
-        }
-
-        setTimeout(() => {
-          setUploadingFiles((prev) => prev.filter((f) => f.id !== item.id));
-        }, 1500);
-      } catch (err) {
-        console.error("Upload error", err);
-        setUploadingFiles((prev) =>
-          prev.map((f) => (f.id === item.id ? { ...f, status: "failed" as const } : f))
-        );
-      }
-    });
-  };
-
   // Cài đặt hình nền custom từ máy tính
   const handleWallpaperUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -514,13 +470,6 @@ export default function ChatBox({ contact, currentUser, onClose }: ChatBoxProps)
     } catch (err) {
       console.error("Wallpaper upload failed", err);
       alert("Không thể tải lên ảnh nền");
-    }
-  };
-
-  const handleRetryUpload = (item: any) => {
-    setUploadingFiles((prev) => prev.filter((f) => f.id !== item.id));
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
     }
   };
 
@@ -1004,6 +953,22 @@ export default function ChatBox({ contact, currentUser, onClose }: ChatBoxProps)
                       </div>
                     </div>
                   ))}
+
+                  {/* Opponent Typing Indicator Bubble */}
+                  {isOpponentTyping && (
+                    <div className="flex gap-2 items-start animate-fade-in self-start max-w-[70%] mt-2 select-none">
+                      <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-500 uppercase flex-shrink-0">
+                        {contact.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex flex-col gap-1 items-start">
+                        <div className="rounded-2xl px-4 py-2.5 bg-slate-100 flex items-center gap-1 shadow-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -1099,7 +1064,23 @@ export default function ChatBox({ contact, currentUser, onClose }: ChatBoxProps)
                 activeTheme.borderInput
               )}
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setText(val);
+                if (socket && conversationId) {
+                  if (!isCurrentlyTypingRef.current) {
+                    isCurrentlyTypingRef.current = true;
+                    socket.emit("typing_start", { conversation_id: conversationId });
+                  }
+                  if (typingTimeoutRef.current) {
+                    clearTimeout(typingTimeoutRef.current);
+                  }
+                  typingTimeoutRef.current = setTimeout(() => {
+                    isCurrentlyTypingRef.current = false;
+                    socket.emit("typing_stop", { conversation_id: conversationId });
+                  }, 2500);
+                }
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && text.trim()) {
                   handleSendMessage();
