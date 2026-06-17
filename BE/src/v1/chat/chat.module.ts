@@ -1,4 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
@@ -10,8 +10,10 @@ import { WsConnection } from '../entities/ws_connection.entity';
 import { UserPresence } from '../entities/user_presence.entity';
 import { Post } from '../entities/post.entity';
 import { MessageReaction } from '../entities/message_reaction.entity';
-import { UserModule } from '../user/user.module';
 import { Friend } from '../entities/friend.entity';
+import { Profile } from '../entities/profile.entity';
+import { UserBlock } from '../entities/user_block.entity';
+import { ChatsModule } from 'src/domains/chat/chat.module';
 
 @Module({
   imports: [
@@ -24,8 +26,10 @@ import { Friend } from '../entities/friend.entity';
       Post,
       MessageReaction,
       Friend,
+      Profile,
+      UserBlock,
     ]),
-    forwardRef(() => UserModule),
+    ChatsModule,
   ],
   controllers: [ChatController],
   providers: [ChatGateway, ChatService],

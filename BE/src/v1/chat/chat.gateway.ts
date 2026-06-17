@@ -14,6 +14,7 @@ import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { PresenceStatus } from 'src/constants/enums';
+import { User } from '../entities/user.entity';
 
 @WebSocketGateway({
   cors: {
@@ -78,7 +79,8 @@ export class ChatGateway
 
       // Broadcast presence status to friends
       if (presence) {
-        const broadcastStatus = presence.is_invisible ? PresenceStatus.OFFLINE : PresenceStatus.ONLINE;
+        const isActive = await this.chatService.getUserActiveStatus(userId);
+        const broadcastStatus = (presence.is_invisible || !isActive) ? PresenceStatus.OFFLINE : PresenceStatus.ONLINE;
         await this.broadcastPresenceUpdate(userId, broadcastStatus, presence.last_seen_at);
       }
     } catch (error) {
@@ -149,10 +151,10 @@ export class ChatGateway
     // 2. Lưu tin nhắn
     const savedMessage = await this.chatService.saveMessage(userId, dto);
 
-    // 3. Broadcast cho tất cả trong room (bao gồm cả người gửi để confirm)
-    this.server.to(`conversation_${dto.conversation_id}`).emit('newMessage', savedMessage);
+    // 3. Broadcast cho tất cả trong room NGOẠI TRỪ người gửi
+    client.to(`conversation_${dto.conversation_id}`).emit('newMessage', savedMessage);
 
-    // 4. Có thể emit riêng messageSent cho người gửi nếu muốn
+    // 4. Emit riêng messageSent cho người gửi để confirm
     client.emit('messageSent', savedMessage);
   }
 
@@ -292,7 +294,8 @@ export class ChatGateway
       const newStatus = data.is_idle ? PresenceStatus.AWAY : PresenceStatus.ONLINE;
       const presence = await this.chatService.updateUserPresenceStatus(userId, newStatus);
       if (presence) {
-        const broadcastStatus = presence.is_invisible ? PresenceStatus.OFFLINE : newStatus;
+        const isActive = await this.chatService.getUserActiveStatus(userId);
+        const broadcastStatus = (presence.is_invisible || !isActive) ? PresenceStatus.OFFLINE : newStatus;
         await this.broadcastPresenceUpdate(userId, broadcastStatus, presence.last_seen_at);
       }
     }
@@ -307,7 +310,8 @@ export class ChatGateway
     if (userId) {
       const presence = await this.chatService.updateUserVisibility(userId, data.is_invisible);
       if (presence) {
-        const broadcastStatus = presence.is_invisible ? PresenceStatus.OFFLINE : presence.status;
+        const isActive = await this.chatService.getUserActiveStatus(userId);
+        const broadcastStatus = (presence.is_invisible || !isActive) ? PresenceStatus.OFFLINE : presence.status;
         await this.broadcastPresenceUpdate(userId, broadcastStatus, presence.last_seen_at);
         client.emit('visibilityChanged', { is_invisible: presence.is_invisible });
       }
@@ -336,5 +340,44 @@ export class ChatGateway
       conversation_id: data.conversation_id,
       user_id: userId,
     });
+  }
+
+  @SubscribeMessage('joinStoryRoom')
+  async handleJoinStoryRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { storyOwnerId: string },
+  ) {
+    client.join(`story_user_${data.storyOwnerId}`);
+    this.logger.log(`Socket ${client.id} joined story room of user ${data.storyOwnerId}`);
+  }
+
+  @SubscribeMessage('leaveStoryRoom')
+  async handleLeaveStoryRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { storyOwnerId: string },
+  ) {
+    client.leave(`story_user_${data.storyOwnerId}`);
+    this.logger.log(`Socket ${client.id} left story room of user ${data.storyOwnerId}`);
+  }
+
+  @SubscribeMessage('sendStoryReaction')
+  async handleSendStoryReaction(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { storyOwnerId: string; storyId: string; emoji: string },
+  ) {
+    const userId = client.data.user.id;
+    const profile = await this.chatService.getUserProfile(userId);
+    
+    const reactionPayload = {
+      storyId: data.storyId,
+      emoji: data.emoji,
+      userId,
+      userName: profile?.full_name || 'Người dùng KnowBlock',
+      avatarUrl: profile?.avatar_url || null,
+    };
+
+    // Broadcast tới tất cả client đang ở trong room story của owner này
+    this.server.to(`story_user_${data.storyOwnerId}`).emit('newStoryReaction', reactionPayload);
+    this.logger.log(`User ${userId} reacted ${data.emoji} to story ${data.storyId}`);
   }
 }

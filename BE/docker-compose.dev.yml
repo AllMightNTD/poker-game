@@ -6,12 +6,12 @@ services:
       dockerfile: Dockerfile
       target: development
     ports:
-      - '3003:3000'
-      - '9229:9229'
+      - '${APP_PORT}:${APP_PORT}'
+      - '127.0.0.1:9229:9229'  # Chỉ bind debug port về localhost
     volumes:
       - .:/app
-      - /app/node_modules # Giữ lại node_modules trong container để tránh xung đột với máy host
-      - ~/.npm:/root/.npm # Cache npm để cài đặt lib nhanh hơn nếu có rebuild
+      - /app/node_modules
+      - ~/.npm:/root/.npm
     env_file:
       - .env
     environment:
@@ -23,30 +23,33 @@ services:
         condition: service_healthy
     networks:
       - app_network
-    restart: unless-stopped
+    restart: "no"  # Dev không cần auto-restart, tránh permission lock
 
   db:
     image: mysql:8.0
     container_name: mysql-db
-    # Loại bỏ native_password nếu không thực sự cần thiết cho client cũ
+    command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_DATABASE: ${DB_DATABASE}
       MYSQL_USER: ${DB_USERNAME}
       MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      TZ: Asia/Ho_Chi_Minh # Đổi về VN cho dễ quản lý log
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}  # Tách riêng root password
+      MYSQL_ALLOW_EMPTY_PASSWORD: false
+      MYSQL_RANDOM_ROOT_PASSWORD: false
+      TZ: Asia/Ho_Chi_Minh
     ports:
       - '13306:3306'
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USERNAME}", "-p${DB_PASSWORD}"]
-      interval: 5s # Giảm interval để app-dev khởi động nhanh hơn
+      interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 30s  # Cho MySQL đủ thời gian init lần đầu
     networks:
       - app_network
-    restart: unless-stopped
+    restart: "no"
 
   redis:
     image: redis:7-alpine
@@ -61,25 +64,26 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+      start_period: 10s
     networks:
       - app_network
-    restart: unless-stopped
+    restart: "no"
 
   redis-commander:
-    image: rediscommander/redis-commander:latest
+    image: rediscommander/redis-commander:latest  # Pin version, tránh breaking change
     container_name: redis-commander
     environment:
       - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD}
-      - HTTP_USER=admin # Thêm user/pass cho giao diện quản lý nếu cần
-      - HTTP_PASSWORD=admin
+      - HTTP_USER=${REDIS_COMMANDER_USER}          # Đưa vào .env
+      - HTTP_PASSWORD=${REDIS_COMMANDER_PASSWORD}  # Đưa vào .env
     ports:
-      - '8081:8081'
+      - '127.0.0.1:8081:8081'  # Chỉ truy cập từ localhost
     depends_on:
       redis:
         condition: service_healthy
     networks:
       - app_network
-    restart: unless-stopped
+    restart: "no"
 
 networks:
   app_network:

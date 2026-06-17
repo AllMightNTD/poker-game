@@ -7,6 +7,7 @@ import { FriendModule } from './friend/friend.module';
 import { UserModule } from './user/user.module';
 import { PostModule } from './post/post.module';
 import { CommentModule } from './comment/comment.module';
+import { StoryModule } from './story/story.module';
 
 const routes: Routes = [
   {
@@ -19,6 +20,7 @@ const routes: Routes = [
       { path: 'chat', module: ChatModule },
       { path: 'post', module: PostModule },
       { path: 'comment', module: CommentModule },
+      { path: 'stories', module: StoryModule },
     ],
   },
 ];

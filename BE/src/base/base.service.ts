@@ -4,12 +4,12 @@ import { paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
 import { DeleteResult, Repository } from 'typeorm';
 import { FindOneOptions } from 'typeorm/find-options/FindOneOptions';
 
-export abstract class BaseService {
+export abstract class BaseService<T = any, ID = string> {
   protected sortableColumns: any = ['id'];
   protected defaultSortBy: any = [['id', 'ASC']];
   protected abstract filterableColumns: any;
 
-  constructor(private readonly repository: Repository<any>) {
+  constructor(private readonly repository: Repository<T>) {
     // empty
   }
 
@@ -32,7 +32,7 @@ export abstract class BaseService {
 
   public async findOne(
     conditions: Partial<any>,
-    options: FindOneOptions<any> = {},
+    options: FindOneOptions<T> = {},
   ): Promise<any | undefined> {
     const data = await this.repository.findOne({
       where: conditions,
@@ -46,17 +46,17 @@ export abstract class BaseService {
     };
   }
 
-  public async create(dto: object): Promise<any> {
+  public async create(dto: any): Promise<any> {
     const instance = this.repository.create(dto);
-    return await instance.save();
+    return await this.repository.save(instance as any);
   }
 
-  public deleteByIds(ids: number[]): Promise<DeleteResult> {
-    return this.repository.delete(ids);
+  public deleteByIds(ids: ID[]): Promise<DeleteResult> {
+    return this.repository.delete(ids as any);
   }
 
-  public delete(id: number): Promise<DeleteResult> {
-    return this.repository.delete(id);
+  public delete(id: ID): Promise<DeleteResult> {
+    return this.repository.delete(id as any);
   }
 
   protected async mapData(instance: any, dto: object) {
@@ -119,36 +119,29 @@ export abstract class BaseService {
         continue;
       }
 
-      switch (operator) {
-        case '$like':
-          queryBuilder.andWhere(`${tableName}.${column} LIKE :${column}`, {
-            [column]: `%${value}%`,
-          });
-          break;
-
-        case '$eq':
-          if (value !== undefined && value !== 'NaN') {
-            queryBuilder.andWhere(`${tableName}.${column} = :${column}`, {
-              [column]: value,
-            });
+      // Map operator to corresponding query builder strategies (OCP Compliant)
+      const filterStrategies: Record<string, (qb: any, val: string) => void> = {
+        $like: (qb, val) => qb.andWhere(`${tableName}.${column} LIKE :${column}`, { [column]: `%${val}%` }),
+        $eq: (qb, val) => {
+          if (val !== undefined && val !== 'NaN') {
+            qb.andWhere(`${tableName}.${column} = :${column}`, { [column]: val });
           }
-          break;
-
-        case '$gt':
-          if (!isNaN(Number(value))) {
-            queryBuilder.andWhere(`${tableName}.${column} > :${column}`, {
-              [column]: Number(value),
-            });
+        },
+        $gt: (qb, val) => {
+          if (!isNaN(Number(val))) {
+            qb.andWhere(`${tableName}.${column} > :${column}`, { [column]: Number(val) });
           }
-          break;
-
-        case '$lt':
-          if (!isNaN(Number(value))) {
-            queryBuilder.andWhere(`${tableName}.${column} < :${column}`, {
-              [column]: Number(value),
-            });
+        },
+        $lt: (qb, val) => {
+          if (!isNaN(Number(val))) {
+            qb.andWhere(`${tableName}.${column} < :${column}`, { [column]: Number(val) });
           }
-          break;
+        },
+      };
+
+      const strategy = filterStrategies[operator];
+      if (strategy) {
+        strategy(queryBuilder, value);
       }
     }
 

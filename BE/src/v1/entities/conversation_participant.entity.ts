@@ -32,6 +32,21 @@ export class ConversationParticipant extends BaseEntity {
   @Column({ type: 'boolean', default: false })
   is_muted: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  is_pinned: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  is_archived: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  is_hidden: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  is_spam: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  is_request: boolean;
+
   @CreateDateColumn()
   joined_at: Date;
 

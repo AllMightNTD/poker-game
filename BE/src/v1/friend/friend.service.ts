@@ -1,164 +1,130 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FriendRequestStatus } from 'src/constants/enums';
 import { Repository } from 'typeorm';
-import { Friend } from '../entities/friend.entity';
-import { FriendRequest } from '../entities/friend_request.entity';
-import { User } from '../entities/user.entity';
+import { GetFriendsUseCase } from 'src/domains/friends/applications/use-cases/get-friends.use-case';
+import { SendFriendRequestUseCase } from 'src/domains/friends/applications/use-cases/send-friend-request.use-case';
+import { AcceptFriendRequestUseCase } from 'src/domains/friends/applications/use-cases/accept-friend-request.use-case';
+import { DeclineFriendRequestUseCase } from 'src/domains/friends/applications/use-cases/decline-friend-request.use-case';
+import { CancelFriendRequestUseCase } from 'src/domains/friends/applications/use-cases/cancel-friend-request.use-case';
+import { UnfriendUseCase } from 'src/domains/friends/applications/use-cases/unfriend.use-case';
+import { GetPendingRequestsUseCase } from 'src/domains/friends/applications/use-cases/get-pending-requests.use-case';
+import { GetSentRequestsUseCase } from 'src/domains/friends/applications/use-cases/get-sent-requests.use-case';
+import { CountPendingRequestsUseCase } from 'src/domains/friends/applications/use-cases/count-pending-requests.use-case';
+import { GetFriendSuggestionsUseCase } from 'src/domains/friends/applications/use-cases/get-friend-suggestions.use-case';
+import { Notification } from '../entities/notification.entity';
+import { ChatGateway } from '../chat/chat.gateway';
 
 @Injectable()
 export class FriendService {
   constructor(
-    @InjectRepository(Friend)
-    private readonly friendRepo: Repository<Friend>,
-    @InjectRepository(FriendRequest)
-    private readonly friendRequestRepo: Repository<FriendRequest>,
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
-  ) { }
+    private readonly getFriendsUseCase: GetFriendsUseCase,
+    private readonly sendFriendRequestUseCase: SendFriendRequestUseCase,
+    private readonly acceptFriendRequestUseCase: AcceptFriendRequestUseCase,
+    private readonly declineFriendRequestUseCase: DeclineFriendRequestUseCase,
+    private readonly cancelFriendRequestUseCase: CancelFriendRequestUseCase,
+    private readonly unfriendUseCase: UnfriendUseCase,
+    private readonly getPendingRequestsUseCase: GetPendingRequestsUseCase,
+    private readonly getSentRequestsUseCase: GetSentRequestsUseCase,
+    private readonly countPendingRequestsUseCase: CountPendingRequestsUseCase,
+    private readonly getFriendSuggestionsUseCase: GetFriendSuggestionsUseCase,
+    @InjectRepository(Notification)
+    private readonly notificationRepo: Repository<Notification>,
+    private readonly chatGateway: ChatGateway,
+  ) {}
 
-  /**
-   * Get list of friends for a user with profile info
-   */
   async getFriends(userId: string, page = 1, limit = 20) {
-    console.log(userId);
-    const [friends, total] = await this.friendRepo.findAndCount({
-      where: { user_id: userId },
-      relations: ['friend_user', 'friend_user.profile', 'friend_user.presence'],
-      skip: (page - 1) * limit,
-      take: limit,
-      order: { created_at: 'DESC' },
-    });
-
-    return {
-      data: friends,
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
-    };
+    return this.getFriendsUseCase.execute(userId, page, limit);
   }
 
-  /**
-   * Send a friend request
-   */
   async sendFriendRequest(senderId: string, receiverId: string) {
-    if (senderId === receiverId) {
-      throw new BadRequestException('Cannot send friend request to yourself');
+    const result = await this.sendFriendRequestUseCase.execute(senderId, receiverId);
+
+    try {
+      const notification = await this.notificationRepo.save({
+        user_id: receiverId,
+        actor_id: senderId,
+        type: 'friend_request',
+        payload: {
+          message: 'sent you a friend request',
+          requestId: result.data.id,
+        },
+      });
+
+      if (this.chatGateway.server) {
+        this.chatGateway.server.to(`user_${receiverId}`).emit('new_notification', {
+          id: notification.id,
+          user_id: receiverId,
+          actor_id: senderId,
+          type: 'friend_request',
+          payload: notification.payload,
+          created_at: notification.created_at,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to create send friend request notification:', err);
     }
 
-    // Check if receiver exists
-    const receiver = await this.userRepo.findOne({ where: { id: receiverId } });
-    if (!receiver) {
-      throw new NotFoundException('User not found');
-    }
-
-    // Check if already friends
-    const existing = await this.friendRepo.findOne({
-      where: { user_id: senderId, friend_id: receiverId },
-    });
-    if (existing) {
-      throw new BadRequestException('Already friends');
-    }
-
-    // Check if request already sent
-    const existingReq = await this.friendRequestRepo.findOne({
-      where: { sender_id: senderId, receiver_id: receiverId },
-    });
-    if (existingReq) {
-      throw new BadRequestException('Friend request already sent');
-    }
-
-    const request = await this.friendRequestRepo.save({
-      sender_id: senderId,
-      receiver_id: receiverId,
-      status: FriendRequestStatus.PENDING,
-    });
-
-    return { message: 'Friend request sent', data: request };
+    return result;
   }
 
-  /**
-   * Accept a friend request
-   */
   async acceptFriendRequest(userId: string, requestId: string) {
-    const request = await this.friendRequestRepo.findOne({
-      where: { id: requestId, receiver_id: userId, status: FriendRequestStatus.PENDING },
-    });
+    const result = await this.acceptFriendRequestUseCase.execute(userId, requestId);
 
-    if (!request) {
-      throw new NotFoundException('Friend request not found');
+    try {
+      const senderId = result.senderId;
+      if (senderId) {
+        const notification = await this.notificationRepo.save({
+          user_id: senderId,
+          actor_id: userId,
+          type: 'friend_accept',
+          payload: {
+            message: 'accepted your friend request',
+          },
+        });
+
+        if (this.chatGateway.server) {
+          this.chatGateway.server.to(`user_${senderId}`).emit('new_notification', {
+            id: notification.id,
+            user_id: senderId,
+            actor_id: userId,
+            type: 'friend_accept',
+            payload: notification.payload,
+            created_at: notification.created_at,
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to create accept friend request notification:', err);
     }
 
-    // Update request status
-    request.status = FriendRequestStatus.ACCEPTED;
-    request.responded_at = new Date();
-    await this.friendRequestRepo.save(request);
-
-    // Create bidirectional friendship
-    await this.friendRepo.save([
-      { user_id: request.sender_id, friend_id: request.receiver_id },
-      { user_id: request.receiver_id, friend_id: request.sender_id },
-    ]);
-
-    return { message: 'Friend request accepted' };
+    return result;
   }
 
-  /**
-   * Decline a friend request
-   */
   async declineFriendRequest(userId: string, requestId: string) {
-    const request = await this.friendRequestRepo.findOne({
-      where: { id: requestId, receiver_id: userId, status: FriendRequestStatus.PENDING },
-    });
-
-    if (!request) {
-      throw new NotFoundException('Friend request not found');
-    }
-
-    request.status = FriendRequestStatus.DECLINED;
-    request.responded_at = new Date();
-    await this.friendRequestRepo.save(request);
-
-    return { message: 'Friend request declined' };
+    return this.declineFriendRequestUseCase.execute(userId, requestId);
   }
 
-  /**
-   * Unfriend a user (remove bidirectional)
-   */
-  async unfriend(userId: string, friendId: string) {
-    const friendship = await this.friendRepo.findOne({
-      where: { user_id: userId, friend_id: friendId },
-    });
-
-    if (!friendship) {
-      throw new NotFoundException('Not friends with this user');
-    }
-
-    // Remove both directions
-    await this.friendRepo.delete({ user_id: userId, friend_id: friendId });
-    await this.friendRepo.delete({ user_id: friendId, friend_id: userId });
-
-    return { message: 'Unfriended successfully' };
-  }
-
-  /**
-   * Cancel a sent friend request
-   */
   async cancelFriendRequest(userId: string, requestId: string) {
-    const request = await this.friendRequestRepo.findOne({
-      where: { id: requestId, sender_id: userId, status: FriendRequestStatus.PENDING },
-    });
+    return this.cancelFriendRequestUseCase.execute(userId, requestId);
+  }
 
-    if (!request) {
-      throw new NotFoundException('Friend request not found');
-    }
+  async unfriend(userId: string, friendId: string) {
+    return this.unfriendUseCase.execute(userId, friendId);
+  }
 
-    request.status = FriendRequestStatus.CANCELLED;
-    request.responded_at = new Date();
-    await this.friendRequestRepo.save(request);
+  async getPendingRequests(userId: string, page = 1, limit = 20) {
+    return this.getPendingRequestsUseCase.execute(userId, page, limit);
+  }
 
-    return { message: 'Friend request cancelled' };
+  async getSentRequests(userId: string, page = 1, limit = 20) {
+    return this.getSentRequestsUseCase.execute(userId, page, limit);
+  }
+
+  async countPendingRequests(userId: string) {
+    return this.countPendingRequestsUseCase.execute(userId);
+  }
+
+  async getFriendSuggestions(userId: string, page = 1, limit = 10) {
+    return this.getFriendSuggestionsUseCase.execute(userId, page, limit);
   }
 }

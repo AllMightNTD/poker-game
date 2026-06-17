@@ -32,6 +32,55 @@ export class FriendController {
   }
 
   /**
+   * GET /api/v1/friend/suggestions
+   * Get friend recommendations/suggestions for the authenticated user
+   */
+  @Get('/suggestions')
+  async getFriendSuggestions(
+    @Request() req,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    return this.friendService.getFriendSuggestions(req.user.sub, +page, +limit);
+  }
+
+  /**
+   * GET /api/v1/friend/requests/incoming
+   * Get list of pending incoming friend requests
+   */
+  @Get('/requests/incoming')
+  async getPendingRequests(
+    @Request() req,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+  ) {
+    return this.friendService.getPendingRequests(req.user.sub, +page, +limit);
+  }
+
+  /**
+   * GET /api/v1/friend/requests/outgoing
+   * Get list of pending outgoing friend requests
+   */
+  @Get('/requests/outgoing')
+  async getSentRequests(
+    @Request() req,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+  ) {
+    return this.friendService.getSentRequests(req.user.sub, +page, +limit);
+  }
+
+  /**
+   * GET /api/v1/friend/requests/count
+   * Count pending incoming friend requests
+   */
+  @Get('/requests/count')
+  async countPendingRequests(@Request() req) {
+    const count = await this.friendService.countPendingRequests(req.user.sub);
+    return { count };
+  }
+
+  /**
    * POST /api/v1/friend/request
    * Send a friend request
    */

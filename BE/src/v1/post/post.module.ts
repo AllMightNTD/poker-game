@@ -5,12 +5,15 @@ import { PostMedia } from '../entities/post_media.entity';
 import { Reaction } from '../entities/reaction.entity';
 import { PostController } from './post.controller';
 import { PostService } from './post.service';
-import { PostGateway } from './post.gateway';
+import { PostsModule } from 'src/domains/posts/posts.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Post, PostMedia, Reaction])],
+  imports: [
+    TypeOrmModule.forFeature([Post, PostMedia, Reaction]),
+    PostsModule,
+  ],
   controllers: [PostController],
-  providers: [PostService, PostGateway],
-  exports: [PostService, PostGateway],
+  providers: [PostService],
+  exports: [PostService, PostsModule],
 })
 export class PostModule {}

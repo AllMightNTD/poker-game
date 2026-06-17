@@ -9,6 +9,7 @@ import { JwtRefreshStrategy } from './strategy/jwt-refresh.strategy';
 import { UserModule } from './user/user.module';
 import { PostModule } from './post/post.module';
 import { CommentModule } from './comment/comment.module';
+import { StoryModule } from './story/story.module';
 
 @Global()
 @Module({
@@ -20,7 +21,8 @@ import { CommentModule } from './comment/comment.module';
     AdminModule, 
     FriendModule, 
     PostModule,
-    CommentModule
+    CommentModule,
+    StoryModule
   ],
 
   providers: [JwtService, JwtRefreshStrategy],

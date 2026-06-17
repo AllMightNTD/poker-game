@@ -1,28 +1,45 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { WsConnection } from '../entities/ws_connection.entity';
+import { UserPresence } from '../entities/user_presence.entity';
+import { Post } from '../entities/post.entity';
+import { MessageReaction } from '../entities/message_reaction.entity';
+import { Friend } from '../entities/friend.entity';
+import { Profile } from '../entities/profile.entity';
+import { Message } from '../entities/message.entity';
 import { Conversation } from '../entities/conversation.entity';
 import { ConversationParticipant } from '../entities/conversation_participant.entity';
-import { Message } from '../entities/message.entity';
-import { Post } from '../entities/post.entity';
-import { UserPresence } from '../entities/user_presence.entity';
-import { WsConnection } from '../entities/ws_connection.entity';
-import { MessageReaction } from '../entities/message_reaction.entity';
+import { User } from '../entities/user.entity';
 import { DeviceType, PresenceStatus, MessageType } from 'src/constants/enums';
 import { SendMessageDto } from './dto/send-message.dto';
-import { Friend } from '../entities/friend.entity';
+
+import { IChatRepository } from 'src/domains/chat/domain/repositories/chat.repository.interface';
+import { GetOrCreateConversationUseCase } from 'src/domains/chat/applications/use-cases/get-or-create-conversation.use-case';
+import { CheckParticipantUseCase } from 'src/domains/chat/applications/use-cases/check-participant.use-case';
+import { GetMessagesUseCase } from 'src/domains/chat/applications/use-cases/get-messages.use-case';
+import { GetConversationsUseCase } from 'src/domains/chat/applications/use-cases/get-conversations.use-case';
+import { MarkAsReadUseCase } from 'src/domains/chat/applications/use-cases/mark-as-read.use-case';
+import { MarkAllAsReadUseCase } from 'src/domains/chat/applications/use-cases/mark-all-as-read.use-case';
+import { TogglePinConversationUseCase } from 'src/domains/chat/applications/use-cases/toggle-pin-conversation.use-case';
+import { GetMediaUseCase } from 'src/domains/chat/applications/use-cases/get-media.use-case';
+import { LeaveConversationUseCase } from 'src/domains/chat/applications/use-cases/leave-conversation.use-case';
+import { ToggleMuteConversationUseCase } from 'src/domains/chat/applications/use-cases/toggle-mute-conversation.use-case';
+import { ToggleArchiveConversationUseCase } from 'src/domains/chat/applications/use-cases/toggle-archive-conversation.use-case';
+import { ToggleHideConversationUseCase } from 'src/domains/chat/applications/use-cases/toggle-hide-conversation.use-case';
+import { ToggleSpamConversationUseCase } from 'src/domains/chat/applications/use-cases/toggle-spam-conversation.use-case';
+import { ToggleRequestConversationUseCase } from 'src/domains/chat/applications/use-cases/toggle-request-conversation.use-case';
+import { MarkAsUnreadUseCase } from 'src/domains/chat/applications/use-cases/mark-as-unread.use-case';
+import { BlockUserUseCase } from 'src/domains/chat/applications/use-cases/block-user.use-case';
+import { UnblockUserUseCase } from 'src/domains/chat/applications/use-cases/unblock-user.use-case';
 
 @Injectable()
 export class ChatService implements OnModuleInit {
   private readonly logger = new Logger(ChatService.name);
 
   constructor(
-    @InjectRepository(Conversation)
-    private readonly conversationRepo: Repository<Conversation>,
-    @InjectRepository(ConversationParticipant)
-    private readonly participantRepo: Repository<ConversationParticipant>,
-    @InjectRepository(Message)
-    private readonly messageRepo: Repository<Message>,
+    @Inject('IChatRepository')
+    private readonly chatRepository: IChatRepository,
     @InjectRepository(WsConnection)
     private readonly wsConnectionRepo: Repository<WsConnection>,
     @InjectRepository(UserPresence)
@@ -33,33 +50,56 @@ export class ChatService implements OnModuleInit {
     private readonly reactionRepo: Repository<MessageReaction>,
     @InjectRepository(Friend)
     private readonly friendRepo: Repository<Friend>,
+    @InjectRepository(Profile)
+    private readonly profileRepo: Repository<Profile>,
+    @InjectRepository(Message)
+    private readonly messageRepo: Repository<Message>,
+    @InjectRepository(Conversation)
+    private readonly conversationRepo: Repository<Conversation>,
+    @InjectRepository(ConversationParticipant)
+    private readonly participantRepo: Repository<ConversationParticipant>,
+
+    private readonly getOrCreateConversationUseCase: GetOrCreateConversationUseCase,
+    private readonly checkParticipantUseCase: CheckParticipantUseCase,
+    private readonly getMessagesUseCase: GetMessagesUseCase,
+    private readonly getConversationsUseCase: GetConversationsUseCase,
+    private readonly markAsReadUseCase: MarkAsReadUseCase,
+    private readonly markAllAsReadUseCase: MarkAllAsReadUseCase,
+    private readonly togglePinConversationUseCase: TogglePinConversationUseCase,
+    private readonly getMediaUseCase: GetMediaUseCase,
+    private readonly leaveConversationUseCase: LeaveConversationUseCase,
+    private readonly toggleMuteConversationUseCase: ToggleMuteConversationUseCase,
+    private readonly toggleArchiveConversationUseCase: ToggleArchiveConversationUseCase,
+    private readonly toggleHideConversationUseCase: ToggleHideConversationUseCase,
+    private readonly toggleSpamConversationUseCase: ToggleSpamConversationUseCase,
+    private readonly toggleRequestConversationUseCase: ToggleRequestConversationUseCase,
+    private readonly markAsUnreadUseCase: MarkAsUnreadUseCase,
+    private readonly blockUserUseCase: BlockUserUseCase,
+    private readonly unblockUserUseCase: UnblockUserUseCase,
   ) {}
 
   async onModuleInit() {
     try {
-      // Khi server khởi chạy, xóa tất cả các kết nối cũ của chính nó (tránh zombie records)
       const serverId = process.env.APP_SERVER_ID || 'node-1';
       await this.wsConnectionRepo.delete({ server_id: serverId });
       this.logger.log(`Cleaned up zombie connections for server ${serverId}`);
     } catch (error) {
-      this.logger.warn(`Could not clean up zombie connections: ${error.message}. This is normal if the table doesn't exist yet.`);
+      this.logger.warn(`Could not clean up zombie connections: ${error.message}`);
     }
   }
 
   async handleConnection(userId: string, socketId: string) {
     try {
-      // 1. Save WS Connection
       const newConnection = this.wsConnectionRepo.create({
         user_id: userId,
         socket_id: socketId,
-        server_id: 'node-1', // Có thể config động nếu scale
-        device_type: DeviceType.WEB, // Default
+        server_id: 'node-1',
+        device_type: DeviceType.WEB,
         connected_at: new Date(),
         last_ping_at: new Date(),
       });
       await this.wsConnectionRepo.save(newConnection);
 
-      // 2. Update User Presence
       let presence = await this.userPresenceRepo.findOne({ where: { user_id: userId } });
       if (!presence) {
         presence = this.userPresenceRepo.create({ user_id: userId });
@@ -83,7 +123,6 @@ export class ChatService implements OnModuleInit {
         const userId = connection.user_id;
         await this.wsConnectionRepo.remove(connection);
 
-        // Kiểm tra xem user còn connection nào khác không (nếu đăng nhập nhiều thiết bị)
         const activeConnections = await this.wsConnectionRepo.count({ where: { user_id: userId } });
         if (activeConnections === 0) {
           const presence = await this.userPresenceRepo.findOne({ where: { user_id: userId } });
@@ -101,14 +140,10 @@ export class ChatService implements OnModuleInit {
   }
 
   async checkParticipant(userId: string, conversationId: string): Promise<boolean> {
-    const participant = await this.participantRepo.findOne({
-      where: { user_id: userId, conversation_id: conversationId },
-    });
-    return !!participant;
+    return this.checkParticipantUseCase.execute(userId, conversationId);
   }
 
   async saveMessage(userId: string, dto: SendMessageDto): Promise<Message> {
-    // Lưu message
     const message = this.messageRepo.create({
       conversation_id: dto.conversation_id,
       sender_id: userId,
@@ -119,13 +154,11 @@ export class ChatService implements OnModuleInit {
     
     const savedMessage = await this.messageRepo.save(message);
 
-    // Cập nhật last_message_id ở Conversation
     await this.conversationRepo.update(
       { id: dto.conversation_id },
       { last_message_id: savedMessage.id }
     );
 
-    // Query full message with relations
     return this.messageRepo.findOne({
       where: { id: savedMessage.id },
       relations: [
@@ -150,10 +183,12 @@ export class ChatService implements OnModuleInit {
   }
 
   async markAsRead(userId: string, conversationId: string, messageId: string) {
-    await this.participantRepo.update(
-      { user_id: userId, conversation_id: conversationId },
-      { last_read_message_id: messageId }
-    );
+    return this.markAsReadUseCase.execute(userId, conversationId, messageId);
+  }
+
+  async markAllAsRead(userId: string): Promise<boolean> {
+    await this.markAllAsReadUseCase.execute(userId);
+    return true;
   }
 
   async addReaction(userId: string, messageId: string, emoji: string) {
@@ -191,26 +226,7 @@ export class ChatService implements OnModuleInit {
   }
 
   async getMessages(conversationId: string, page: number, limit: number) {
-    const [data, total] = await this.messageRepo.findAndCount({
-      where: { conversation_id: conversationId },
-      order: { created_at: 'ASC' },
-      skip: (page - 1) * limit,
-      take: limit,
-      relations: [
-        'sender',
-        'sender.profile',
-        'reply_to',
-        'reply_to.sender',
-        'reply_to.sender.profile',
-      ],
-    });
-
-    return {
-      data,
-      total,
-      page,
-      limit,
-    };
+    return this.getMessagesUseCase.execute(conversationId, page, limit);
   }
 
   async updateThemeColor(userId: string, conversationId: string, color: string) {
@@ -245,8 +261,6 @@ export class ChatService implements OnModuleInit {
     await this.conversationRepo.update({ id: conversationId }, { background_image: bgUrl || null });
     return bgUrl;
   }
-
-  // ---- NEW PRESENCE SYSTEM HELPERS ----
 
   async getFriendUserIds(userId: string): Promise<string[]> {
     const friendships = await this.friendRepo.find({
@@ -285,5 +299,74 @@ export class ChatService implements OnModuleInit {
     presence.is_invisible = isInvisible;
     presence.last_seen_at = new Date();
     return this.userPresenceRepo.save(presence);
+  }
+
+  async getUserProfile(userId: string): Promise<Profile | null> {
+    return await this.profileRepo.findOne({
+      where: { user_id: userId },
+    });
+  }
+
+  async getConversations(
+    userId: string,
+    page: number,
+    limit: number,
+    search?: string,
+    tab?: 'all' | 'unread' | 'group' | 'request' | 'archived' | 'hidden' | 'spam',
+  ) {
+    return this.getConversationsUseCase.execute(userId, page, limit, search, tab);
+  }
+
+  async getMedia(conversationId: string, page: number, limit: number, type?: 'image' | 'video' | 'file') {
+    return this.getMediaUseCase.execute(conversationId, page, limit, type);
+  }
+
+  async leaveConversation(userId: string, conversationId: string) {
+    return this.leaveConversationUseCase.execute(userId, conversationId);
+  }
+
+  async togglePinConversation(userId: string, conversationId: string, isPinned: boolean): Promise<boolean> {
+    return this.togglePinConversationUseCase.execute(userId, conversationId, isPinned);
+  }
+
+  async getUserActiveStatus(userId: string): Promise<boolean> {
+    const user = await this.conversationRepo.manager.getRepository(User).findOne({ where: { id: userId } });
+    return user?.is_active_status !== false;
+  }
+
+  async toggleMuteConversation(userId: string, conversationId: string, isMuted: boolean): Promise<boolean> {
+    return this.toggleMuteConversationUseCase.execute(userId, conversationId, isMuted);
+  }
+
+  async toggleArchiveConversation(userId: string, conversationId: string, isArchived: boolean): Promise<boolean> {
+    return this.toggleArchiveConversationUseCase.execute(userId, conversationId, isArchived);
+  }
+
+  async toggleHideConversation(userId: string, conversationId: string, isHidden: boolean): Promise<boolean> {
+    return this.toggleHideConversationUseCase.execute(userId, conversationId, isHidden);
+  }
+
+  async toggleSpamConversation(userId: string, conversationId: string, isSpam: boolean): Promise<boolean> {
+    return this.toggleSpamConversationUseCase.execute(userId, conversationId, isSpam);
+  }
+
+  async toggleRequestConversation(userId: string, conversationId: string, isRequest: boolean): Promise<boolean> {
+    return this.toggleRequestConversationUseCase.execute(userId, conversationId, isRequest);
+  }
+
+  async markAsUnread(userId: string, conversationId: string): Promise<boolean> {
+    return this.markAsUnreadUseCase.execute(userId, conversationId);
+  }
+
+  async blockUser(blockerId: string, blockedId: string): Promise<boolean> {
+    return this.blockUserUseCase.execute(blockerId, blockedId);
+  }
+
+  async unblockUser(blockerId: string, blockedId: string): Promise<boolean> {
+    return this.unblockUserUseCase.execute(blockerId, blockedId);
+  }
+
+  async getOrCreateConversation(userId: string, friendId: string) {
+    return this.getOrCreateConversationUseCase.execute(userId, friendId);
   }
 }

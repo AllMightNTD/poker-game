@@ -1,18 +1,17 @@
-import { Body, Delete, Get, Param, UseGuards } from '@nestjs/common';
-import { Paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
+import { Body, Delete, Get, Param } from '@nestjs/common';
+import { Paginate, PaginateQuery } from 'nestjs-paginate';
 import { BaseEntity } from 'typeorm';
 import { DeleteByIdsDto } from './base.dto';
 import { BaseService } from './base.service';
-import { JwtAuthGuard } from 'src/v1/guards/jwt-auth.guard';
 
 // @UseGuards(JwtAuthGuard)
 export class BaseController<T extends BaseEntity> {
-  constructor(private readonly service: BaseService) {
+  constructor(private readonly service: BaseService<T, any>) {
     // empty
   }
 
   @Get()
-  public findAll(@Paginate() query: PaginateQuery){
+  public findAll(@Paginate() query: PaginateQuery) {
     return this.service.findAll(query);
   }
 
@@ -28,6 +27,6 @@ export class BaseController<T extends BaseEntity> {
 
   @Delete(':id')
   public delete(@Param('id') id: number) {
-    return this.service.delete(+id);
+    return this.service.delete(id);
   }
 }

@@ -332,3 +332,10 @@ export enum Role {
   SUPER_ADMIN = 'SUPER_ADMIN',
   MEMBER = 'MEMBER',
 }
+
+export enum MessagePermission {
+  EVERYONE = 'everyone',
+  FRIENDS = 'friends',
+  FOLLOWERS = 'followers',
+  NONE = 'none',
+}

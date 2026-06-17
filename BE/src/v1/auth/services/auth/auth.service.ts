@@ -1,70 +1,47 @@
 import { Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
-import { UserStatus } from 'src/constants/enums';
-import { Profile } from 'src/v1/entities/profile.entity';
-import { User } from 'src/v1/entities/user.entity';
-import { Repository } from 'typeorm';
+import { RegisterDto, LoginDto } from '../../dto/auth.dto';
+import { RequestPasswordResetDto } from '../../dto/request-reset-password.dto';
+import { ResetPasswordDto } from '../../dto/reset-password.dto';
+
+import { RegisterUseCase } from 'src/domains/auth/applications/use-cases/register.use-case';
+import { LoginUseCase } from 'src/domains/auth/applications/use-cases/login.use-case';
+import { LogoutUseCase } from 'src/domains/auth/applications/use-cases/logout.use-case';
+import { ForgotPasswordUseCase } from 'src/domains/auth/applications/use-cases/forgot-password.use-case';
+import { ResetPasswordUseCase } from 'src/domains/auth/applications/use-cases/reset-password.use-case';
+import { ValidateFacebookUserUseCase } from 'src/domains/auth/applications/use-cases/validate-facebook-user.use-case';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
-    @InjectRepository(Profile)
-    private readonly profileRepo: Repository<Profile>,
-    private readonly jwtService: JwtService,
-  ) { }
+    private readonly registerUseCase: RegisterUseCase,
+    private readonly loginUseCase: LoginUseCase,
+    private readonly logoutUseCase: LogoutUseCase,
+    private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
+    private readonly resetPasswordUseCase: ResetPasswordUseCase,
+    private readonly validateFacebookUserUseCase: ValidateFacebookUserUseCase,
+  ) {}
 
   async validateFacebookUser(facebookUser: any) {
-    const { facebook_id, email, firstName, lastName, picture } = facebookUser;
+    return this.validateFacebookUserUseCase.execute(facebookUser);
+  }
 
-    // 1. Tìm user theo facebook_id
-    let user = await this.userRepo.findOne({
-      where: { facebook_id },
-      relations: ['profile'],
-    });
+  async register(registerDto: RegisterDto) {
+    return this.registerUseCase.execute(registerDto);
+  }
 
-    if (!user && email) {
-      // 2. Nếu không thấy theo ID, tìm theo email (để link account)
-      user = await this.userRepo.findOne({
-        where: { email },
-        relations: ['profile'],
-      });
+  async login(loginDto: LoginDto) {
+    return this.loginUseCase.execute(loginDto);
+  }
 
-      if (user) {
-        // Cập nhật facebook_id cho user đã tồn tại
-        user.facebook_id = facebook_id;
-        await this.userRepo.save(user);
-      }
-    }
+  async logout(userId: string) {
+    return this.logoutUseCase.execute(userId);
+  }
 
-    if (!user) {
-      // 3. Nếu vẫn không thấy -> Tạo mới
-      user = this.userRepo.create({
-        facebook_id,
-        email,
-        status: UserStatus.ACTIVE,
-        password: Math.random().toString(36).slice(-10),
-      });
-      await this.userRepo.save(user);
+  async forgotPassword(requestPasswordResetDto: RequestPasswordResetDto) {
+    return this.forgotPasswordUseCase.execute(requestPasswordResetDto);
+  }
 
-      // Tạo Profile cho user mới
-      const profile = this.profileRepo.create({
-        user_id: user.id,
-        full_name: `${firstName} ${lastName}`,
-        username: `fb_${facebook_id}`, // Tạo username tạm thời
-        avatar_url: picture,
-      });
-      await this.profileRepo.save(profile);
-      user.profile = profile;
-    }
-
-    // 4. Trả về Token
-    const payload = { sub: user.id, email: user.email };
-    return {
-      access_token: this.jwtService.sign(payload),
-      user,
-    };
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    return this.resetPasswordUseCase.execute(resetPasswordDto);
   }
 }

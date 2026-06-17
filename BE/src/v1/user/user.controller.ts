@@ -4,17 +4,17 @@ import {
   Get,
   Param,
   Post,
+  Put,
+  Delete,
   Request,
   UseGuards,
 } from '@nestjs/common';
 import { I18n, I18nLang, I18nService } from 'nestjs-i18n';
 import { AuthGuard } from '../guards/auth.guard';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
-import { RequestPasswordResetDto } from './dto/request-reset-password.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { UserService } from './user.service';
+import { MessagePermission } from 'src/constants/enums';
 
 @Controller('')
 export class UserController {
@@ -25,26 +25,6 @@ export class UserController {
     return i18n.t('common.GREETING', { lang });
   }
 
-  @Post('/auth/register')
-  async register(@Body() registerDto: RegisterDto) {
-    return this.userService.register(registerDto);
-  }
-
-  @Post('/auth/login')
-  async login(@Body() loginDto: LoginDto) {
-    return this.userService.login(loginDto);
-  }
-
-  @Post('/auth/forgot-password')
-  async forgotPassword(@Body() requestPasswordResetDto: RequestPasswordResetDto) {
-    return this.userService.forgotPassword(requestPasswordResetDto);
-  }
-
-  @Post('/auth/reset-password')
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return this.userService.resetPassword(resetPasswordDto);
-  }
-
   @UseGuards(AuthGuard)
   @Get('/me')
   async getMe(@Request() req) {
@@ -53,7 +33,7 @@ export class UserController {
   }
 
   @UseGuards(AuthGuard)
-  @Post('/profile') // Use POST or PUT based on preference, PUT is better but POST works
+  @Post('/profile')
   async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
     return this.userService.updateProfile(req.user.sub, updateProfileDto);
   }
@@ -71,14 +51,32 @@ export class UserController {
   }
 
   @UseGuards(AuthGuard)
-  @Get('/chat/conversation/:friendId')
-  async getOrCreateConversation(@Request() req, @Param('friendId') friendId: string) {
-    return this.userService.getOrCreateConversation(req.user.sub, friendId);
+  @Put('/user/presence')
+  async updatePresence(@Request() req, @Body('is_active_status') isActive: boolean) {
+    return this.userService.updatePresence(req.user.sub, isActive);
   }
 
   @UseGuards(AuthGuard)
-  @Post('/auth/logout')
-  async logout(@Request() req) {
-    return this.userService.logout(req.user.sub);
+  @Put('/user/message-permission')
+  async updateMessagePermission(@Request() req, @Body('message_permission') permission: MessagePermission) {
+    return this.userService.updateMessagePermission(req.user.sub, permission);
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('/user/block/:targetUserId')
+  async blockUser(@Request() req, @Param('targetUserId') targetUserId: string, @Body('reason') reason?: string) {
+    return this.userService.blockUser(req.user.sub, targetUserId, reason);
+  }
+
+  @UseGuards(AuthGuard)
+  @Delete('/user/block/:targetUserId')
+  async unblockUser(@Request() req, @Param('targetUserId') targetUserId: string) {
+    return this.userService.unblockUser(req.user.sub, targetUserId);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('/user/block')
+  async getBlockedUsers(@Request() req) {
+    return this.userService.getBlockedUsers(req.user.sub);
   }
 }
