@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useFriendRequests } from "@/features/friends/hooks/use-friend-requests";
 import { useFriendSuggestions } from "@/features/friends/hooks/use-friend-suggestions";
 import { useToast } from "@/core/providers/toast-provider";
+import { useTranslations } from "next-intl";
 
 function FriendRequestCard({
   person,
@@ -17,6 +18,7 @@ function FriendRequestCard({
   onDelete: (id: string) => void;
   isProcessing?: boolean;
 }) {
+  const t = useTranslations("friendRequest");
   return (
     <div className="flex items-center gap-3 py-2">
       <img
@@ -29,7 +31,7 @@ function FriendRequestCard({
           {person.name}
         </p>
         {person.mutual > 0 && (
-          <p className="text-xs text-slate-400">{person.mutual} mutual friends</p>
+          <p className="text-xs text-slate-400">{t("mutualFriends", { count: person.mutual })}</p>
         )}
         <div className="flex gap-2 mt-2">
           <button
@@ -40,7 +42,7 @@ function FriendRequestCard({
             {isProcessing ? (
               <Loader2 size={12} className="animate-spin" />
             ) : (
-              "Confirm"
+              t("confirm")
             )}
           </button>
           <button
@@ -48,7 +50,7 @@ function FriendRequestCard({
             disabled={isProcessing}
             className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold py-1.5 rounded-lg transition-colors disabled:opacity-75"
           >
-            Delete
+            {t("delete")}
           </button>
         </div>
       </div>
@@ -57,6 +59,7 @@ function FriendRequestCard({
 }
 
 export default function FriendRequests({ onSeeAll }: { onSeeAll?: () => void }) {
+  const t = useTranslations("friendRequest");
   const { success: toastSuccess, error: toastError } = useToast();
   const {
     incomingRequests,
@@ -90,9 +93,9 @@ export default function FriendRequests({ onSeeAll }: { onSeeAll?: () => void }) 
     const result = await acceptRequest(requestId);
     setProcessingRequestId(null);
     if (result.success) {
-      toastSuccess("Chấp nhận lời mời kết bạn thành công!");
+      toastSuccess(t("acceptSuccess"));
     } else {
-      toastError("Không thể chấp nhận kết bạn. Vui lòng thử lại.");
+      toastError(t("acceptError"));
     }
   };
 
@@ -101,9 +104,9 @@ export default function FriendRequests({ onSeeAll }: { onSeeAll?: () => void }) 
     const result = await declineRequest(requestId);
     setProcessingRequestId(null);
     if (result.success) {
-      toastSuccess("Đã từ chối lời mời kết bạn.");
+      toastSuccess(t("declineSuccess"));
     } else {
-      toastError("Không thể từ chối kết bạn. Vui lòng thử lại.");
+      toastError(t("declineError"));
     }
   };
 
@@ -112,15 +115,15 @@ export default function FriendRequests({ onSeeAll }: { onSeeAll?: () => void }) 
     const result = await sendRequest(userId);
     setProcessingSuggestionId(null);
     if (result.success) {
-      toastSuccess("Đã gửi lời mời kết bạn thành công!");
+      toastSuccess(t("sendSuccess"));
     } else {
-      toastError("Gửi lời mời kết bạn thất bại. Vui lòng thử lại.");
+      toastError(t("sendError"));
     }
   };
 
   const handleSkipSuggestion = (userId: string) => {
     removeSuggestion(userId);
-    toastSuccess("Đã bỏ qua gợi ý.");
+    toastSuccess(t("skipSuccess"));
   };
 
   return (
@@ -128,13 +131,13 @@ export default function FriendRequests({ onSeeAll }: { onSeeAll?: () => void }) 
       {/* Friend Requests */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-slate-800">Friend Request</h3>
+          <h3 className="text-sm font-bold text-slate-800">{t("title")}</h3>
           {onSeeAll && incomingRequests.length > 0 && (
             <button
               onClick={onSeeAll}
               className="text-xs text-blue-500 font-semibold hover:underline"
             >
-              See all
+              {t("seeAll")}
             </button>
           )}
         </div>
@@ -144,7 +147,7 @@ export default function FriendRequests({ onSeeAll }: { onSeeAll?: () => void }) 
           </div>
         ) : incomingRequests.length === 0 ? (
           <p className="text-xs text-slate-400 text-center py-4">
-            No pending requests
+            {t("noPending")}
           </p>
         ) : (
           <div className="divide-y divide-slate-50">
@@ -172,13 +175,13 @@ export default function FriendRequests({ onSeeAll }: { onSeeAll?: () => void }) 
       {/* Friend Suggestions */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-slate-800">People You May Know</h3>
+          <h3 className="text-sm font-bold text-slate-800">{t("peopleYouMayKnow")}</h3>
           {onSeeAll && suggestions.length > 0 && (
             <button
               onClick={onSeeAll}
               className="text-xs text-blue-500 font-semibold hover:underline"
             >
-              See all
+              {t("seeAll")}
             </button>
           )}
         </div>
@@ -188,7 +191,7 @@ export default function FriendRequests({ onSeeAll }: { onSeeAll?: () => void }) 
           </div>
         ) : suggestions.length === 0 ? (
           <p className="text-xs text-slate-400 text-center py-4">
-            No suggestions
+            {t("noSuggestions")}
           </p>
         ) : (
           <div className="divide-y divide-slate-50">
@@ -210,7 +213,7 @@ export default function FriendRequests({ onSeeAll }: { onSeeAll?: () => void }) 
                     </p>
                     {mutual > 0 && (
                       <p className="text-xs text-slate-400">
-                        {mutual} mutual friends
+                        {t("mutualFriends", { count: mutual })}
                       </p>
                     )}
                   </div>
@@ -219,7 +222,7 @@ export default function FriendRequests({ onSeeAll }: { onSeeAll?: () => void }) 
                       onClick={() => handleAddFriend(person.id)}
                       disabled={processingSuggestionId === person.id}
                       className="w-7 h-7 rounded-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center transition-colors disabled:opacity-75"
-                      title="Add Friend"
+                      title={t("addFriend")}
                     >
                       {processingSuggestionId === person.id ? (
                         <Loader2 size={12} className="animate-spin text-white" />
@@ -230,7 +233,7 @@ export default function FriendRequests({ onSeeAll }: { onSeeAll?: () => void }) 
                     <button
                       onClick={() => handleSkipSuggestion(person.id)}
                       className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
-                      title="Skip"
+                      title={t("skip")}
                     >
                       <X size={14} className="text-slate-500" />
                     </button>

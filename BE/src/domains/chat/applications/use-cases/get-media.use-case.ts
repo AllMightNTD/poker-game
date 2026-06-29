@@ -8,7 +8,12 @@ export class GetMediaUseCase {
     private readonly chatRepository: IChatRepository,
   ) {}
 
-  async execute(conversationId: string, page: number, limit: number, type?: string) {
+  async execute(
+    conversationId: string,
+    page: number,
+    limit: number,
+    type?: string,
+  ) {
     return this.chatRepository.getMedia(conversationId, page, limit, type);
   }
 }

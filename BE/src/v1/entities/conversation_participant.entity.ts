@@ -20,7 +20,11 @@ export class ConversationParticipant extends BaseEntity {
   @PrimaryColumn({ type: 'varchar' })
   user_id: string;
 
-  @Column({ type: 'enum', enum: ConversationParticipantRole, default: ConversationParticipantRole.MEMBER })
+  @Column({
+    type: 'enum',
+    enum: ConversationParticipantRole,
+    default: ConversationParticipantRole.MEMBER,
+  })
   role: ConversationParticipantRole;
 
   @Column({ type: 'varchar', nullable: true })
@@ -52,7 +56,9 @@ export class ConversationParticipant extends BaseEntity {
 
   // ---- Relations ----
 
-  @ManyToOne(() => Conversation, (conversation) => conversation.participants, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Conversation, (conversation) => conversation.participants, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'conversation_id' })
   conversation: Conversation;
 

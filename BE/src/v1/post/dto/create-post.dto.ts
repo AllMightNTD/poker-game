@@ -1,4 +1,12 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsArray, ValidateNested, IsInt } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsArray,
+  ValidateNested,
+  IsInt,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { Audience, PostType, PostMediaType } from 'src/constants/enums';
 
@@ -40,6 +48,10 @@ export class CreatePostDto {
   @IsString()
   @IsOptional()
   post_background?: string;
+
+  @IsString()
+  @IsOptional()
+  group_id?: string;
 
   @IsArray()
   @IsOptional()

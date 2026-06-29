@@ -10,7 +10,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Audience, PostType } from 'src/constants/enums';
+import { Audience, PostType, PostStatus } from 'src/constants/enums';
 import { User } from './user.entity';
 import { Page } from './page.entity';
 import { Group } from './group.entity';
@@ -18,6 +18,7 @@ import { PostMedia } from './post_media.entity';
 import { PostTag } from './post_tag.entity';
 import { PostHashtag } from './post_hashtag.entity';
 import { Poll } from './poll.entity';
+import { Comment } from './comment.entity';
 
 @Entity('posts')
 export class Post extends BaseEntity {
@@ -38,6 +39,9 @@ export class Post extends BaseEntity {
 
   @Column({ type: 'enum', enum: PostType, default: PostType.TEXT })
   type: PostType;
+
+  @Column({ type: 'enum', enum: PostStatus, default: PostStatus.APPROVED })
+  status: PostStatus;
 
   @Column({ type: 'enum', enum: Audience })
   audience: Audience;
@@ -137,4 +141,7 @@ export class Post extends BaseEntity {
 
   @OneToMany(() => Poll, (poll) => poll.post)
   polls: Poll[];
+
+  @OneToMany(() => Comment, (comment) => comment.post)
+  comments: Comment[];
 }

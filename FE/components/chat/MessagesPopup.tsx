@@ -1,33 +1,35 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import {
-  Search,
-  MoreHorizontal,
-  Check,
-  BellOff,
-  MessageSquare,
-  Archive,
-  ArchiveRestore,
-  EyeOff,
-  Eye,
-  AlertTriangle,
-  Pin,
-  PinOff,
-  X,
-  ExternalLink,
-  SquarePen,
-  ChevronDown,
-  Lock,
-  LogOut,
-  Users
-} from "lucide-react";
-import { useSocket } from "@/components/providers/SocketProvider";
 import { useMiniChat } from "@/components/chat/MiniChatContext";
+import { useSocket } from "@/components/providers/SocketProvider";
 import api from "@/lib/axios";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertTriangle,
+  Archive,
+  ArchiveRestore,
+  BellOff,
+  Check,
+  ChevronDown,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Lock,
+  LogOut,
+  MessageSquare,
+  MoreHorizontal,
+  Pin,
+  PinOff,
+  Search,
+  SquarePen,
+  Users,
+  X
+} from "lucide-react";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface MessagesPopupProps {
   onClose: () => void;
@@ -104,7 +106,8 @@ function formatTime(dateString: string): string {
 
 function renderPreview(msg: Message | null, currentUserId: string): string {
   if (!msg) return "No messages yet";
-  const isMe = msg.sender_id === currentUserId;
+  const senderId = msg.sender_id || (msg as any).sender?.id;
+  const isMe = Boolean(currentUserId && senderId === currentUserId);
   const prefix = isMe ? "You: " : "";
 
   if (msg.type === "image") return `${prefix}📷 sent an image`;
@@ -176,8 +179,10 @@ function SafeAvatar({ src, name, isGroup }: { src: string | null; name: string; 
 }
 
 export default function MessagesPopup({ onClose, currentUser }: MessagesPopupProps) {
+  const t = useTranslations("chat");
   const { socket } = useSocket();
   const { openPopup } = useMiniChat();
+  const queryClient = useQueryClient();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -193,7 +198,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
   // Search state
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  
+
   // Settings Dropdown state
   const [showSettings, setShowSettings] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -250,7 +255,9 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
       });
 
       const newList = res.data?.data || [];
-      const totalPages = res.data?.meta?.totalPages || 1;
+      const total = res.data?.total || 0;
+      const limit = res.data?.limit || 15;
+      const totalPages = Math.ceil(total / limit) || 1;
 
       // Update online status maps
       const newPresences: Record<string, boolean> = {};
@@ -293,17 +300,18 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
     const handleNewMessage = (msg: Message) => {
       setConversations((prev) => {
         const index = prev.findIndex((c) => c.id === msg.conversation_id);
-        
+
         if (index !== -1) {
           const updatedList = [...prev];
           const target = { ...updatedList[index] };
-          
+
           target.last_message = msg;
-          
-          if (msg.sender_id !== currentUser?.id) {
+
+          const senderId = msg.sender_id || (msg as any).sender?.id;
+          if (senderId !== currentUser?.id) {
             target.unreadCount = (target.unreadCount || 0) + 1;
           }
-          
+
           updatedList[index] = target;
 
           updatedList.sort((a, b) => {
@@ -355,38 +363,52 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
       });
     };
 
+    const handleMessageSeen = (data: { conversation_id: string }) => {
+      setConversations((prev) =>
+        prev.map(c => c.id === data.conversation_id ? { ...c, unreadCount: 0 } : c)
+      );
+    };
+
     socket.on("newMessage", handleNewMessage);
+    socket.on("messageSeen", handleMessageSeen);
     socket.on("userPresenceChange", handlePresenceChange);
     socket.on("user_typing_start", handleTypingStart);
     socket.on("user_typing_stop", handleTypingStop);
 
     return () => {
       socket.off("newMessage", handleNewMessage);
+      socket.off("messageSeen", handleMessageSeen);
       socket.off("userPresenceChange", handlePresenceChange);
       socket.off("user_typing_start", handleTypingStart);
       socket.off("user_typing_stop", handleTypingStop);
     };
   }, [socket, currentUser?.id, debouncedSearch, activeTab, fetchConversations]);
 
+  const markSeenMutation = useMutation({
+    mutationFn: async ({ conversation_id, message_id }: { conversation_id: string, message_id: string }) => {
+      await api.post(`/api/v1/chat/conversations/seen`, { conversation_id, message_id });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['navbar', 'chat_unread'] });
+    }
+  });
+
   const handleOpenChat = async (conv: Conversation) => {
     if (conv.unreadCount > 0 && conv.last_message) {
-      try {
-        await api.post(`/api/v1/chat/conversations/seen`, {
-          conversation_id: conv.id,
-          message_id: conv.last_message.id,
-        });
-        socket?.emit("seenMessage", {
-          conversation_id: conv.id,
-          message_id: conv.last_message.id,
-        });
-        // Clear local unread count
-        setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c));
-      } catch (err) {
-        console.error("Failed to mark message as seen:", err);
-      }
+      markSeenMutation.mutate({ conversation_id: conv.id, message_id: conv.last_message.id }, {
+        onSuccess: () => {
+          socket?.emit("seenMessage", {
+            conversation_id: conv.id,
+            message_id: conv.last_message!.id,
+          });
+          setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c));
+        },
+        onError: (err) => console.error("Failed to mark message as seen:", err)
+      });
     }
 
-    if (conv.type === "direct" && conv.otherParticipants[0]) {
+    const isDirectConv = conv.type === "direct";
+    if (isDirectConv && conv.otherParticipants[0]) {
       const p = conv.otherParticipants[0];
       const isOnline = userPresences[p.user.id] ?? p.user.is_active_status;
       openPopup({
@@ -394,6 +416,8 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
         name: p.nickname || p.user.profile?.full_name || "User",
         avatar: p.user.profile?.avatar_url || "/avatar-default.png",
         status: isOnline ? "online" : "offline",
+        type: "direct",
+        conversationId: conv.id,
       });
     } else {
       openPopup({
@@ -401,6 +425,8 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
         name: conv.name || "Group Chat",
         avatar: conv.avatar_url || "/group-default.png",
         status: "online",
+        type: "group",
+        conversationId: conv.id,
       });
     }
 
@@ -416,22 +442,28 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
     }
   };
 
-  const handleMarkAllAsRead = async () => {
-    try {
+  const markAllReadMutation = useMutation({
+    mutationFn: async () => {
       await api.post("/api/v1/chat/conversations/mark-all-read");
-      setConversations((prev) =>
-        prev.map((c) => ({ ...c, unreadCount: 0 }))
-      );
+    },
+    onSuccess: () => {
+      setConversations((prev) => prev.map((c) => ({ ...c, unreadCount: 0 })));
       setShowSettings(false);
-    } catch (err) {
-      console.error("Mark all as read failed:", err);
-    }
+      queryClient.invalidateQueries({ queryKey: ['navbar', 'chat_unread'] });
+    },
+    onError: (err) => console.error("Mark all as read failed:", err)
+  });
+
+  const handleMarkAllAsRead = () => {
+    markAllReadMutation.mutate();
   };
 
-  const handleTogglePin = async (conv: Conversation) => {
-    try {
+  const togglePinMutation = useMutation({
+    mutationFn: async (conv: Conversation) => {
       const endpoint = conv.is_pinned ? `/api/v1/chat/conversations/${conv.id}/unpin` : `/api/v1/chat/conversations/${conv.id}/pin`;
       await api.post(endpoint);
+    },
+    onSuccess: (_, conv) => {
       setConversations(prev =>
         prev.map(c => c.id === conv.id ? { ...c, is_pinned: !conv.is_pinned } : c)
           .sort((a, b) => {
@@ -444,87 +476,107 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
           })
       );
       setActiveMenuConvId(null);
-    } catch (err) {
-      console.error("Failed to pin/unpin conversation:", err);
-    }
-  };
+    },
+    onError: (err) => console.error("Failed to pin/unpin conversation:", err)
+  });
 
-  const handleToggleMute = async (conv: Conversation) => {
-    try {
+  const handleTogglePin = (conv: Conversation) => togglePinMutation.mutate(conv);
+
+  const toggleMuteMutation = useMutation({
+    mutationFn: async (conv: Conversation) => {
       const isMuted = conv.unreadCount === -1;
       const endpoint = `/api/v1/chat/conversations/${conv.id}/${isMuted ? 'unmute' : 'mute'}`;
       await api.post(endpoint);
-      setActiveMenuConvId(null);
-    } catch (err) {
-      console.error("Failed to mute/unmute conversation:", err);
-    }
-  };
+    },
+    onSuccess: () => setActiveMenuConvId(null),
+    onError: (err) => console.error("Failed to mute/unmute conversation:", err)
+  });
 
-  const handleToggleArchive = async (conv: Conversation) => {
-    try {
+  const handleToggleMute = (conv: Conversation) => toggleMuteMutation.mutate(conv);
+
+  const toggleArchiveMutation = useMutation({
+    mutationFn: async (conv: Conversation) => {
       const endpoint = conv.is_archived ? `/api/v1/chat/conversations/${conv.id}/unarchive` : `/api/v1/chat/conversations/${conv.id}/archive`;
       await api.post(endpoint);
+    },
+    onSuccess: (_, conv) => {
       setConversations(prev => prev.filter(c => c.id !== conv.id));
       setActiveMenuConvId(null);
-    } catch (err) {
-      console.error("Failed to archive conversation:", err);
-    }
-  };
+    },
+    onError: (err) => console.error("Failed to archive conversation:", err)
+  });
 
-  const handleToggleHide = async (conv: Conversation) => {
-    try {
+  const handleToggleArchive = (conv: Conversation) => toggleArchiveMutation.mutate(conv);
+
+  const toggleHideMutation = useMutation({
+    mutationFn: async (conv: Conversation) => {
       const endpoint = conv.is_hidden ? `/api/v1/chat/conversations/${conv.id}/unhide` : `/api/v1/chat/conversations/${conv.id}/hide`;
       await api.post(endpoint);
+    },
+    onSuccess: (_, conv) => {
       setConversations(prev => prev.filter(c => c.id !== conv.id));
       setActiveMenuConvId(null);
-    } catch (err) {
-      console.error("Failed to hide conversation:", err);
-    }
-  };
+    },
+    onError: (err) => console.error("Failed to hide conversation:", err)
+  });
 
-  const handleToggleSpam = async (conv: Conversation) => {
-    try {
+  const handleToggleHide = (conv: Conversation) => toggleHideMutation.mutate(conv);
+
+  const toggleSpamMutation = useMutation({
+    mutationFn: async (conv: Conversation) => {
       const endpoint = conv.is_spam ? `/api/v1/chat/conversations/${conv.id}/unspam` : `/api/v1/chat/conversations/${conv.id}/spam`;
       await api.post(endpoint);
+    },
+    onSuccess: (_, conv) => {
       setConversations(prev => prev.filter(c => c.id !== conv.id));
       setActiveMenuConvId(null);
-    } catch (err) {
-      console.error("Failed to spam conversation:", err);
-    }
-  };
+    },
+    onError: (err) => console.error("Failed to spam conversation:", err)
+  });
 
-  const handleMarkAsUnread = async (conv: Conversation) => {
-    try {
+  const handleToggleSpam = (conv: Conversation) => toggleSpamMutation.mutate(conv);
+
+  const markAsUnreadMutation = useMutation({
+    mutationFn: async (conv: Conversation) => {
       await api.post(`/api/v1/chat/conversations/${conv.id}/mark-unread`);
+    },
+    onSuccess: (_, conv) => {
       setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unreadCount: 1 } : c));
       setActiveMenuConvId(null);
-    } catch (err) {
-      console.error("Failed to mark as unread:", err);
-    }
-  };
+    },
+    onError: (err) => console.error("Failed to mark as unread:", err)
+  });
 
-  const handleBlockUser = async (conv: Conversation) => {
-    try {
+  const handleMarkAsUnread = (conv: Conversation) => markAsUnreadMutation.mutate(conv);
+
+  const blockUserMutation = useMutation({
+    mutationFn: async (conv: Conversation) => {
       if (conv.type === 'direct' && conv.otherParticipants[0]) {
         const targetUserId = conv.otherParticipants[0].user.id;
-        await api.post(`/api/v1/users/${targetUserId}/block`);
-        setConversations(prev => prev.filter(c => c.id !== conv.id));
+        await api.post(`/api/v1/user/${targetUserId}/block`);
       }
-      setActiveMenuConvId(null);
-    } catch (err) {
-      console.error("Failed to block user:", err);
-    }
-  };
-
-  const handleLeaveGroup = async (conv: Conversation) => {
-    try {
-      await api.delete(`/api/v1/chat/conversations/${conv.id}/leave`);
+    },
+    onSuccess: (_, conv) => {
       setConversations(prev => prev.filter(c => c.id !== conv.id));
       setActiveMenuConvId(null);
-    } catch (err) {
-      console.error("Failed to leave group:", err);
-    }
-  };
+    },
+    onError: (err) => console.error("Failed to block user:", err)
+  });
+
+  const handleBlockUser = (conv: Conversation) => blockUserMutation.mutate(conv);
+
+  const leaveGroupMutation = useMutation({
+    mutationFn: async (conv: Conversation) => {
+      await api.delete(`/api/v1/chat/conversations/${conv.id}/leave`);
+    },
+    onSuccess: (_, conv) => {
+      setConversations(prev => prev.filter(c => c.id !== conv.id));
+      setActiveMenuConvId(null);
+    },
+    onError: (err) => console.error("Failed to leave group:", err)
+  });
+
+  const handleLeaveGroup = (conv: Conversation) => leaveGroupMutation.mutate(conv);
 
   const interactedUsers = useMemo(() => {
     const usersMap = new Map<string, { id: string; name: string; avatar: string; status: boolean; conv: Conversation }>();
@@ -549,23 +601,23 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
 
   return (
     <div className="fixed sm:absolute top-[60px] sm:top-12 left-4 right-4 sm:left-auto sm:-right-2 sm:w-[370px] bg-white border border-slate-100 shadow-[0_12px_42px_rgba(0,0,0,0.12)] rounded-2xl z-50 flex flex-col overflow-hidden max-h-[80vh] md:max-h-[570px] transition-all duration-300">
-      
+
       {/* 1. Header Popup */}
       <div className="p-4 border-b border-slate-50 flex items-center justify-between shrink-0">
-        <h3 className="font-extrabold text-slate-800 text-lg tracking-tight">Đoạn chat</h3>
+        <h3 className="font-extrabold text-slate-800 text-lg tracking-tight">{t("title")}</h3>
         <div className="flex items-center gap-1.5 relative">
-          
+
           <Link
             href="/messages"
             onClick={onClose}
-            title="Mở rộng"
+            title={t("openExpand")}
             className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
           >
             <ExternalLink size={16} />
           </Link>
 
           <button
-            title="Tạo chat mới"
+            title={t("newChat")}
             onClick={() => {
               onClose();
             }}
@@ -599,7 +651,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                     className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-50 text-left text-xs text-slate-700 cursor-pointer"
                   >
                     <Check className="text-slate-400" size={15} />
-                    Đánh dấu tất cả là đã đọc
+                    {t("markAllAsRead")}
                   </button>
                   <div className="h-[1px] bg-slate-100 my-1" />
                   <button
@@ -610,7 +662,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                     className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-50 text-left text-xs text-slate-600 cursor-pointer"
                   >
                     <MessageSquare className="text-slate-400" size={15} />
-                    Tin nhắn chờ
+                    {t("messageRequests")}
                   </button>
                   <button
                     onClick={() => {
@@ -620,7 +672,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                     className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-50 text-left text-xs text-slate-600 cursor-pointer"
                   >
                     <Archive className="text-slate-400" size={15} />
-                    Kho lưu trữ
+                    {t("archive")}
                   </button>
                   <button
                     onClick={() => {
@@ -630,7 +682,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                     className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-50 text-left text-xs text-slate-600 cursor-pointer"
                   >
                     <EyeOff className="text-slate-400" size={15} />
-                    Đoạn chat bị ẩn
+                    {t("hidden")}
                   </button>
                   <button
                     onClick={() => {
@@ -640,7 +692,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                     className="w-full flex items-center gap-2.5 px-3.5 py-2 hover:bg-slate-50 text-left text-xs text-slate-600 cursor-pointer"
                   >
                     <AlertTriangle className="text-slate-400" size={15} />
-                    Tin nhắn Spam
+                    {t("spam")}
                   </button>
                 </motion.div>
               )}
@@ -652,13 +704,13 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
 
       {/* 2. Search Box & Filter Tabs */}
       <div className="px-4 py-2 bg-white shrink-0 space-y-2.5 border-b border-slate-50">
-        
+
         {/* Search Bar */}
         <div className="flex items-center gap-2 bg-slate-100/80 hover:bg-slate-100 rounded-full px-3 py-1.5 transition-colors border border-transparent focus-within:bg-white focus-within:border-blue-200 relative">
           <Search size={14} className="text-slate-400 shrink-0" />
           <input
             type="text"
-            placeholder="Tìm kiếm cuộc trò chuyện..."
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="bg-transparent text-xs text-slate-700 outline-none w-full placeholder:text-slate-400 font-medium pr-6"
@@ -683,7 +735,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                 activeTab === 'all' ? "bg-blue-50 text-blue-600" : "hover:bg-slate-100 hover:text-slate-700"
               )}
             >
-              Tất cả
+              {t("all")}
             </button>
             <button
               onClick={() => setActiveTab('unread')}
@@ -692,7 +744,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                 activeTab === 'unread' ? "bg-blue-50 text-blue-600" : "hover:bg-slate-100 hover:text-slate-700"
               )}
             >
-              Chưa đọc
+              {t("unread")}
             </button>
             <button
               onClick={() => setActiveTab('group')}
@@ -701,7 +753,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                 activeTab === 'group' ? "bg-blue-50 text-blue-600" : "hover:bg-slate-100 hover:text-slate-700"
               )}
             >
-              Nhóm
+              {t("group")}
             </button>
           </div>
 
@@ -715,11 +767,11 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
               )}
             >
               <span>
-                {activeTab === 'request' && "Chờ"}
-                {activeTab === 'archived' && "Lưu trữ"}
-                {activeTab === 'hidden' && "Ẩn"}
-                {activeTab === 'spam' && "Spam"}
-                {!['request', 'archived', 'hidden', 'spam'].includes(activeTab) && "Khác"}
+                {activeTab === 'request' && t("pending")}
+                {activeTab === 'archived' && t("archived")}
+                {activeTab === 'hidden' && t("hidden")}
+                {activeTab === 'spam' && t("spam")}
+                {!['request', 'archived', 'hidden', 'spam'].includes(activeTab) && t("other")}
               </span>
               <ChevronDown size={12} />
             </button>
@@ -741,7 +793,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                     }}
                     className="w-full px-3 py-1.5 hover:bg-slate-50 text-left text-xs cursor-pointer flex items-center justify-between"
                   >
-                    Tin nhắn chờ
+                    {t("messageRequests")}
                   </button>
                   <button
                     onClick={() => {
@@ -750,7 +802,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                     }}
                     className="w-full px-3 py-1.5 hover:bg-slate-50 text-left text-xs cursor-pointer flex items-center justify-between"
                   >
-                    Lưu trữ
+                    {t("archive")}
                   </button>
                   <button
                     onClick={() => {
@@ -759,7 +811,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                     }}
                     className="w-full px-3 py-1.5 hover:bg-slate-50 text-left text-xs cursor-pointer flex items-center justify-between"
                   >
-                    Bị ẩn
+                    {t("hidden")}
                   </button>
                   <button
                     onClick={() => {
@@ -768,7 +820,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                     }}
                     className="w-full px-3 py-1.5 hover:bg-slate-50 text-left text-xs cursor-pointer flex items-center justify-between"
                   >
-                    Spam
+                    {t("spam")}
                   </button>
                 </motion.div>
               )}
@@ -783,7 +835,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
       {interactedUsers.length > 0 && !debouncedSearch && activeTab === 'all' && (
         <div className="px-4 py-3 bg-white border-b border-slate-50 shrink-0 select-none">
           <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mb-2.5">
-            Tương tác gần đây
+            {t("recentInteractions")}
           </p>
           <div className="flex items-center gap-4 overflow-x-auto pb-1 scrollbar-none snap-x">
             {interactedUsers.map((user) => {
@@ -833,13 +885,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
               <MessageSquare size={30} className="text-slate-300 stroke-[1.5]" />
             </div>
             <p className="text-xs font-bold text-slate-600">
-              {activeTab === 'all' && "Không có cuộc trò chuyện nào"}
-              {activeTab === 'unread' && "Không có tin nhắn chưa đọc"}
-              {activeTab === 'group' && "Không tìm thấy nhóm chat"}
-              {activeTab === 'request' && "Hộp thư chờ trống"}
-              {activeTab === 'archived' && "Không có đoạn chat lưu trữ"}
-              {activeTab === 'hidden' && "Không có cuộc trò chuyện nào bị ẩn"}
-              {activeTab === 'spam' && "Không có tin nhắn Spam"}
+              {t("noMessages")}
             </p>
             <p className="text-[10px] text-slate-400 mt-1 max-w-[200px]">
               {activeTab === 'all' ? "Hãy bắt đầu gửi tin nhắn đến những người bạn của bạn!" : "Giao diện sạch sẽ, gọn gàng."}
@@ -850,7 +896,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
             {conversations.map((conv) => {
               const isDirect = conv.type === "direct";
               const otherPart = conv.otherParticipants[0];
-              
+
               if (!otherPart && isDirect) return null;
 
               const isOnline = isDirect
@@ -866,7 +912,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                 : (conv.avatar_url || null);
 
               const hasUnread = conv.unreadCount > 0;
-              const formattedTime = conv.last_message 
+              const formattedTime = conv.last_message
                 ? formatTime(conv.last_message.created_at)
                 : formatTime(conv.created_at);
 
@@ -931,7 +977,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                             {renderPreview(conv.last_message, currentUser?.id)}
                           </p>
                         )}
-                        
+
                         {/* Unread blue dot & pinned state */}
                         <div className="flex items-center gap-1.5 shrink-0">
                           {conv.is_pinned && (
@@ -976,7 +1022,7 @@ export default function MessagesPopup({ onClose, currentUser }: MessagesPopupPro
                               </>
                             )}
                           </button>
-                          
+
                           <button
                             onClick={() => handleToggleMute(conv)}
                             className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 text-left text-[11px] cursor-pointer"

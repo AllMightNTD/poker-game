@@ -8,7 +8,17 @@ export class GetProfilePostsUseCase {
     private readonly postRepository: IPostRepository,
   ) {}
 
-  async execute(targetUserId: string, currentUserId: string) {
-    return this.postRepository.getProfilePosts(targetUserId, currentUserId);
+  async execute(
+    targetUserId: string,
+    currentUserId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    return this.postRepository.getProfilePosts(
+      targetUserId,
+      currentUserId,
+      page,
+      limit,
+    );
   }
 }

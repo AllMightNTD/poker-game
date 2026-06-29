@@ -1,19 +1,20 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { 
-  Image, 
-  Smile, 
-  Video, 
-  Globe, 
-  Users, 
-  Lock, 
-  ChevronDown, 
-  Loader2, 
-  X, 
+import {
+  Image,
+  Smile,
+  Video,
+  Globe,
+  Users,
+  Lock,
+  ChevronDown,
+  Loader2,
+  X,
   Palette 
 } from "lucide-react";
 import api from "@/lib/axios";
 import { AnimatePresence, motion } from "framer-motion";
+import { useMutation } from "@tanstack/react-query";
 
 interface EditPostModalProps {
   isOpen: boolean;
@@ -56,7 +57,6 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
   const [text, setText] = useState("");
   const [audience, setAudience] = useState<"public" | "friends" | "only_me">("public");
   const [isAudienceOpen, setIsAudienceOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // States nâng cao
@@ -64,10 +64,9 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
   const [isFeelingOpen, setIsFeelingOpen] = useState(false);
   const [selectedBg, setSelectedBg] = useState(GRADIENTS[0]);
   const [isBgPickerOpen, setIsBgPickerOpen] = useState(false);
-  
+
   // Media States
   const [uploadedMedia, setUploadedMedia] = useState<{ file_url: string; type: "image" | "video" }[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
 
   const audienceRef = useRef<HTMLDivElement>(null);
   const feelingRef = useRef<HTMLDivElement>(null);
@@ -79,7 +78,7 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
     if (post && isOpen) {
       setText(post.content || "");
       setAudience(post.audience || "public");
-      
+
       // Feeling parser
       if (post.feeling) {
         const matchingFeeling = FEELINGS.find(
@@ -151,6 +150,40 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
+  const uploadMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const res = await api.post("/api/v1/post/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data.metadata.map((item: any) => ({
+        file_url: item.file_url,
+        type: item.type === "video" ? "video" : "image",
+      }));
+    },
+    onSuccess: (newMedia) => {
+      setUploadedMedia((prev) => [...prev, ...newMedia]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+    onError: (err) => {
+      console.error("Upload failed:", err);
+      setError("Không thể tải ảnh/video lên server. Vui lòng thử lại!");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  });
+
+  const editMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      await api.put(`/api/v1/post/${post.id}`, payload);
+    },
+    onSuccess: () => {
+      onClose();
+    },
+    onError: (err: any) => {
+      console.error("Failed to edit post:", err);
+      setError(err.response?.data?.message || "Không thể lưu thay đổi bài viết. Vui lòng thử lại!");
+    }
+  });
+
   const triggerFileSelect = () => {
     if (selectedBg.id !== "none") {
       setSelectedBg(GRADIENTS[0]);
@@ -158,38 +191,17 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    setIsUploading(true);
     setError(null);
-
     const formData = new FormData();
     for (let i = 0; i < files.length; i++) {
       formData.append("files", files[i]);
     }
 
-    try {
-      const res = await api.post("/api/v1/post/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      const newMedia = res.data.metadata.map((item: any) => ({
-        file_url: item.file_url,
-        type: item.type === "video" ? "video" : "image",
-      }));
-
-      setUploadedMedia((prev) => [...prev, ...newMedia]);
-    } catch (err: any) {
-      console.error("Upload failed:", err);
-      setError("Không thể tải ảnh/video lên server. Vui lòng thử lại!");
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
+    uploadMutation.mutate(formData);
   };
 
   const removeMedia = (index: number) => {
@@ -204,33 +216,24 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
     setIsBgPickerOpen(false);
   };
 
-  const handleSaveChanges = async () => {
+  const handleSaveChanges = () => {
     if (!text.trim() && uploadedMedia.length === 0) return;
 
-    setIsSubmitting(true);
     setError(null);
 
-    try {
-      const payload: any = {
-        content: text,
-        audience: audience,
-        feeling: selectedFeeling ? `${selectedFeeling.emoji} ${selectedFeeling.label}` : null,
-        post_background: selectedBg.id !== "none" ? selectedBg.class : null,
-        media: uploadedMedia.map((m, index) => ({
-          file_url: m.file_url,
-          type: m.type,
-          sort_order: index,
-        })),
-      };
+    const payload: any = {
+      content: text,
+      audience: audience,
+      feeling: selectedFeeling ? `${selectedFeeling.emoji} ${selectedFeeling.label}` : null,
+      post_background: selectedBg.id !== "none" ? selectedBg.class : null,
+      media: uploadedMedia.map((m, index) => ({
+        file_url: m.file_url,
+        type: m.type,
+        sort_order: index,
+      })),
+    };
 
-      await api.put(`/api/v1/post/${post.id}`, payload);
-      onClose();
-    } catch (err: any) {
-      console.error("Failed to edit post:", err);
-      setError(err.response?.data?.message || "Không thể lưu thay đổi bài viết. Vui lòng thử lại!");
-    } finally {
-      setIsSubmitting(false);
-    }
+    editMutation.mutate(payload);
   };
 
   const getAudienceIcon = (type: string) => {
@@ -328,7 +331,7 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
                         </span>
                       )}
                     </div>
-                    
+
                     {/* Audience dropdown selector */}
                     <div className="relative mt-1" ref={audienceRef}>
                       <button
@@ -419,8 +422,7 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
                 </div>
               )}
 
-              {/* Loader during media upload */}
-              {isUploading && (
+              {uploadMutation.isPending && (
                 <div className="flex items-center justify-center py-3 bg-slate-50 rounded-xl border border-dashed border-slate-200">
                   <Loader2 size={16} className="animate-spin text-blue-500 mr-2" />
                   <span className="text-[11px] font-bold text-slate-500">Đang tải đa phương tiện lên server...</span>
@@ -441,13 +443,13 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
                 <span className="text-[11px] font-bold text-slate-500">
                   Thêm vào bài viết của bạn:
                 </span>
-                
+
                 {/* Icons row */}
                 <div className="flex items-center gap-1">
                   {/* Photo upload button */}
                   <button
                     onClick={triggerFileSelect}
-                    disabled={isUploading}
+                    disabled={uploadMutation.isPending}
                     className="p-2 hover:bg-white hover:shadow-xs text-emerald-500 rounded-full transition-all duration-200"
                     title="Ảnh/Video"
                   >
@@ -458,9 +460,8 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
                   <div className="relative" ref={feelingRef}>
                     <button
                       onClick={() => setIsFeelingOpen(!isFeelingOpen)}
-                      className={`p-2 hover:bg-white hover:shadow-xs text-amber-500 rounded-full transition-all duration-200 ${
-                        selectedFeeling ? "bg-amber-50" : ""
-                      }`}
+                      className={`p-2 hover:bg-white hover:shadow-xs text-amber-500 rounded-full transition-all duration-200 ${selectedFeeling ? "bg-amber-50" : ""
+                        }`}
                       title="Cảm xúc"
                     >
                       <Smile size={18} />
@@ -483,11 +484,10 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
                                 );
                                 setIsFeelingOpen(false);
                               }}
-                              className={`p-1.5 rounded-lg text-lg flex items-center justify-center transition-all ${
-                                selectedFeeling?.value === feel.value
-                                  ? "bg-amber-100 scale-105"
-                                  : "hover:bg-slate-50"
-                              }`}
+                              className={`p-1.5 rounded-lg text-lg flex items-center justify-center transition-all ${selectedFeeling?.value === feel.value
+                                ? "bg-amber-100 scale-105"
+                                : "hover:bg-slate-50"
+                                }`}
                               title={feel.label}
                             >
                               {feel.emoji}
@@ -502,9 +502,8 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
                   <div className="relative" ref={bgPickerRef}>
                     <button
                       onClick={() => setIsBgPickerOpen(!isBgPickerOpen)}
-                      className={`p-2 hover:bg-white hover:shadow-xs text-purple-500 rounded-full transition-all duration-200 ${
-                        selectedBg.id !== "none" ? "bg-purple-50" : ""
-                      }`}
+                      className={`p-2 hover:bg-white hover:shadow-xs text-purple-500 rounded-full transition-all duration-200 ${selectedBg.id !== "none" ? "bg-purple-50" : ""
+                        }`}
                       title="Màu nền"
                     >
                       <Palette size={18} />
@@ -522,13 +521,11 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
                             <button
                               key={bg.id}
                               onClick={() => handleBgSelect(bg)}
-                              className={`w-7 h-7 rounded-full border border-slate-200 transition-transform ${
-                                bg.id === "none" ? "bg-slate-100" : bg.class
-                              } ${
-                                selectedBg.id === bg.id
+                              className={`w-7 h-7 rounded-full border border-slate-200 transition-transform ${bg.id === "none" ? "bg-slate-100" : bg.class
+                                } ${selectedBg.id === bg.id
                                   ? "ring-2 ring-blue-500 scale-110"
                                   : "hover:scale-105"
-                              }`}
+                                }`}
                               title={bg.name}
                             />
                           ))}
@@ -539,13 +536,12 @@ export default function EditPostModal({ isOpen, onClose, post, currentUser }: Ed
                 </div>
               </div>
 
-              {/* Submit Changes Button */}
               <button
                 onClick={handleSaveChanges}
-                disabled={isSubmitting || isUploading || (!text.trim() && uploadedMedia.length === 0)}
+                disabled={editMutation.isPending || uploadMutation.isPending || (!text.trim() && uploadedMedia.length === 0)}
                 className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-200 disabled:to-slate-200 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-xs transition-all duration-200 flex items-center justify-center gap-1.5 hover:shadow-md"
               >
-                {isSubmitting ? (
+                {editMutation.isPending ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
                     <span>Đang lưu...</span>

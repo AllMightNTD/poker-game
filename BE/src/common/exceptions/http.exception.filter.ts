@@ -35,9 +35,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         : (rawResponse as any)?.message || 'Internal server error';
 
     const error =
-      typeof rawResponse === 'object'
-        ? (rawResponse as any)?.error
-        : 'Error';
+      typeof rawResponse === 'object' ? (rawResponse as any)?.error : 'Error';
 
     // ✅ Propagate errorCode if present (used for field-level FE validation)
     const errorCode =
@@ -67,10 +65,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // 🎯 Log theo level
     if (!isFavicon) {
       if (status >= 500) {
-        this.logger.error(
-          JSON.stringify(logPayload),
-          exception.stack,
-        );
+        this.logger.error(JSON.stringify(logPayload), exception.stack);
       } else if (!isNotFound) {
         this.logger.warn(JSON.stringify(logPayload));
       }
@@ -83,10 +78,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       timestamp: logPayload.timestamp,
       path: request.url,
       ...(errorCode ? { errorCode } : {}),
-      message:
-        status >= 500
-          ? 'Internal server error'
-          : message,
+      message: status >= 500 ? 'Internal server error' : message,
     });
   }
 }

@@ -1,4 +1,10 @@
-import { IsDateString, IsEnum, IsOptional, IsString, IsUrl } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUrl,
+} from 'class-validator';
 import { Gender, RelationshipStatus } from 'src/constants/enums';
 
 export class UpdateProfileDto {
@@ -34,6 +40,14 @@ export class UpdateProfileDto {
   @IsOptional()
   location_country?: string;
 
+  @IsString()
+  @IsOptional()
+  address?: string;
+
+  @IsString()
+  @IsOptional()
+  postcode?: string;
+
   @IsUrl()
   @IsOptional()
   website?: string;
@@ -48,6 +62,9 @@ export class UpdateProfileDto {
   @IsOptional()
   education?: Record<string, any>[];
 
+  @IsOptional()
+  hobbies?: string[];
+
   @IsString()
   @IsOptional()
   language?: string;
@@ -55,4 +72,8 @@ export class UpdateProfileDto {
   @IsString()
   @IsOptional()
   timezone?: string;
+
+  @IsString()
+  @IsOptional()
+  profile_music_id?: string;
 }

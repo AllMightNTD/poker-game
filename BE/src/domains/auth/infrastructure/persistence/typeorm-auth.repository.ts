@@ -23,17 +23,8 @@ export class TypeOrmAuthRepository implements IAuthRepository {
 
   async findUserByEmailOrPhone(emailOrPhone: string): Promise<any | null> {
     return this.userRepo.findOne({
-      where: [
-        { email: emailOrPhone },
-        { phone: emailOrPhone },
-      ],
-      select: [
-        'id',
-        'email',
-        'phone',
-        'password',
-        'status',
-      ],
+      where: [{ email: emailOrPhone }, { phone: emailOrPhone }],
+      select: ['id', 'email', 'phone', 'password', 'status'],
     });
   }
 
@@ -65,7 +56,10 @@ export class TypeOrmAuthRepository implements IAuthRepository {
     return this.profileRepo.findOne({ where: { username } });
   }
 
-  async createRegisterTransaction(userData: any, profileData: any): Promise<any> {
+  async createRegisterTransaction(
+    userData: any,
+    profileData: any,
+  ): Promise<any> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();

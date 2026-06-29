@@ -45,7 +45,9 @@ export class Message extends BaseEntity {
 
   // ---- Relations ----
 
-  @ManyToOne(() => Conversation, (conversation) => conversation.messages, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Conversation, (conversation) => conversation.messages, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'conversation_id' })
   conversation: Conversation;
 
@@ -53,7 +55,9 @@ export class Message extends BaseEntity {
   @JoinColumn({ name: 'sender_id' })
   sender: User;
 
-  @ManyToOne(() => Message, (message) => message.replies, { onDelete: 'SET NULL' })
+  @ManyToOne(() => Message, (message) => message.replies, {
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'reply_to_id' })
   reply_to: Message;
 

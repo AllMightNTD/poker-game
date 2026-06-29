@@ -11,8 +11,9 @@ import { GetPendingRequestsUseCase } from 'src/domains/friends/applications/use-
 import { GetSentRequestsUseCase } from 'src/domains/friends/applications/use-cases/get-sent-requests.use-case';
 import { CountPendingRequestsUseCase } from 'src/domains/friends/applications/use-cases/count-pending-requests.use-case';
 import { GetFriendSuggestionsUseCase } from 'src/domains/friends/applications/use-cases/get-friend-suggestions.use-case';
-import { Notification } from '../entities/notification.entity';
-import { ChatGateway } from '../chat/chat.gateway';
+import { SearchFriendsUseCase } from 'src/domains/friends/applications/use-cases/search-friends.use-case';
+import { GetMutualFriendsUseCase } from 'src/domains/friends/applications/use-cases/get-mutual-friends.use-case';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class FriendService {
@@ -27,9 +28,9 @@ export class FriendService {
     private readonly getSentRequestsUseCase: GetSentRequestsUseCase,
     private readonly countPendingRequestsUseCase: CountPendingRequestsUseCase,
     private readonly getFriendSuggestionsUseCase: GetFriendSuggestionsUseCase,
-    @InjectRepository(Notification)
-    private readonly notificationRepo: Repository<Notification>,
-    private readonly chatGateway: ChatGateway,
+    private readonly searchFriendsUseCase: SearchFriendsUseCase,
+    private readonly getMutualFriendsUseCase: GetMutualFriendsUseCase,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async getFriends(userId: string, page = 1, limit = 20) {
@@ -37,29 +38,21 @@ export class FriendService {
   }
 
   async sendFriendRequest(senderId: string, receiverId: string) {
-    const result = await this.sendFriendRequestUseCase.execute(senderId, receiverId);
+    const result = await this.sendFriendRequestUseCase.execute(
+      senderId,
+      receiverId,
+    );
 
     try {
-      const notification = await this.notificationRepo.save({
+      await this.notificationService.createNotification({
         user_id: receiverId,
         actor_id: senderId,
-        type: 'friend_request',
+        type: 'FRIEND_REQUEST',
         payload: {
-          message: 'sent you a friend request',
+          message: 'đã gửi cho bạn lời mời kết bạn.',
           requestId: result.data.id,
         },
       });
-
-      if (this.chatGateway.server) {
-        this.chatGateway.server.to(`user_${receiverId}`).emit('new_notification', {
-          id: notification.id,
-          user_id: receiverId,
-          actor_id: senderId,
-          type: 'friend_request',
-          payload: notification.payload,
-          created_at: notification.created_at,
-        });
-      }
     } catch (err) {
       console.error('Failed to create send friend request notification:', err);
     }
@@ -68,33 +61,28 @@ export class FriendService {
   }
 
   async acceptFriendRequest(userId: string, requestId: string) {
-    const result = await this.acceptFriendRequestUseCase.execute(userId, requestId);
+    const result = await this.acceptFriendRequestUseCase.execute(
+      userId,
+      requestId,
+    );
 
     try {
       const senderId = result.senderId;
       if (senderId) {
-        const notification = await this.notificationRepo.save({
+        await this.notificationService.createNotification({
           user_id: senderId,
           actor_id: userId,
-          type: 'friend_accept',
+          type: 'FRIEND_ACCEPTED',
           payload: {
-            message: 'accepted your friend request',
+            message: 'đã chấp nhận lời mời kết bạn của bạn.',
           },
         });
-
-        if (this.chatGateway.server) {
-          this.chatGateway.server.to(`user_${senderId}`).emit('new_notification', {
-            id: notification.id,
-            user_id: senderId,
-            actor_id: userId,
-            type: 'friend_accept',
-            payload: notification.payload,
-            created_at: notification.created_at,
-          });
-        }
       }
     } catch (err) {
-      console.error('Failed to create accept friend request notification:', err);
+      console.error(
+        'Failed to create accept friend request notification:',
+        err,
+      );
     }
 
     return result;
@@ -126,5 +114,23 @@ export class FriendService {
 
   async getFriendSuggestions(userId: string, page = 1, limit = 10) {
     return this.getFriendSuggestionsUseCase.execute(userId, page, limit);
+  }
+
+  async searchFriends(userId: string, keyword: string, page = 1, limit = 20) {
+    return this.searchFriendsUseCase.execute(userId, keyword, page, limit);
+  }
+
+  async getMutualFriends(
+    currentUserId: string,
+    targetUserId: string,
+    page = 1,
+    limit = 20,
+  ) {
+    return this.getMutualFriendsUseCase.execute(
+      currentUserId,
+      targetUserId,
+      page,
+      limit,
+    );
   }
 }

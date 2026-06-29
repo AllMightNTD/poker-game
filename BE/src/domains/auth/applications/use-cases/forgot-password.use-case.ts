@@ -17,7 +17,8 @@ export class ForgotPasswordUseCase {
     const user = await this.authRepository.findUserByEmail(email);
 
     const successMessage = {
-      message: 'Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi đến hòm thư của bạn',
+      message:
+        'Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi đến hòm thư của bạn',
     };
 
     if (!user) {
@@ -25,7 +26,10 @@ export class ForgotPasswordUseCase {
     }
 
     const rawToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(rawToken)
+      .digest('hex');
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
     user.reset_password_token = hashedToken;

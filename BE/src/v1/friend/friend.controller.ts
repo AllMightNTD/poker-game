@@ -16,7 +16,7 @@ import { FriendService } from './friend.service';
 @Controller('')
 @UseGuards(AuthGuard)
 export class FriendController {
-  constructor(private readonly friendService: FriendService) { }
+  constructor(private readonly friendService: FriendService) {}
 
   /**
    * GET /api/v1/friend/list

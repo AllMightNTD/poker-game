@@ -14,31 +14,34 @@ import {
   Palette 
 } from "lucide-react";
 import api from "@/lib/axios";
+import { useTranslations } from "next-intl";
+import { useMutation } from "@tanstack/react-query";
 
 interface CreatePostProps {
   currentUser?: any;
   onPostCreated?: () => void;
+  groupId?: string;
 }
 
 const FEELINGS = [
-  { label: "Hào hứng", emoji: "🤩", value: "excited" },
-  { label: "Vui vẻ", emoji: "😊", value: "happy" },
-  { label: "Yêu thương", emoji: "🥰", value: "loved" },
-  { label: "Buồn bã", emoji: "😢", value: "sad" },
-  { label: "Biết ơn", emoji: "🙏", value: "thankful" },
-  { label: "Thư giãn", emoji: "😌", value: "relaxed" },
-  { label: "Tập trung", emoji: "💻", value: "focused" },
-  { label: "Tò mò", emoji: "🧐", value: "curious" },
+  { emoji: "🤩", value: "excited" },
+  { emoji: "😊", value: "happy" },
+  { emoji: "🥰", value: "loved" },
+  { emoji: "😢", value: "sad" },
+  { emoji: "🙏", value: "thankful" },
+  { emoji: "😌", value: "relaxed" },
+  { emoji: "💻", value: "focused" },
+  { emoji: "🧐", value: "curious" },
 ];
 
 const GRADIENTS = [
-  { id: "none", name: "Mặc định", class: "bg-transparent text-slate-700" },
-  { id: "sunset", name: "Hoàng hôn", class: "bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 text-white font-bold" },
-  { id: "ocean", name: "Đại dương", class: "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-bold" },
-  { id: "forest", name: "Rừng xanh", class: "bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 text-white font-bold" },
-  { id: "cosmic", name: "Vũ trụ", class: "bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 text-white font-bold" },
-  { id: "neon", name: "Đêm Neon", class: "bg-gradient-to-r from-fuchsia-600 via-purple-600 to-violet-700 text-white font-bold" },
-  { id: "fire", name: "Ngọn lửa", class: "bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 text-white font-bold" },
+  { id: "none", class: "bg-transparent text-slate-700" },
+  { id: "sunset", class: "bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 text-white font-bold" },
+  { id: "ocean", class: "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-bold" },
+  { id: "forest", class: "bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500 text-white font-bold" },
+  { id: "cosmic", class: "bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 text-white font-bold" },
+  { id: "neon", class: "bg-gradient-to-r from-fuchsia-600 via-purple-600 to-violet-700 text-white font-bold" },
+  { id: "fire", class: "bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 text-white font-bold" },
 ];
 
 const getMediaUrl = (url: string) => {
@@ -50,11 +53,11 @@ const getMediaUrl = (url: string) => {
   return `${apiBase}${url.startsWith("/") ? "" : "/"}${url}`;
 };
 
-export default function CreatePost({ currentUser, onPostCreated }: CreatePostProps) {
+export default function CreatePost({ currentUser, onPostCreated, groupId }: CreatePostProps) {
+  const t = useTranslations("createPost");
   const [text, setText] = useState("");
   const [audience, setAudience] = useState<"public" | "friends" | "only_me">("public");
   const [isAudienceOpen, setIsAudienceOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // States nâng cao
@@ -65,7 +68,6 @@ export default function CreatePost({ currentUser, onPostCreated }: CreatePostPro
   
   // Media States
   const [uploadedMedia, setUploadedMedia] = useState<{ file_url: string; type: "image" | "video" }[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
 
   const audienceRef = useRef<HTMLDivElement>(null);
   const feelingRef = useRef<HTMLDivElement>(null);
@@ -90,48 +92,67 @@ export default function CreatePost({ currentUser, onPostCreated }: CreatePostPro
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // File Upload Mutation
+  const uploadMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const res = await api.post("/api/v1/post/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data.metadata.map((item: any) => ({
+        file_url: item.file_url,
+        type: item.type === "video" ? "video" : "image",
+      }));
+    },
+    onSuccess: (newMedia) => {
+      setUploadedMedia((prev) => [...prev, ...newMedia]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+    onError: (err) => {
+      console.error("Upload failed:", err);
+      setError(t("uploadError"));
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  });
+
+  // Create Post Mutation
+  const createPostMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      await api.post("/api/v1/post", payload);
+    },
+    onSuccess: () => {
+      setText("");
+      setSelectedFeeling(null);
+      setSelectedBg(GRADIENTS[0]);
+      setUploadedMedia([]);
+      if (onPostCreated) {
+        onPostCreated();
+      }
+    },
+    onError: (err: any) => {
+      console.error("Failed to create post:", err);
+      setError(err.response?.data?.message || t("postError"));
+    }
+  });
+
   // Handle Photo/Video button click
   const triggerFileSelect = () => {
     if (selectedBg.id !== "none") {
-      // Nếu đang chọn gradient, chuyển về mặc định trước khi upload ảnh
       setSelectedBg(GRADIENTS[0]);
     }
     fileInputRef.current?.click();
   };
 
-  // Handle File Upload to backend
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    setIsUploading(true);
     setError(null);
-
     const formData = new FormData();
     for (let i = 0; i < files.length; i++) {
       formData.append("files", files[i]);
     }
 
-    try {
-      const res = await api.post("/api/v1/post/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      const newMedia = res.data.metadata.map((item: any) => ({
-        file_url: item.file_url,
-        type: item.type === "video" ? "video" : "image",
-      }));
-
-      setUploadedMedia((prev) => [...prev, ...newMedia]);
-    } catch (err: any) {
-      console.error("Upload failed:", err);
-      setError("Không thể tải ảnh/video lên server. Vui lòng thử lại!");
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
+    uploadMutation.mutate(formData);
   };
 
   // Remove media preview
@@ -149,45 +170,31 @@ export default function CreatePost({ currentUser, onPostCreated }: CreatePostPro
     setIsBgPickerOpen(false);
   };
 
-  const handlePost = async () => {
+  const handlePost = () => {
     if (!text.trim() && uploadedMedia.length === 0) return;
 
-    setIsSubmitting(true);
     setError(null);
 
-    try {
-      const payload: any = {
-        content: text,
-        audience: audience,
-        feeling: selectedFeeling ? `${selectedFeeling.emoji} ${selectedFeeling.label}` : undefined,
-        post_background: selectedBg.id !== "none" ? selectedBg.class : undefined,
-      };
+    const payload: any = {
+      content: text,
+      audience: audience,
+      feeling: selectedFeeling ? `${selectedFeeling.emoji} ${t(`feelings.${selectedFeeling.value}`)}` : undefined,
+      post_background: selectedBg.id !== "none" ? selectedBg.class : undefined,
+    };
 
-      if (uploadedMedia.length > 0) {
-        payload.media = uploadedMedia.map((m, index) => ({
-          file_url: m.file_url,
-          type: m.type,
-          sort_order: index,
-        }));
-      }
-
-      await api.post("/api/v1/post", payload);
-      
-      // Reset form
-      setText("");
-      setSelectedFeeling(null);
-      setSelectedBg(GRADIENTS[0]);
-      setUploadedMedia([]);
-      
-      if (onPostCreated) {
-        onPostCreated();
-      }
-    } catch (err: any) {
-      console.error("Failed to create post:", err);
-      setError(err.response?.data?.message || "Không thể đăng bài viết. Vui lòng thử lại!");
-    } finally {
-      setIsSubmitting(false);
+    if (groupId) {
+      payload.group_id = groupId;
     }
+
+    if (uploadedMedia.length > 0) {
+      payload.media = uploadedMedia.map((m, index) => ({
+        file_url: m.file_url,
+        type: m.type,
+        sort_order: index,
+      }));
+    }
+
+    createPostMutation.mutate(payload);
   };
 
   const getAudienceIcon = (type: string) => {
@@ -206,18 +213,18 @@ export default function CreatePost({ currentUser, onPostCreated }: CreatePostPro
   const getAudienceLabel = (type: string) => {
     switch (type) {
       case "public":
-        return "Công khai";
+        return t("public");
       case "friends":
-        return "Bạn bè";
+        return t("friends");
       case "only_me":
-        return "Chỉ mình tôi";
+        return t("onlyMe");
       default:
-        return "Công khai";
+        return t("public");
     }
   };
 
   const avatarUrl = currentUser?.profile?.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=default";
-  const displayName = currentUser?.profile?.full_name || currentUser?.email || "Người dùng";
+  const displayName = currentUser?.profile?.full_name || currentUser?.email || t("user");
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 transition-all duration-300 hover:shadow-md">
@@ -249,7 +256,7 @@ export default function CreatePost({ currentUser, onPostCreated }: CreatePostPro
               </span>
               {selectedFeeling && (
                 <span className="text-xs text-slate-500 flex items-center gap-0.5 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100 animate-in fade-in zoom-in duration-200">
-                  đang cảm thấy {selectedFeeling.emoji} <strong className="text-slate-700">{selectedFeeling.label}</strong>
+                  {t("feelingAction", { feeling: `${selectedFeeling.emoji} ${t(`feelings.${selectedFeeling.value}`)}` })}
                   <button 
                     type="button" 
                     onClick={() => setSelectedFeeling(null)}
@@ -319,12 +326,12 @@ export default function CreatePost({ currentUser, onPostCreated }: CreatePostPro
           }}
           placeholder={
             selectedBg.id !== "none" 
-              ? "Hãy viết gì đó thật ấn tượng..." 
-              : "Chia sẻ kiến thức hôm nay nào..."
+              ? t("writeImpressive")
+              : t("shareKnowledge")
           }
-          disabled={isSubmitting}
+          disabled={createPostMutation.isPending}
           className={`w-full resize-none text-sm outline-none bg-transparent leading-relaxed transition-all duration-300 ${
-            isSubmitting ? "opacity-50" : ""
+            createPostMutation.isPending ? "opacity-50" : ""
           } ${
             selectedBg.id !== "none" 
               ? "text-center font-bold text-lg text-white placeholder:text-white/70 overflow-hidden" 
@@ -370,11 +377,10 @@ export default function CreatePost({ currentUser, onPostCreated }: CreatePostPro
         </div>
       )}
 
-      {/* Uploading indicator */}
-      {isUploading && (
+      {uploadMutation.isPending && (
         <div className="mt-3 flex items-center justify-center gap-2 p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-slate-500 text-xs font-semibold">
           <Loader2 size={16} className="animate-spin text-blue-500" />
-          <span>Đang tải tệp lên server cục bộ...</span>
+          <span>{t("uploadingLocal")}</span>
         </div>
       )}
 
@@ -390,33 +396,33 @@ export default function CreatePost({ currentUser, onPostCreated }: CreatePostPro
           {/* Photos Upload Trigger */}
           <button 
             type="button"
-            disabled={isSubmitting || isUploading} 
+            disabled={createPostMutation.isPending || uploadMutation.isPending} 
             onClick={triggerFileSelect}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 text-slate-500 text-sm font-medium transition-colors disabled:opacity-50"
           >
             <span className="w-5 h-5 rounded-md bg-green-50 flex items-center justify-center">
               <Image size={11} className="text-green-500" />
             </span>
-            <span className="text-xs">Ảnh/Video</span>
+            <span className="text-xs">{t("photoVideo")}</span>
           </button>
 
           {/* Feeling Trigger */}
           <div className="relative" ref={feelingRef}>
             <button 
               type="button"
-              disabled={isSubmitting}
+              disabled={createPostMutation.isPending}
               onClick={() => setIsFeelingOpen(!isFeelingOpen)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 text-slate-500 text-sm font-medium transition-colors disabled:opacity-50"
             >
               <span className="w-5 h-5 rounded-md bg-yellow-50 flex items-center justify-center">
                 <Smile size={11} className="text-yellow-500" />
               </span>
-              <span className="text-xs">Cảm xúc</span>
+              <span className="text-xs">{t("feeling")}</span>
             </button>
 
             {isFeelingOpen && (
               <div className="absolute left-0 mt-2 w-60 bg-white border border-slate-100 rounded-xl shadow-xl p-3 z-30 animate-in fade-in slide-in-from-top-2 duration-200">
-                <h4 className="text-xs font-bold text-slate-400 mb-2 px-1">Bạn đang cảm thấy thế nào?</h4>
+                <h4 className="text-xs font-bold text-slate-400 mb-2 px-1">{t("howAreYouFeeling")}</h4>
                 <div className="grid grid-cols-2 gap-1 max-h-48 overflow-y-auto">
                   {FEELINGS.map((feel) => (
                     <button
@@ -429,7 +435,7 @@ export default function CreatePost({ currentUser, onPostCreated }: CreatePostPro
                       className="flex items-center gap-1.5 p-1.5 hover:bg-slate-50 rounded-lg text-left text-xs font-medium text-slate-600 transition-colors"
                     >
                       <span className="text-base">{feel.emoji}</span>
-                      <span className="truncate">{feel.label}</span>
+                      <span className="truncate">{t(`feelings.${feel.value}`)}</span>
                     </button>
                   ))}
                 </div>
@@ -441,19 +447,19 @@ export default function CreatePost({ currentUser, onPostCreated }: CreatePostPro
           <div className="relative" ref={bgPickerRef}>
             <button 
               type="button"
-              disabled={isSubmitting}
+              disabled={createPostMutation.isPending}
               onClick={() => setIsBgPickerOpen(!isBgPickerOpen)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-slate-50 text-slate-500 text-sm font-medium transition-colors disabled:opacity-50"
             >
               <span className="w-5 h-5 rounded-md bg-blue-50 flex items-center justify-center">
                 <Palette size={11} className="text-blue-500" />
               </span>
-              <span className="text-xs">Màu nền</span>
+              <span className="text-xs">{t("background")}</span>
             </button>
 
             {isBgPickerOpen && (
               <div className="absolute left-0 mt-2 w-64 bg-white border border-slate-100 rounded-xl shadow-xl p-3 z-30 animate-in fade-in slide-in-from-top-2 duration-200">
-                <h4 className="text-xs font-bold text-slate-400 mb-2 px-1">Chọn hình nền bài viết</h4>
+                <h4 className="text-xs font-bold text-slate-400 mb-2 px-1">{t("chooseBackground")}</h4>
                 <div className="grid grid-cols-4 gap-1.5">
                   {GRADIENTS.map((bg) => (
                     <button
@@ -465,7 +471,7 @@ export default function CreatePost({ currentUser, onPostCreated }: CreatePostPro
                           ? "bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100" 
                           : `${bg.class} border-white shadow-sm hover:scale-105`
                       } ${selectedBg.id === bg.id ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
-                      title={bg.name}
+                      title={t(`gradients.${bg.id}`)}
                     >
                       {bg.id === "none" ? "None" : "Aa"}
                     </button>
@@ -481,16 +487,16 @@ export default function CreatePost({ currentUser, onPostCreated }: CreatePostPro
             <button
               type="button"
               onClick={handlePost}
-              disabled={isSubmitting || isUploading}
+              disabled={createPostMutation.isPending || uploadMutation.isPending}
               className="bg-blue-500 text-white text-xs font-semibold px-4 h-8 rounded-xl hover:bg-blue-600 transition-all active:scale-95 flex items-center gap-1.5 shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 disabled:opacity-50"
             >
-              {isSubmitting ? (
+              {createPostMutation.isPending ? (
                 <>
                   <Loader2 size={12} className="animate-spin" />
-                  <span>Đang đăng...</span>
+                  <span>{t("posting")}</span>
                 </>
               ) : (
-                <span>Đăng tin</span>
+                <span>{t("postBtn")}</span>
               )}
             </button>
           )}

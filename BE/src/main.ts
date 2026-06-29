@@ -26,7 +26,10 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.use('/uploads', express.static(path.join(__dirname, '..', 'public/uploads')));
+  app.use(
+    '/uploads',
+    express.static(path.join(__dirname, '..', 'public/uploads')),
+  );
 
   app.setGlobalPrefix(prefix);
   app.useGlobalFilters(new GlobalExceptionFilter());

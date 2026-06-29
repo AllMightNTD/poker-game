@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { IStoryRepository } from '../../domain/repositories/story.repository.interface';
@@ -31,7 +35,7 @@ export class TypeOrmStoryRepository implements IStoryRepository {
       expires_at: expiresAt,
     });
 
-    return await this.storyRepository.save(story) as any;
+    return (await this.storyRepository.save(story)) as any;
   }
 
   async getStoryFeed(userId: string) {
@@ -149,8 +153,13 @@ export class TypeOrmStoryRepository implements IStoryRepository {
     });
   }
 
-  async viewStory(userId: string, storyId: string): Promise<{ success: boolean }> {
-    const story = await this.storyRepository.findOne({ where: { id: storyId } });
+  async viewStory(
+    userId: string,
+    storyId: string,
+  ): Promise<{ success: boolean }> {
+    const story = await this.storyRepository.findOne({
+      where: { id: storyId },
+    });
     if (!story) {
       throw new NotFoundException('Story không tồn tại');
     }
@@ -174,13 +183,17 @@ export class TypeOrmStoryRepository implements IStoryRepository {
   }
 
   async getStoryViewers(userId: string, storyId: string) {
-    const story = await this.storyRepository.findOne({ where: { id: storyId } });
+    const story = await this.storyRepository.findOne({
+      where: { id: storyId },
+    });
     if (!story) {
       throw new NotFoundException('Story không tồn tại');
     }
 
     if (story.user_id !== userId) {
-      throw new ForbiddenException('Bạn không có quyền xem danh sách người xem của story này');
+      throw new ForbiddenException(
+        'Bạn không có quyền xem danh sách người xem của story này',
+      );
     }
 
     const views = await this.storyViewRepository.find({
@@ -206,8 +219,13 @@ export class TypeOrmStoryRepository implements IStoryRepository {
     });
   }
 
-  async deleteStory(userId: string, storyId: string): Promise<{ success: boolean }> {
-    const story = await this.storyRepository.findOne({ where: { id: storyId } });
+  async deleteStory(
+    userId: string,
+    storyId: string,
+  ): Promise<{ success: boolean }> {
+    const story = await this.storyRepository.findOne({
+      where: { id: storyId },
+    });
     if (!story) {
       throw new NotFoundException('Story không tồn tại');
     }
@@ -222,32 +240,52 @@ export class TypeOrmStoryRepository implements IStoryRepository {
 
   private getEmojiForReactionType(type: string): string {
     switch (type) {
-      case 'love': return '❤️';
-      case 'like': return '👍';
-      case 'haha': return '😂';
-      case 'sad': return '😢';
-      case 'wow': return '😮';
-      case 'care': return '🥰';
-      case 'angry': return '😡';
-      default: return '❤️';
+      case 'love':
+        return '❤️';
+      case 'like':
+        return '👍';
+      case 'haha':
+        return '😂';
+      case 'sad':
+        return '😢';
+      case 'wow':
+        return '😮';
+      case 'care':
+        return '🥰';
+      case 'angry':
+        return '😡';
+      default:
+        return '❤️';
     }
   }
 
   private getReactionTypeForEmoji(emoji: string): any {
     switch (emoji) {
-      case '❤️': return 'love';
-      case '👍': return 'like';
-      case '😂': case '👏': return 'haha';
-      case '😢': return 'sad';
-      case '😮': case '🔥': return 'wow';
-      case '🥰': return 'care';
-      case '😡': return 'angry';
-      default: return 'love';
+      case '❤️':
+        return 'love';
+      case '👍':
+        return 'like';
+      case '😂':
+      case '👏':
+        return 'haha';
+      case '😢':
+        return 'sad';
+      case '😮':
+      case '🔥':
+        return 'wow';
+      case '🥰':
+        return 'care';
+      case '😡':
+        return 'angry';
+      default:
+        return 'love';
     }
   }
 
   async reactStory(userId: string, storyId: string, emoji: string) {
-    const story = await this.storyRepository.findOne({ where: { id: storyId } });
+    const story = await this.storyRepository.findOne({
+      where: { id: storyId },
+    });
     if (!story) {
       throw new NotFoundException('Story không tồn tại');
     }

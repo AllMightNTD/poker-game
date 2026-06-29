@@ -1,20 +1,24 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { IChatRepository } from '../../domain/repositories/chat.repository.interface';
-import { Conversation } from 'src/v1/entities/conversation.entity';
-import { ConversationParticipant } from 'src/v1/entities/conversation_participant.entity';
-import { Message } from 'src/v1/entities/message.entity';
-import { WsConnection } from 'src/v1/entities/ws_connection.entity';
-import { UserPresence } from 'src/v1/entities/user_presence.entity';
-import { Post } from 'src/v1/entities/post.entity';
-import { MessageReaction } from 'src/v1/entities/message_reaction.entity';
-import { Friend } from 'src/v1/entities/friend.entity';
-import { Profile } from 'src/v1/entities/profile.entity';
-import { UserBlock } from 'src/v1/entities/user_block.entity';
-import { Block } from 'src/v1/entities/block.entity';
 import { ConversationType, MessageType } from 'src/constants/enums';
 import { User } from 'src/domains/users/infrastructure/persistence/typeorm-user.entity';
+import { Block } from 'src/v1/entities/block.entity';
+import { Conversation } from 'src/v1/entities/conversation.entity';
+import { ConversationParticipant } from 'src/v1/entities/conversation_participant.entity';
+import { Friend } from 'src/v1/entities/friend.entity';
+import { Message } from 'src/v1/entities/message.entity';
+import { MessageReaction } from 'src/v1/entities/message_reaction.entity';
+import { Post } from 'src/v1/entities/post.entity';
+import { Profile } from 'src/v1/entities/profile.entity';
+import { UserBlock } from 'src/v1/entities/user_block.entity';
+import { UserPresence } from 'src/v1/entities/user_presence.entity';
+import { WsConnection } from 'src/v1/entities/ws_connection.entity';
+import { In, Repository } from 'typeorm';
+import { IChatRepository } from '../../domain/repositories/chat.repository.interface';
 
 @Injectable()
 export class TypeOrmChatRepository implements IChatRepository {
@@ -41,7 +45,10 @@ export class TypeOrmChatRepository implements IChatRepository {
     private readonly userBlockRepo: Repository<UserBlock>,
   ) {}
 
-  async checkParticipant(userId: string, conversationId: string): Promise<boolean> {
+  async checkParticipant(
+    userId: string,
+    conversationId: string,
+  ): Promise<boolean> {
     const participant = await this.participantRepo.findOne({
       where: { user_id: userId, conversation_id: conversationId },
     });
@@ -51,7 +58,7 @@ export class TypeOrmChatRepository implements IChatRepository {
   async getMessages(conversationId: string, page: number, limit: number) {
     const [data, total] = await this.messageRepo.findAndCount({
       where: { conversation_id: conversationId },
-      order: { created_at: 'ASC' },
+      order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
       relations: [
@@ -64,7 +71,7 @@ export class TypeOrmChatRepository implements IChatRepository {
     });
 
     return {
-      data,
+      data: data.reverse(),
       total,
       page,
       limit,
@@ -76,15 +83,25 @@ export class TypeOrmChatRepository implements IChatRepository {
     page: number,
     limit: number,
     search?: string,
-    tab?: 'all' | 'unread' | 'group' | 'request' | 'archived' | 'hidden' | 'spam',
+    tab?:
+      | 'all'
+      | 'unread'
+      | 'group'
+      | 'request'
+      | 'archived'
+      | 'hidden'
+      | 'spam',
   ) {
-    const blockedUsers = await this.conversationRepo.manager.getRepository(Block).find({
-      where: [
-        { blocker_id: userId },
-        { blocked_id: userId }
-      ]
-    });
-    const blockedUserIds = new Set(blockedUsers.map(b => b.blocker_id === userId ? b.blocked_id : b.blocker_id));
+    const blockedUsers = await this.conversationRepo.manager
+      .getRepository(Block)
+      .find({
+        where: [{ blocker_id: userId }, { blocked_id: userId }],
+      });
+    const blockedUserIds = new Set(
+      blockedUsers.map((b) =>
+        b.blocker_id === userId ? b.blocked_id : b.blocker_id,
+      ),
+    );
 
     const query = this.conversationRepo
       .createQueryBuilder('c')
@@ -105,8 +122,8 @@ export class TypeOrmChatRepository implements IChatRepository {
           'WHERE cp.conversation_id = c.id ' +
           'AND cp.user_id != :userId ' +
           'AND (prof.full_name LIKE :searchPattern OR prof.username LIKE :searchPattern)' +
-        ')',
-        { userId, searchPattern: `%${search}%` }
+          ')',
+        { userId, searchPattern: `%${search}%` },
       );
     }
 
@@ -119,7 +136,8 @@ export class TypeOrmChatRepository implements IChatRepository {
     } else if (tab === 'request') {
       query.andWhere('p.is_request = :isRequest', { isRequest: true });
     } else {
-      query.andWhere('p.is_archived = :isArchived', { isArchived: false })
+      query
+        .andWhere('p.is_archived = :isArchived', { isArchived: false })
         .andWhere('p.is_hidden = :isHidden', { isHidden: false })
         .andWhere('p.is_spam = :isSpam', { isSpam: false })
         .andWhere('p.is_request = :isRequest', { isRequest: false });
@@ -127,9 +145,12 @@ export class TypeOrmChatRepository implements IChatRepository {
       if (tab === 'group') {
         query.andWhere('c.type = :groupType', { groupType: 'group' });
       } else if (tab === 'unread') {
-        query.andWhere('c.last_message_id IS NOT NULL')
+        query
+          .andWhere('c.last_message_id IS NOT NULL')
           .andWhere('lm.sender_id != :userId', { userId })
-          .andWhere('(p.last_read_message_id IS NULL OR p.last_read_message_id != c.last_message_id)');
+          .andWhere(
+            '(p.last_read_message_id IS NULL OR p.last_read_message_id != c.last_message_id)',
+          );
       }
     }
 
@@ -142,27 +163,35 @@ export class TypeOrmChatRepository implements IChatRepository {
 
     let data = await Promise.all(
       conversations.map(async (conv) => {
-        const currentUserParticipant = conv.participants.find((p) => p.user_id === userId);
-        
+        const currentUserParticipant = conv.participants.find(
+          (p) => p.user_id === userId,
+        );
+
         let unreadCount = 0;
         if (currentUserParticipant) {
           const lastReadId = currentUserParticipant.last_read_message_id;
-          
+
           const unreadQuery = this.messageRepo
             .createQueryBuilder('m')
             .where('m.conversation_id = :convId', { convId: conv.id })
             .andWhere('m.sender_id != :userId', { userId });
 
           if (lastReadId) {
-            const lastReadMessage = await this.messageRepo.findOne({ where: { id: lastReadId } });
+            const lastReadMessage = await this.messageRepo.findOne({
+              where: { id: lastReadId },
+            });
             if (lastReadMessage) {
-              unreadQuery.andWhere('m.created_at > :lastReadTime', { lastReadTime: lastReadMessage.created_at });
+              unreadQuery.andWhere('m.created_at > :lastReadTime', {
+                lastReadTime: lastReadMessage.created_at,
+              });
             }
           }
           unreadCount = await unreadQuery.getCount();
         }
 
-        const otherParticipants = conv.participants.filter((p) => p.user_id !== userId);
+        const otherParticipants = conv.participants.filter(
+          (p) => p.user_id !== userId,
+        );
 
         return {
           ...conv,
@@ -184,11 +213,11 @@ export class TypeOrmChatRepository implements IChatRepository {
             },
           })),
         };
-      })
+      }),
     );
 
-    data = data.filter(conv => {
-      if (conv.type === 'direct') {
+    data = data.filter((conv) => {
+      if (conv.type === 'direct' || conv.type === 'private') {
         const otherUser = conv.otherParticipants[0]?.user_id;
         if (otherUser && blockedUserIds.has(otherUser)) {
           return false;
@@ -197,22 +226,95 @@ export class TypeOrmChatRepository implements IChatRepository {
       return true;
     });
 
+    let virtualCount = 0;
+    if (!tab || tab === 'all') {
+      const friendships = await this.friendRepo.find({
+        where: [{ user_id: userId }, { friend_id: userId }],
+        relations: [
+          'user',
+          'user.profile',
+          'friend_user',
+          'friend_user.profile',
+        ],
+      });
+
+      const existingConvUserIds = new Set(
+        data
+          .filter((c) => c.type === 'direct' || c.type === 'private')
+          .map((c) => c.otherParticipants[0]?.user_id),
+      );
+
+      for (const f of friendships) {
+        const isUser1 = f.user_id === userId;
+        const friendId = isUser1 ? f.friend_id : f.user_id;
+        const friendUser = isUser1 ? f.friend_user : f.user;
+
+        if (
+          !existingConvUserIds.has(friendId) &&
+          friendUser &&
+          !blockedUserIds.has(friendId)
+        ) {
+          let matchesSearch = true;
+          if (search) {
+            const queryStr = search.toLowerCase();
+            const fullName = friendUser.profile?.full_name?.toLowerCase() || '';
+            const username = friendUser.profile?.username?.toLowerCase() || '';
+            matchesSearch =
+              fullName.includes(queryStr) || username.includes(queryStr);
+          }
+
+          if (matchesSearch) {
+            virtualCount++;
+            existingConvUserIds.add(friendId);
+            data.push({
+              id: `virtual_${friendId}`,
+              type: 'direct',
+              created_at: f.created_at,
+              last_message: null,
+              unreadCount: 0,
+              is_pinned: false,
+              is_archived: false,
+              is_hidden: false,
+              is_spam: false,
+              is_request: false,
+              participants: [],
+              otherParticipants: [
+                {
+                  user_id: friendId,
+                  user: {
+                    id: friendUser.id,
+                    email: friendUser.email,
+                    profile: friendUser.profile,
+                    is_active_status: friendUser.is_active_status !== false,
+                  },
+                },
+              ],
+            } as any);
+          }
+        }
+      }
+    }
+
     data.sort((a, b) => {
       const isPinnedA = a.is_pinned ? 1 : 0;
       const isPinnedB = b.is_pinned ? 1 : 0;
-      
+
       if (isPinnedA !== isPinnedB) {
         return isPinnedB - isPinnedA;
       }
 
-      const timeA = a.last_message ? new Date(a.last_message.created_at).getTime() : new Date(a.created_at).getTime();
-      const timeB = b.last_message ? new Date(b.last_message.created_at).getTime() : new Date(b.created_at).getTime();
+      const timeA = a.last_message
+        ? new Date(a.last_message.created_at).getTime()
+        : new Date(a.created_at).getTime();
+      const timeB = b.last_message
+        ? new Date(b.last_message.created_at).getTime()
+        : new Date(b.created_at).getTime();
       return timeB - timeA;
     });
 
     return {
       data,
-      total: data.length,
+      total: total + virtualCount,
       page,
       limit,
     };
@@ -221,25 +323,33 @@ export class TypeOrmChatRepository implements IChatRepository {
   async markAsRead(userId: string, conversationId: string, messageId: string) {
     await this.participantRepo.update(
       { user_id: userId, conversation_id: conversationId },
-      { last_read_message_id: messageId }
+      { last_read_message_id: messageId },
     );
   }
 
   async markAllAsRead(userId: string) {
     const participants = await this.participantRepo.find({
       where: { user_id: userId },
-      relations: ['conversation']
+      relations: ['conversation'],
     });
 
     for (const participant of participants) {
-      if (participant.conversation && participant.conversation.last_message_id) {
-        participant.last_read_message_id = participant.conversation.last_message_id;
+      if (
+        participant.conversation &&
+        participant.conversation.last_message_id
+      ) {
+        participant.last_read_message_id =
+          participant.conversation.last_message_id;
         await this.participantRepo.save(participant);
       }
     }
   }
 
-  async togglePinConversation(userId: string, conversationId: string, isPinned: boolean): Promise<boolean> {
+  async togglePinConversation(
+    userId: string,
+    conversationId: string,
+    isPinned: boolean,
+  ): Promise<boolean> {
     const participant = await this.participantRepo.findOne({
       where: { user_id: userId, conversation_id: conversationId },
     });
@@ -251,7 +361,12 @@ export class TypeOrmChatRepository implements IChatRepository {
     return true;
   }
 
-  async getMedia(conversationId: string, page: number, limit: number, type?: 'image' | 'video' | 'file') {
+  async getMedia(
+    conversationId: string,
+    page: number,
+    limit: number,
+    type?: 'image' | 'video' | 'file',
+  ) {
     const types: MessageType[] = [];
     if (type) {
       if (type === 'image') types.push(MessageType.IMAGE);
@@ -279,7 +394,10 @@ export class TypeOrmChatRepository implements IChatRepository {
     };
   }
 
-  async leaveConversation(userId: string, conversationId: string): Promise<boolean> {
+  async leaveConversation(
+    userId: string,
+    conversationId: string,
+  ): Promise<boolean> {
     const isParticipant = await this.checkParticipant(userId, conversationId);
     if (!isParticipant) return false;
 
@@ -299,51 +417,76 @@ export class TypeOrmChatRepository implements IChatRepository {
     return true;
   }
 
-  async toggleMuteConversation(userId: string, conversationId: string, isMuted: boolean): Promise<boolean> {
+  async toggleMuteConversation(
+    userId: string,
+    conversationId: string,
+    isMuted: boolean,
+  ): Promise<boolean> {
     const participant = await this.participantRepo.findOne({
       where: { user_id: userId, conversation_id: conversationId },
     });
-    if (!participant) throw new BadRequestException('Conversation participant not found');
+    if (!participant)
+      throw new BadRequestException('Conversation participant not found');
     participant.is_muted = isMuted;
     await this.participantRepo.save(participant);
     return true;
   }
 
-  async toggleArchiveConversation(userId: string, conversationId: string, isArchived: boolean): Promise<boolean> {
+  async toggleArchiveConversation(
+    userId: string,
+    conversationId: string,
+    isArchived: boolean,
+  ): Promise<boolean> {
     const participant = await this.participantRepo.findOne({
       where: { user_id: userId, conversation_id: conversationId },
     });
-    if (!participant) throw new BadRequestException('Conversation participant not found');
+    if (!participant)
+      throw new BadRequestException('Conversation participant not found');
     participant.is_archived = isArchived;
     await this.participantRepo.save(participant);
     return true;
   }
 
-  async toggleHideConversation(userId: string, conversationId: string, isHidden: boolean): Promise<boolean> {
+  async toggleHideConversation(
+    userId: string,
+    conversationId: string,
+    isHidden: boolean,
+  ): Promise<boolean> {
     const participant = await this.participantRepo.findOne({
       where: { user_id: userId, conversation_id: conversationId },
     });
-    if (!participant) throw new BadRequestException('Conversation participant not found');
+    if (!participant)
+      throw new BadRequestException('Conversation participant not found');
     participant.is_hidden = isHidden;
     await this.participantRepo.save(participant);
     return true;
   }
 
-  async toggleSpamConversation(userId: string, conversationId: string, isSpam: boolean): Promise<boolean> {
+  async toggleSpamConversation(
+    userId: string,
+    conversationId: string,
+    isSpam: boolean,
+  ): Promise<boolean> {
     const participant = await this.participantRepo.findOne({
       where: { user_id: userId, conversation_id: conversationId },
     });
-    if (!participant) throw new BadRequestException('Conversation participant not found');
+    if (!participant)
+      throw new BadRequestException('Conversation participant not found');
     participant.is_spam = isSpam;
     await this.participantRepo.save(participant);
     return true;
   }
 
-  async toggleRequestConversation(userId: string, conversationId: string, isRequest: boolean): Promise<boolean> {
+  async toggleRequestConversation(
+    userId: string,
+    conversationId: string,
+    isRequest: boolean,
+  ): Promise<boolean> {
     const participant = await this.participantRepo.findOne({
       where: { user_id: userId, conversation_id: conversationId },
     });
-    if (!participant) throw new BadRequestException('Conversation participant not found');
+    if (!participant)
+      throw new BadRequestException('Conversation participant not found');
     participant.is_request = isRequest;
     await this.participantRepo.save(participant);
     return true;
@@ -353,7 +496,8 @@ export class TypeOrmChatRepository implements IChatRepository {
     const participant = await this.participantRepo.findOne({
       where: { user_id: userId, conversation_id: conversationId },
     });
-    if (!participant) throw new BadRequestException('Conversation participant not found');
+    if (!participant)
+      throw new BadRequestException('Conversation participant not found');
     participant.last_read_message_id = null;
     await this.participantRepo.save(participant);
     return true;
@@ -394,7 +538,10 @@ export class TypeOrmChatRepository implements IChatRepository {
       .createQueryBuilder('c')
       .innerJoin('c.participants', 'p1', 'p1.user_id = :userId', { userId })
       .innerJoin('c.participants', 'p2', 'p2.user_id = :friendId', { friendId })
-      .where('c.type = :type', { type: ConversationType.PRIVATE })
+      .where('c.type IN (:...types)', {
+        types: [ConversationType.PRIVATE, ConversationType.DIRECT],
+      })
+      .orderBy('c.created_at', 'DESC')
       .getOne();
 
     let conversationId: string;
@@ -403,10 +550,11 @@ export class TypeOrmChatRepository implements IChatRepository {
       conversationId = existingConversation.id;
     } else {
       const newConversation = this.conversationRepo.create({
-        type: ConversationType.PRIVATE,
+        type: ConversationType.DIRECT,
         created_by: userId,
       });
-      const savedConversation = await this.conversationRepo.save(newConversation);
+      const savedConversation =
+        await this.conversationRepo.save(newConversation);
       conversationId = savedConversation.id;
 
       await this.participantRepo.save([

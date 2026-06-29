@@ -1,14 +1,18 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { CommentTargetType } from 'src/constants/enums';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { CommentTargetType, CommentType } from 'src/constants/enums';
 
 export class CreateCommentDto {
   @IsEnum(CommentTargetType)
-  @IsNotEmpty()
-  target_type: CommentTargetType;
+  @IsOptional()
+  target_type?: CommentTargetType;
 
   @IsString()
-  @IsNotEmpty()
-  target_id: string;
+  @IsOptional()
+  target_id?: string;
+
+  @IsString()
+  @IsOptional()
+  post_id?: string;
 
   @IsString()
   @IsOptional()
@@ -25,4 +29,8 @@ export class CreateCommentDto {
   @IsString()
   @IsOptional()
   sticker_url?: string;
+
+  @IsEnum(CommentType)
+  @IsOptional()
+  type?: CommentType;
 }

@@ -69,9 +69,9 @@ export abstract class BaseService<T = any, ID = string> {
 
   private prepareQuery(query) {
     const tableName = this.repository.metadata.tableName;
-    
+
     console.log('query', query);
-    
+
     let queryBuilder = this.repository.createQueryBuilder(tableName);
 
     // 🧩 Kiểm tra query tồn tại
@@ -121,20 +121,29 @@ export abstract class BaseService<T = any, ID = string> {
 
       // Map operator to corresponding query builder strategies (OCP Compliant)
       const filterStrategies: Record<string, (qb: any, val: string) => void> = {
-        $like: (qb, val) => qb.andWhere(`${tableName}.${column} LIKE :${column}`, { [column]: `%${val}%` }),
+        $like: (qb, val) =>
+          qb.andWhere(`${tableName}.${column} LIKE :${column}`, {
+            [column]: `%${val}%`,
+          }),
         $eq: (qb, val) => {
           if (val !== undefined && val !== 'NaN') {
-            qb.andWhere(`${tableName}.${column} = :${column}`, { [column]: val });
+            qb.andWhere(`${tableName}.${column} = :${column}`, {
+              [column]: val,
+            });
           }
         },
         $gt: (qb, val) => {
           if (!isNaN(Number(val))) {
-            qb.andWhere(`${tableName}.${column} > :${column}`, { [column]: Number(val) });
+            qb.andWhere(`${tableName}.${column} > :${column}`, {
+              [column]: Number(val),
+            });
           }
         },
         $lt: (qb, val) => {
           if (!isNaN(Number(val))) {
-            qb.andWhere(`${tableName}.${column} < :${column}`, { [column]: Number(val) });
+            qb.andWhere(`${tableName}.${column} < :${column}`, {
+              [column]: Number(val),
+            });
           }
         },
       };

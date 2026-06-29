@@ -45,6 +45,12 @@ export class Profile extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true })
   location_country: string;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  address: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  postcode: string;
+
   @Column({ type: 'varchar', length: 500, nullable: true })
   website: string;
 
@@ -57,11 +63,17 @@ export class Profile extends BaseEntity {
   @Column({ type: 'json', nullable: true })
   education: Record<string, any>[];
 
+  @Column({ type: 'json', nullable: true })
+  hobbies: string[];
+
   @Column({ type: 'varchar', length: 10, default: 'vi' })
   language: string;
 
   @Column({ type: 'varchar', length: 50, default: 'Asia/Ho_Chi_Minh' })
   timezone: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  profile_music_id: string;
 
   @UpdateDateColumn()
   updated_at: Date;

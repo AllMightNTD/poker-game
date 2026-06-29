@@ -7,7 +7,11 @@ import {
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { FollowingType, FollowPriority, FollowStatus } from 'src/constants/enums';
+import {
+  FollowingType,
+  FollowPriority,
+  FollowStatus,
+} from 'src/constants/enums';
 import { User } from './user.entity';
 
 @Entity('follows')
@@ -21,7 +25,11 @@ export class Follow extends BaseEntity {
   @PrimaryColumn({ type: 'varchar' })
   following_entity_id: string;
 
-  @Column({ type: 'enum', enum: FollowPriority, default: FollowPriority.DEFAULT })
+  @Column({
+    type: 'enum',
+    enum: FollowPriority,
+    default: FollowPriority.DEFAULT,
+  })
   priority: FollowPriority;
 
   @Column({ type: 'enum', enum: FollowStatus, default: FollowStatus.ACTIVE })

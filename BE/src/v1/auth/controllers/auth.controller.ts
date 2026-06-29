@@ -8,7 +8,7 @@ import { ResetPasswordDto } from '../dto/reset-password.dto';
 
 @Controller()
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @Get('facebook')
   @UseGuards(FacebookAuthGuard)
@@ -33,7 +33,9 @@ export class AuthController {
   }
 
   @Post('forgot-password')
-  async forgotPassword(@Body() requestPasswordResetDto: RequestPasswordResetDto) {
+  async forgotPassword(
+    @Body() requestPasswordResetDto: RequestPasswordResetDto,
+  ) {
     return this.authService.forgotPassword(requestPasswordResetDto);
   }
 

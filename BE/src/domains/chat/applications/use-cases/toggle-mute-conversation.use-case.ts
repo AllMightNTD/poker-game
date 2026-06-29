@@ -9,6 +9,10 @@ export class ToggleMuteConversationUseCase {
   ) {}
 
   async execute(userId: string, conversationId: string, isMuted: boolean) {
-    return this.chatRepository.toggleMuteConversation(userId, conversationId, isMuted);
+    return this.chatRepository.toggleMuteConversation(
+      userId,
+      conversationId,
+      isMuted,
+    );
   }
 }

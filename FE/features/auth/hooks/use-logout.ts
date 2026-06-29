@@ -1,7 +1,7 @@
-import { useCallback, useState } from "react";
+import { useToast } from "@/core/providers/toast-provider";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/core/providers/toast-provider";
+import { useCallback, useState } from "react";
 import { AuthService } from "../services/auth.service";
 
 const REMEMBER_EMAIL_KEY = "sociala_remembered_email";
@@ -20,7 +20,6 @@ export function useLogout() {
     } finally {
       Cookies.remove("accessToken");
       localStorage.removeItem(REMEMBER_EMAIL_KEY);
-      toastSuccess("Đã đăng xuất thành công");
       router.push("/login");
       setIsLoggingOut(false);
     }

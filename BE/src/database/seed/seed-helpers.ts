@@ -1,9 +1,78 @@
 // Seed helper utilities for generating fake data at scale
 
-const firstNames = ['Nguyen', 'Tran', 'Le', 'Pham', 'Hoang', 'Vo', 'Dang', 'Bui', 'Do', 'Ngo', 'Duong', 'Ly', 'Ha', 'Dinh', 'Mai', 'Truong', 'Lam', 'Cao', 'Vu', 'Ta'];
-const lastNames = ['Anh', 'Binh', 'Cuong', 'Dung', 'Giang', 'Hoa', 'Khanh', 'Linh', 'Minh', 'Nam', 'Phuc', 'Quang', 'Son', 'Tuan', 'Van', 'Xuan', 'Yen', 'Dat', 'Hieu', 'Long'];
-const adjectives = ['Amazing', 'Cool', 'Great', 'Super', 'Awesome', 'Fantastic', 'Brilliant', 'Epic', 'Wonderful', 'Modern'];
-const topics = ['Technology', 'Science', 'Art', 'Music', 'Sports', 'Travel', 'Food', 'Fashion', 'Education', 'Health', 'Finance', 'Gaming', 'Photography', 'Design', 'Programming'];
+const firstNames = [
+  'Nguyen',
+  'Tran',
+  'Le',
+  'Pham',
+  'Hoang',
+  'Vo',
+  'Dang',
+  'Bui',
+  'Do',
+  'Ngo',
+  'Duong',
+  'Ly',
+  'Ha',
+  'Dinh',
+  'Mai',
+  'Truong',
+  'Lam',
+  'Cao',
+  'Vu',
+  'Ta',
+];
+const lastNames = [
+  'Anh',
+  'Binh',
+  'Cuong',
+  'Dung',
+  'Giang',
+  'Hoa',
+  'Khanh',
+  'Linh',
+  'Minh',
+  'Nam',
+  'Phuc',
+  'Quang',
+  'Son',
+  'Tuan',
+  'Van',
+  'Xuan',
+  'Yen',
+  'Dat',
+  'Hieu',
+  'Long',
+];
+const adjectives = [
+  'Amazing',
+  'Cool',
+  'Great',
+  'Super',
+  'Awesome',
+  'Fantastic',
+  'Brilliant',
+  'Epic',
+  'Wonderful',
+  'Modern',
+];
+const topics = [
+  'Technology',
+  'Science',
+  'Art',
+  'Music',
+  'Sports',
+  'Travel',
+  'Food',
+  'Fashion',
+  'Education',
+  'Health',
+  'Finance',
+  'Gaming',
+  'Photography',
+  'Design',
+  'Programming',
+];
 const emojis = ['👍', '❤️', '😂', '😮', '😢', '😡', '🎉', '🔥', '💯', '✨'];
 
 export function rand(min: number, max: number): number {
@@ -49,7 +118,10 @@ export function fakeArticleTitle(i: number) {
 }
 
 export function fakeSlug(text: string, i: number) {
-  return `${text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}-${i}`;
+  return `${text
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')}-${i}`;
 }
 
 export function fakeGroupName(i: number) {
@@ -61,12 +133,34 @@ export function fakePageName(i: number) {
 }
 
 export function fakeListingTitle(i: number) {
-  const items = ['Laptop', 'Phone', 'Camera', 'Headphones', 'Tablet', 'Monitor', 'Keyboard', 'Mouse', 'Speaker', 'Watch'];
+  const items = [
+    'Laptop',
+    'Phone',
+    'Camera',
+    'Headphones',
+    'Tablet',
+    'Monitor',
+    'Keyboard',
+    'Mouse',
+    'Speaker',
+    'Watch',
+  ];
   return `${pick(adjectives)} ${pick(items)} #${i}`;
 }
 
 export function fakeMessage(i: number) {
-  const msgs = ['Hey there!', 'How are you?', 'Check this out!', 'Sounds good!', 'Let me know', 'Thanks!', 'Sure thing', 'On my way', 'See you later', 'Great idea!'];
+  const msgs = [
+    'Hey there!',
+    'How are you?',
+    'Check this out!',
+    'Sounds good!',
+    'Let me know',
+    'Thanks!',
+    'Sure thing',
+    'On my way',
+    'See you later',
+    'Great idea!',
+  ];
   return `${pick(msgs)} [${i}]`;
 }
 
@@ -87,7 +181,11 @@ export function pastDate(daysBack = 90) {
 }
 
 // Batch insert helper - splits array into chunks to avoid query size limits
-export async function batchInsert<T>(repo: any, items: Partial<T>[], chunkSize = 200): Promise<T[]> {
+export async function batchInsert<T>(
+  repo: any,
+  items: Partial<T>[],
+  chunkSize = 200,
+): Promise<T[]> {
   const results: T[] = [];
   for (let i = 0; i < items.length; i += chunkSize) {
     const chunk = items.slice(i, i + chunkSize);

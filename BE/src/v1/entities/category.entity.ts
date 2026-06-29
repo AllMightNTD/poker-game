@@ -32,7 +32,9 @@ export class Category extends BaseEntity {
 
   // ---- Relations ----
 
-  @ManyToOne(() => Category, (category) => category.children, { onDelete: 'SET NULL' })
+  @ManyToOne(() => Category, (category) => category.children, {
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'parent_id' })
   parent: Category;
 

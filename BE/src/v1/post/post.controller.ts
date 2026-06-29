@@ -1,32 +1,32 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Put,
+  Delete,
   Query,
   Request,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
-  UploadedFiles,
-  BadRequestException,
-  Param,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { IsEnum, IsNotEmpty } from 'class-validator';
-import { ReactionType } from 'src/constants/enums';
+import { IsNotEmpty } from 'class-validator';
+
+import * as fs from 'fs';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { AuthGuard } from '../guards/auth.guard';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PostService } from './post.service';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import * as fs from 'fs';
 
 export class ToggleReactionDto {
-  @IsEnum(ReactionType)
   @IsNotEmpty()
-  type: ReactionType;
+  type: string;
 }
 
 const storage = diskStorage({
@@ -60,13 +60,27 @@ export class PostController {
     @Query('page') page = '1',
     @Query('limit') limit = '10',
   ) {
-    return this.postService.getFeedPosts(req.user.sub, Number(page), Number(limit));
+    return this.postService.getFeedPosts(
+      req.user.sub,
+      Number(page),
+      Number(limit),
+    );
   }
 
   @UseGuards(AuthGuard)
   @Get('/profile/:userId')
-  async getProfilePosts(@Request() req, @Param('userId') targetUserId: string) {
-    return this.postService.getProfilePosts(targetUserId, req.user.sub);
+  async getProfilePosts(
+    @Request() req,
+    @Param('userId') targetUserId: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ) {
+    return this.postService.getProfilePosts(
+      targetUserId,
+      req.user.sub,
+      Number(page),
+      Number(limit),
+    );
   }
 
   @UseGuards(AuthGuard)
@@ -98,7 +112,11 @@ export class PostController {
     @Param('postId') postId: string,
     @Body() toggleReactionDto: ToggleReactionDto,
   ) {
-    return this.postService.toggleReaction(req.user.sub, postId, toggleReactionDto.type);
+    return this.postService.toggleReaction(
+      req.user.sub,
+      postId,
+      toggleReactionDto.type,
+    );
   }
 
   @UseGuards(AuthGuard)
@@ -109,5 +127,17 @@ export class PostController {
     @Body() updatePostDto: UpdatePostDto,
   ) {
     return this.postService.updatePost(req.user.sub, postId, updatePostDto);
+  }
+
+  @UseGuards(AuthGuard)
+  @Delete('/:postId')
+  async deletePost(@Request() req, @Param('postId') postId: string) {
+    return this.postService.deletePost(req.user.sub, postId);
+  }
+
+  @UseGuards(AuthGuard)
+  @Delete('/media/:mediaId')
+  async deleteMedia(@Request() req, @Param('mediaId') mediaId: string) {
+    return this.postService.deleteMedia(req.user.sub, mediaId);
   }
 }

@@ -289,6 +289,13 @@ export const navItems = [
     color: "text-blue-600",
     bg: "bg-blue-100",
   },
+  {
+    id: "poker-game",
+    label: "Poker Club",
+    icon: "Coins",
+    color: "text-emerald-500",
+    bg: "bg-emerald-100",
+  },
 ];
 
 export const morePages = [

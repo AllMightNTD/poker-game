@@ -84,7 +84,9 @@ export class ChatService implements OnModuleInit {
       await this.wsConnectionRepo.delete({ server_id: serverId });
       this.logger.log(`Cleaned up zombie connections for server ${serverId}`);
     } catch (error) {
-      this.logger.warn(`Could not clean up zombie connections: ${error.message}`);
+      this.logger.warn(
+        `Could not clean up zombie connections: ${error.message}`,
+      );
     }
   }
 
@@ -100,7 +102,9 @@ export class ChatService implements OnModuleInit {
       });
       await this.wsConnectionRepo.save(newConnection);
 
-      let presence = await this.userPresenceRepo.findOne({ where: { user_id: userId } });
+      let presence = await this.userPresenceRepo.findOne({
+        where: { user_id: userId },
+      });
       if (!presence) {
         presence = this.userPresenceRepo.create({ user_id: userId });
       }
@@ -111,36 +115,61 @@ export class ChatService implements OnModuleInit {
       this.logger.log(`User ${userId} connected with socket ${socketId}`);
       return savedPresence;
     } catch (error) {
-      this.logger.error(`Error in handleConnection for user ${userId}: ${error.message}`);
+      this.logger.error(
+        `Error in handleConnection for user ${userId}: ${error.message}`,
+      );
       return null;
     }
   }
 
   async handleDisconnect(socketId: string) {
     try {
-      const connection = await this.wsConnectionRepo.findOne({ where: { socket_id: socketId } });
+      const connection = await this.wsConnectionRepo.findOne({
+        where: { socket_id: socketId },
+      });
       if (connection) {
         const userId = connection.user_id;
         await this.wsConnectionRepo.remove(connection);
 
-        const activeConnections = await this.wsConnectionRepo.count({ where: { user_id: userId } });
+        const activeConnections = await this.wsConnectionRepo.count({
+          where: { user_id: userId },
+        });
         if (activeConnections === 0) {
-          const presence = await this.userPresenceRepo.findOne({ where: { user_id: userId } });
+          const presence = await this.userPresenceRepo.findOne({
+            where: { user_id: userId },
+          });
           if (presence) {
             presence.status = PresenceStatus.OFFLINE;
             presence.last_seen_at = new Date();
             await this.userPresenceRepo.save(presence);
           }
         }
-        this.logger.log(`User ${userId} disconnected, socket ${socketId} removed`);
+        this.logger.log(
+          `User ${userId} disconnected, socket ${socketId} removed`,
+        );
       }
     } catch (error) {
-      this.logger.error(`Error in handleDisconnect for socket ${socketId}: ${error.message}`);
+      this.logger.error(
+        `Error in handleDisconnect for socket ${socketId}: ${error.message}`,
+      );
     }
   }
 
-  async checkParticipant(userId: string, conversationId: string): Promise<boolean> {
+  async checkParticipant(
+    userId: string,
+    conversationId: string,
+  ): Promise<boolean> {
     return this.checkParticipantUseCase.execute(userId, conversationId);
+  }
+
+  async getConversationParticipantIds(
+    conversationId: string,
+  ): Promise<string[]> {
+    const participants = await this.participantRepo.find({
+      where: { conversation_id: conversationId },
+      select: ['user_id'],
+    });
+    return participants.map((p) => p.user_id);
   }
 
   async saveMessage(userId: string, dto: SendMessageDto): Promise<Message> {
@@ -151,12 +180,12 @@ export class ChatService implements OnModuleInit {
       type: dto.type || MessageType.TEXT,
       reply_to_id: dto.reply_to_id,
     });
-    
+
     const savedMessage = await this.messageRepo.save(message);
 
     await this.conversationRepo.update(
       { id: dto.conversation_id },
-      { last_message_id: savedMessage.id }
+      { last_message_id: savedMessage.id },
     );
 
     return this.messageRepo.findOne({
@@ -178,7 +207,7 @@ export class ChatService implements OnModuleInit {
   async updateLastPing(socketId: string) {
     await this.wsConnectionRepo.update(
       { socket_id: socketId },
-      { last_ping_at: new Date() }
+      { last_ping_at: new Date() },
     );
   }
 
@@ -209,7 +238,9 @@ export class ChatService implements OnModuleInit {
   }
 
   async editMessage(userId: string, messageId: string, content: string) {
-    const message = await this.messageRepo.findOne({ where: { id: messageId, sender_id: userId } });
+    const message = await this.messageRepo.findOne({
+      where: { id: messageId, sender_id: userId },
+    });
     if (!message) return null;
 
     message.content = content;
@@ -218,7 +249,9 @@ export class ChatService implements OnModuleInit {
   }
 
   async deleteMessage(userId: string, messageId: string) {
-    const message = await this.messageRepo.findOne({ where: { id: messageId, sender_id: userId } });
+    const message = await this.messageRepo.findOne({
+      where: { id: messageId, sender_id: userId },
+    });
     if (!message) return false;
 
     await this.messageRepo.softRemove(message);
@@ -229,11 +262,18 @@ export class ChatService implements OnModuleInit {
     return this.getMessagesUseCase.execute(conversationId, page, limit);
   }
 
-  async updateThemeColor(userId: string, conversationId: string, color: string) {
+  async updateThemeColor(
+    userId: string,
+    conversationId: string,
+    color: string,
+  ) {
     const isParticipant = await this.checkParticipant(userId, conversationId);
     if (!isParticipant) return null;
 
-    await this.conversationRepo.update({ id: conversationId }, { theme_color: color });
+    await this.conversationRepo.update(
+      { id: conversationId },
+      { theme_color: color },
+    );
     return color;
   }
 
@@ -241,35 +281,58 @@ export class ChatService implements OnModuleInit {
     const isParticipant = await this.checkParticipant(userId, conversationId);
     if (!isParticipant) return null;
 
-    await this.conversationRepo.update({ id: conversationId }, { emoji: emoji });
+    await this.conversationRepo.update(
+      { id: conversationId },
+      { emoji: emoji },
+    );
     return emoji;
   }
 
-  async updateNickname(userId: string, conversationId: string, targetUserId: string, nickname: string) {
-    const isSenderParticipant = await this.checkParticipant(userId, conversationId);
-    const isTargetParticipant = await this.checkParticipant(targetUserId, conversationId);
+  async updateNickname(
+    userId: string,
+    conversationId: string,
+    targetUserId: string,
+    nickname: string,
+  ) {
+    const isSenderParticipant = await this.checkParticipant(
+      userId,
+      conversationId,
+    );
+    const isTargetParticipant = await this.checkParticipant(
+      targetUserId,
+      conversationId,
+    );
     if (!isSenderParticipant || !isTargetParticipant) return null;
 
-    await this.participantRepo.update({ conversation_id: conversationId, user_id: targetUserId }, { nickname: nickname || null });
+    await this.participantRepo.update(
+      { conversation_id: conversationId, user_id: targetUserId },
+      { nickname: nickname || null },
+    );
     return { targetUserId, nickname };
   }
 
-  async updateBackgroundImage(userId: string, conversationId: string, bgUrl: string) {
+  async updateBackgroundImage(
+    userId: string,
+    conversationId: string,
+    bgUrl: string,
+  ) {
     const isParticipant = await this.checkParticipant(userId, conversationId);
     if (!isParticipant) return null;
 
-    await this.conversationRepo.update({ id: conversationId }, { background_image: bgUrl || null });
+    await this.conversationRepo.update(
+      { id: conversationId },
+      { background_image: bgUrl || null },
+    );
     return bgUrl;
   }
 
   async getFriendUserIds(userId: string): Promise<string[]> {
     const friendships = await this.friendRepo.find({
-      where: [
-        { user_id: userId },
-        { friend_id: userId },
-      ],
+      where: [{ user_id: userId }, { friend_id: userId }],
     });
-    const friendIds = friendships.map((f) => (f.user_id === userId ? f.friend_id : f.user_id));
+    const friendIds = friendships.map((f) =>
+      f.user_id === userId ? f.friend_id : f.user_id,
+    );
     return Array.from(new Set(friendIds));
   }
 
@@ -281,8 +344,13 @@ export class ChatService implements OnModuleInit {
     return this.wsConnectionRepo.count({ where: { user_id: userId } });
   }
 
-  async updateUserPresenceStatus(userId: string, status: PresenceStatus): Promise<UserPresence> {
-    let presence = await this.userPresenceRepo.findOne({ where: { user_id: userId } });
+  async updateUserPresenceStatus(
+    userId: string,
+    status: PresenceStatus,
+  ): Promise<UserPresence> {
+    let presence = await this.userPresenceRepo.findOne({
+      where: { user_id: userId },
+    });
     if (!presence) {
       presence = this.userPresenceRepo.create({ user_id: userId });
     }
@@ -291,8 +359,13 @@ export class ChatService implements OnModuleInit {
     return this.userPresenceRepo.save(presence);
   }
 
-  async updateUserVisibility(userId: string, isInvisible: boolean): Promise<UserPresence> {
-    let presence = await this.userPresenceRepo.findOne({ where: { user_id: userId } });
+  async updateUserVisibility(
+    userId: string,
+    isInvisible: boolean,
+  ): Promise<UserPresence> {
+    let presence = await this.userPresenceRepo.findOne({
+      where: { user_id: userId },
+    });
     if (!presence) {
       presence = this.userPresenceRepo.create({ user_id: userId });
     }
@@ -312,12 +385,30 @@ export class ChatService implements OnModuleInit {
     page: number,
     limit: number,
     search?: string,
-    tab?: 'all' | 'unread' | 'group' | 'request' | 'archived' | 'hidden' | 'spam',
+    tab?:
+      | 'all'
+      | 'unread'
+      | 'group'
+      | 'request'
+      | 'archived'
+      | 'hidden'
+      | 'spam',
   ) {
-    return this.getConversationsUseCase.execute(userId, page, limit, search, tab);
+    return this.getConversationsUseCase.execute(
+      userId,
+      page,
+      limit,
+      search,
+      tab,
+    );
   }
 
-  async getMedia(conversationId: string, page: number, limit: number, type?: 'image' | 'video' | 'file') {
+  async getMedia(
+    conversationId: string,
+    page: number,
+    limit: number,
+    type?: 'image' | 'video' | 'file',
+  ) {
     return this.getMediaUseCase.execute(conversationId, page, limit, type);
   }
 
@@ -325,33 +416,83 @@ export class ChatService implements OnModuleInit {
     return this.leaveConversationUseCase.execute(userId, conversationId);
   }
 
-  async togglePinConversation(userId: string, conversationId: string, isPinned: boolean): Promise<boolean> {
-    return this.togglePinConversationUseCase.execute(userId, conversationId, isPinned);
+  async togglePinConversation(
+    userId: string,
+    conversationId: string,
+    isPinned: boolean,
+  ): Promise<boolean> {
+    return this.togglePinConversationUseCase.execute(
+      userId,
+      conversationId,
+      isPinned,
+    );
   }
 
   async getUserActiveStatus(userId: string): Promise<boolean> {
-    const user = await this.conversationRepo.manager.getRepository(User).findOne({ where: { id: userId } });
+    const user = await this.conversationRepo.manager
+      .getRepository(User)
+      .findOne({ where: { id: userId } });
     return user?.is_active_status !== false;
   }
 
-  async toggleMuteConversation(userId: string, conversationId: string, isMuted: boolean): Promise<boolean> {
-    return this.toggleMuteConversationUseCase.execute(userId, conversationId, isMuted);
+  async toggleMuteConversation(
+    userId: string,
+    conversationId: string,
+    isMuted: boolean,
+  ): Promise<boolean> {
+    return this.toggleMuteConversationUseCase.execute(
+      userId,
+      conversationId,
+      isMuted,
+    );
   }
 
-  async toggleArchiveConversation(userId: string, conversationId: string, isArchived: boolean): Promise<boolean> {
-    return this.toggleArchiveConversationUseCase.execute(userId, conversationId, isArchived);
+  async toggleArchiveConversation(
+    userId: string,
+    conversationId: string,
+    isArchived: boolean,
+  ): Promise<boolean> {
+    return this.toggleArchiveConversationUseCase.execute(
+      userId,
+      conversationId,
+      isArchived,
+    );
   }
 
-  async toggleHideConversation(userId: string, conversationId: string, isHidden: boolean): Promise<boolean> {
-    return this.toggleHideConversationUseCase.execute(userId, conversationId, isHidden);
+  async toggleHideConversation(
+    userId: string,
+    conversationId: string,
+    isHidden: boolean,
+  ): Promise<boolean> {
+    return this.toggleHideConversationUseCase.execute(
+      userId,
+      conversationId,
+      isHidden,
+    );
   }
 
-  async toggleSpamConversation(userId: string, conversationId: string, isSpam: boolean): Promise<boolean> {
-    return this.toggleSpamConversationUseCase.execute(userId, conversationId, isSpam);
+  async toggleSpamConversation(
+    userId: string,
+    conversationId: string,
+    isSpam: boolean,
+  ): Promise<boolean> {
+    return this.toggleSpamConversationUseCase.execute(
+      userId,
+      conversationId,
+      isSpam,
+    );
   }
 
-  async toggleRequestConversation(userId: string, conversationId: string, isRequest: boolean): Promise<boolean> {
-    return this.toggleRequestConversationUseCase.execute(userId, conversationId, isRequest);
+  async toggleRequestConversation(
+    userId: string,
+    conversationId: string,
+    isRequest: boolean,
+  ): Promise<boolean> {
+    return this.toggleRequestConversationUseCase.execute(
+      userId,
+      conversationId,
+      isRequest,
+    );
   }
 
   async markAsUnread(userId: string, conversationId: string): Promise<boolean> {

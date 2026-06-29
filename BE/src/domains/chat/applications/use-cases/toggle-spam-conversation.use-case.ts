@@ -9,6 +9,10 @@ export class ToggleSpamConversationUseCase {
   ) {}
 
   async execute(userId: string, conversationId: string, isSpam: boolean) {
-    return this.chatRepository.toggleSpamConversation(userId, conversationId, isSpam);
+    return this.chatRepository.toggleSpamConversation(
+      userId,
+      conversationId,
+      isSpam,
+    );
   }
 }

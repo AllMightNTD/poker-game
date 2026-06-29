@@ -20,9 +20,7 @@ const useCases = [
 ];
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Comment, Post]),
-  ],
+  imports: [TypeOrmModule.forFeature([Comment, Post])],
   providers: [
     ...useCases,
     CommentGateway,
@@ -31,10 +29,6 @@ const useCases = [
       useClass: TypeOrmCommentRepository,
     },
   ],
-  exports: [
-    'ICommentRepository',
-    ...useCases,
-    CommentGateway,
-  ],
+  exports: ['ICommentRepository', ...useCases, CommentGateway],
 })
 export class CommentsModule {}

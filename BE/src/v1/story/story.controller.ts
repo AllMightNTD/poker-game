@@ -91,7 +91,11 @@ export class StoryController {
   }
 
   @Post(':id/react')
-  async reactStory(@Request() req, @Param('id') storyId: string, @Body() body: { emoji: string }) {
+  async reactStory(
+    @Request() req,
+    @Param('id') storyId: string,
+    @Body() body: { emoji: string },
+  ) {
     const userId = req.user.sub;
     return await this.storyService.reactStory(userId, storyId, body.emoji);
   }

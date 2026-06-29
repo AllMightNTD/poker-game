@@ -25,7 +25,10 @@ export class TypeOrmUserRepository implements IUserRepository {
     return this.mapToDomain(user);
   }
 
-  async findByIdWithRelations(id: string, relations: string[]): Promise<any | null> {
+  async findByIdWithRelations(
+    id: string,
+    relations: string[],
+  ): Promise<any | null> {
     return this.typeormRepository.findOne({ where: { id }, relations });
   }
 
@@ -55,7 +58,11 @@ export class TypeOrmUserRepository implements IUserRepository {
     return { success: true, message_permission: user.message_permission };
   }
 
-  async blockUser(userId: string, targetUserId: string, reason?: string): Promise<any> {
+  async blockUser(
+    userId: string,
+    targetUserId: string,
+    reason?: string,
+  ): Promise<any> {
     if (userId === targetUserId) {
       throw new BadRequestException('You cannot block yourself');
     }

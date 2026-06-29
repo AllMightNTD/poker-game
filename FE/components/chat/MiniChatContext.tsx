@@ -7,6 +7,8 @@ export interface MiniChatContact {
   name: string;
   avatar: string;
   status?: "online" | "away" | "offline";
+  conversationId?: string;
+  type?: "direct" | "group";
 }
 
 interface MiniChatContextValue {

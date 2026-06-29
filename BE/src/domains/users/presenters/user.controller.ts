@@ -53,13 +53,19 @@ export class UserController {
 
   @UseGuards(AuthGuard)
   @Post('/profile')
-  async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
+  async updateProfile(
+    @Request() req,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
     return this.updateProfileUseCase.execute(req.user.sub, updateProfileDto);
   }
 
   @UseGuards(AuthGuard)
   @Post('/settings')
-  async updateSettings(@Request() req, @Body() updateSettingsDto: UpdateSettingsDto) {
+  async updateSettings(
+    @Request() req,
+    @Body() updateSettingsDto: UpdateSettingsDto,
+  ) {
     return this.updateSettingsUseCase.execute(req.user.sub, updateSettingsDto);
   }
 
@@ -71,7 +77,10 @@ export class UserController {
 
   @UseGuards(AuthGuard)
   @Put('/user/presence')
-  async updatePresence(@Request() req, @Body('is_active_status') isActive: boolean) {
+  async updatePresence(
+    @Request() req,
+    @Body('is_active_status') isActive: boolean,
+  ) {
     return this.updatePresenceUseCase.execute(req.user.sub, isActive);
   }
 
@@ -81,7 +90,10 @@ export class UserController {
     @Request() req,
     @Body('message_permission') permission: MessagePermission,
   ) {
-    return this.updateMessagePermissionUseCase.execute(req.user.sub, permission);
+    return this.updateMessagePermissionUseCase.execute(
+      req.user.sub,
+      permission,
+    );
   }
 
   @UseGuards(AuthGuard)
@@ -96,7 +108,10 @@ export class UserController {
 
   @UseGuards(AuthGuard)
   @Delete('/user/block/:targetUserId')
-  async unblockUser(@Request() req, @Param('targetUserId') targetUserId: string) {
+  async unblockUser(
+    @Request() req,
+    @Param('targetUserId') targetUserId: string,
+  ) {
     return this.unblockUserUseCase.execute(req.user.sub, targetUserId);
   }
 

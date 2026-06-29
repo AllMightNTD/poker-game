@@ -5,30 +5,39 @@ import { useSocket } from "@/components/providers/SocketProvider";
 import CreatePost from "../feed/CreatePost";
 import PostCard from "../feed/PostCard";
 import { FriendActionButton } from "@/features/friends/components/FriendActionButton";
+import { FollowButton } from "@/features/friends/components/FollowButton";
+import { ProfileMusicPlayer } from "./ProfileMusicPlayer";
 import api from "@/lib/axios";
+import { useTranslations } from "next-intl";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ProfileAboutTab } from "./tabs/ProfileAboutTab";
+import { ProfileFriendsTab } from "./tabs/ProfileFriendsTab";
+import { ProfilePhotosTab } from "./tabs/ProfilePhotosTab";
+import { ProfileVideosTab } from "./tabs/ProfileVideosTab";
+import { ProfileGroupsTab } from "./tabs/ProfileGroupsTab";
 
 interface PersonalPageProps {
   user?: any;
   currentUser?: any;
 }
 
-const formatTimeAgo = (dateString: string) => {
+const formatTimeAgo = (dateString: string, t: any) => {
   try {
     const date = new Date(dateString);
     const now = new Date();
     const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
     
-    if (seconds < 60) return "Vừa xong";
+    if (seconds < 60) return t("justNow");
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes} phút trước`;
+    if (minutes < 60) return t("minsAgo", { count: minutes });
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} giờ trước`;
+    if (hours < 24) return t("hoursAgo", { count: hours });
     const days = Math.floor(hours / 24);
-    if (days < 30) return `${days} ngày trước`;
+    if (days < 30) return t("daysAgo", { count: days });
     
-    return date.toLocaleDateString('vi-VN');
+    return date.toLocaleDateString();
   } catch (e) {
-    return "Vừa xong";
+    return t("justNow");
   }
 };
 
@@ -41,9 +50,9 @@ const getMediaUrl = (url: string) => {
   return `${apiBase}${url.startsWith("/") ? "" : "/"}${url}`;
 };
 
-const mapBackendPostToFrontend = (bPost: any) => {
+const mapBackendPostToFrontend = (bPost: any, t: any) => {
   const userProfile = bPost.user?.profile;
-  const displayName = userProfile?.full_name || bPost.user?.email || "Người dùng ẩn danh";
+  const displayName = userProfile?.full_name || bPost.user?.email || t("anonymous");
   const avatarUrl = userProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`;
   
   return {
@@ -55,7 +64,7 @@ const mapBackendPostToFrontend = (bPost: any) => {
       avatar: avatarUrl,
       id: bPost.user?.id || bPost.user_id,
     },
-    time: formatTimeAgo(bPost.created_at),
+    time: formatTimeAgo(bPost.created_at, t),
     content: bPost.content || "",
     images: bPost.media?.map((m: any) => getMediaUrl(m.file_url)) || [],
     rawMedia: bPost.media || [],
@@ -70,16 +79,17 @@ const mapBackendPostToFrontend = (bPost: any) => {
 };
 
 export default function PersonalPage({ user, currentUser }: PersonalPageProps) {
+  const t = useTranslations("profile");
+  const queryClient = useQueryClient();
   const [postsList, setPostsList] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
 
   const displayUser = user || currentUser || {
     name: "Mohannad Zitoun",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mohannad&backgroundColor=ffdfbf"
   };
 
-  const displayName = displayUser.name || displayUser.profile?.full_name || displayUser.email || "Thành viên";
+  const displayName = displayUser.name || displayUser.profile?.full_name || displayUser.email || t("member");
   const avatarUrl = displayUser.avatar || displayUser.profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`;
   const { socket } = useSocket();
   const userId = displayUser.id || displayUser.user_id || currentUser?.id;
@@ -93,7 +103,7 @@ export default function PersonalPage({ user, currentUser }: PersonalPageProps) {
       if (newPost.user_id !== userId) return;
 
       console.log("[PersonalPage] Realtime post received for profile:", newPost);
-      const formatted = mapBackendPostToFrontend(newPost);
+      const formatted = mapBackendPostToFrontend(newPost, t);
       setPostsList((prev) => {
         // Chống trùng lặp (double render)
         if (prev.some((p) => p.id === formatted.id)) return prev;
@@ -119,7 +129,7 @@ export default function PersonalPage({ user, currentUser }: PersonalPageProps) {
 
     const handlePostUpdated = (updatedPost: any) => {
       console.log("[PersonalPage] Realtime post updated received for profile:", updatedPost);
-      const formatted = mapBackendPostToFrontend(updatedPost);
+      const formatted = mapBackendPostToFrontend(updatedPost, t);
       setPostsList((prev) =>
         prev.map((post) => {
           if (post.id === formatted.id) {
@@ -183,42 +193,67 @@ export default function PersonalPage({ user, currentUser }: PersonalPageProps) {
   }, [socket, userId]);
 
   const profileTabs = [
-    "Bài viết",
-    "Giới thiệu",
-    "Bạn bè",
-    "Hình ảnh",
-    "Video",
-    "Nhóm",
-    "Sự kiện",
+    t("tabPosts"),
+    t("tabAbout"),
+    t("tabFriends"),
+    t("tabPhotos"),
+    t("tabVideos"),
+    t("tabGroups"),
+    t("tabEvents"),
   ];
 
-  const fetchProfilePosts = useCallback(async () => {
-    if (!userId) return;
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await api.get(`/api/v1/post/profile/${userId}`);
-      const backendPosts = res.data?.metadata || res.data || [];
-      const formatted = backendPosts.map(mapBackendPostToFrontend);
-      setPostsList(formatted);
-    } catch (err: any) {
-      console.error("Failed to fetch profile posts:", err);
-      setError("Không thể tải bài đăng của trang cá nhân này.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId]);
+  const { data: initialPosts, isLoading, error, refetch: fetchProfilePosts } = useQuery({
+    queryKey: ['profilePosts', userId],
+    queryFn: async () => {
+      const res = await api.get(`/api/v1/post/profile/${userId}?page=1&limit=20`);
+      // API now returns { data, meta }
+      const backendPosts = res.data?.data || res.data?.metadata || res.data || [];
+      const postsArray = Array.isArray(backendPosts) ? backendPosts : [];
+      return postsArray.map((p: any) => mapBackendPostToFrontend(p, t));
+    },
+    enabled: !!userId,
+  });
 
   useEffect(() => {
-    fetchProfilePosts();
-  }, [fetchProfilePosts]);
+    if (initialPosts) {
+      setPostsList(initialPosts);
+    }
+  }, [initialPosts]);
 
   const isOwnProfile = userId === currentUser?.id;
+
+  const updateMusicMutation = useMutation({
+    mutationFn: async (musicId: string) => {
+      await api.post("/api/v1/profile", { profile_music_id: musicId });
+      return musicId;
+    },
+    onSuccess: (musicId) => {
+      if (displayUser.profile) {
+        displayUser.profile.profile_music_id = musicId;
+      } else if (currentUser?.profile) {
+        currentUser.profile.profile_music_id = musicId;
+      }
+      fetchProfilePosts();
+    },
+    onError: (err) => {
+      console.error("Failed to update profile music", err);
+    }
+  });
+
+  const handleUpdateProfileMusic = async (musicId: string) => {
+    updateMusicMutation.mutate(musicId);
+  };
 
   return (
     <div className="w-full max-w-[1000px] mx-auto space-y-4 pb-12">
       {/* Header Card */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in duration-300">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in duration-300 relative">
+        <ProfileMusicPlayer 
+          musicId={displayUser?.profile?.profile_music_id || currentUser?.profile?.profile_music_id} 
+          isOwnProfile={isOwnProfile}
+          onUpdateMusic={handleUpdateProfileMusic}
+        />
+        
         {/* Cover Photo */}
         <div className="h-48 md:h-64 bg-slate-100 relative">
           <img
@@ -247,11 +282,19 @@ export default function PersonalPage({ user, currentUser }: PersonalPageProps) {
             <p className="text-sm text-slate-500">
               {displayUser.email || `${displayName.toLowerCase().replace(/\s+/g, "")}@gmail.com`}
             </p>
+            <div className="flex items-center gap-4 mt-2 text-sm font-medium text-slate-600">
+              <span><strong className="text-slate-800">{displayUser.stats?.total_posts || 0}</strong> bài viết</span>
+              <span><strong className="text-slate-800">{displayUser.stats?.total_friends || 0}</strong> bạn bè</span>
+              <span><strong className="text-slate-800">{displayUser.stats?.total_followers || 0}</strong> người theo dõi</span>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {!isOwnProfile && (
-              <FriendActionButton targetUserId={userId} currentUserId={currentUser?.id} />
+              <>
+                <FriendActionButton targetUserId={userId} currentUserId={currentUser?.id} />
+                <FollowButton targetUserId={userId} currentUserId={currentUser?.id} />
+              </>
             )}
             <button className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors">
               <Mail size={18} />
@@ -267,7 +310,8 @@ export default function PersonalPage({ user, currentUser }: PersonalPageProps) {
           {profileTabs.map((tab, idx) => (
             <button
               key={tab}
-              className={`py-4 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${idx === 0
+              onClick={() => setActiveTab(idx)}
+              className={`py-4 text-sm font-bold border-b-2 whitespace-nowrap transition-colors ${idx === activeTab
                 ? "border-slate-800 text-slate-800"
                 : "border-transparent text-slate-400 hover:text-slate-600"
                 }`}
@@ -279,68 +323,85 @@ export default function PersonalPage({ user, currentUser }: PersonalPageProps) {
       </div>
 
       {/* Content grid */}
-      <div className="flex flex-col lg:flex-row gap-4">
-        {/* Left Column - Information */}
-        <div className="w-full lg:w-[320px] shrink-0 space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-6">
-            <div>
-              <h3 className="text-sm font-bold text-slate-800 mb-3">Giới thiệu</h3>
-              <p className="text-sm text-slate-400 leading-relaxed font-medium">
-                Chào mừng đến với trang cá nhân của tôi trên Know Block! Nơi chia sẻ kiến thức, kinh nghiệm và kết nối những bộ óc sáng tạo.
-              </p>
-            </div>
-
-            <div className="space-y-5 pt-5 border-t border-slate-100">
-              <div className="flex items-start gap-3">
-                <Lock className="w-5 h-5 text-slate-400 mt-0.5" strokeWidth={2.5} />
-                <div>
-                  <p className="text-sm font-bold text-slate-800">Quyền riêng tư</p>
-                  <p className="text-xs text-slate-400 font-medium">Trang cá nhân được bảo vệ an toàn</p>
-                </div>
+      {activeTab === 0 && (
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Left Column - Information */}
+          <div className="w-full lg:w-[320px] shrink-0 space-y-4">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-6">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 mb-3">{t("aboutTitle")}</h3>
+                <p className="text-sm text-slate-400 leading-relaxed font-medium">
+                  {t("bioDesc")}
+                </p>
               </div>
-              <div className="flex items-start gap-3">
-                <Eye className="w-5 h-5 text-slate-400 mt-0.5" strokeWidth={2.5} />
-                <div>
-                  <p className="text-sm font-bold text-slate-800">Trạng thái hiển thị</p>
-                  <p className="text-xs text-slate-400 font-medium">Bất kỳ ai cũng có thể tìm kiếm bạn</p>
+
+              <div className="space-y-5 pt-5 border-t border-slate-100">
+                <div className="flex items-start gap-3">
+                  <Lock className="w-5 h-5 text-slate-400 mt-0.5" strokeWidth={2.5} />
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">{t("privacy")}</p>
+                    <p className="text-xs text-slate-400 font-medium">{t("privacyDesc")}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Eye className="w-5 h-5 text-slate-400 mt-0.5" strokeWidth={2.5} />
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">{t("visibility")}</p>
+                    <p className="text-xs text-slate-400 font-medium">{t("visibilityDesc")}</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Right Column - Posts Feed */}
-        <div className="w-full flex-1 min-w-0 space-y-4">
-          {isOwnProfile && (
-            <CreatePost currentUser={currentUser} onPostCreated={fetchProfilePosts} />
-          )}
+          {/* Right Column - Posts Feed */}
+          <div className="w-full flex-1 min-w-0 space-y-4">
+            {isOwnProfile && (
+              <CreatePost currentUser={currentUser} onPostCreated={fetchProfilePosts} />
+            )}
 
-          {isLoading ? (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 flex flex-col items-center justify-center min-h-[200px]">
-              <Loader2 size={24} className="animate-spin text-blue-500 mb-2" />
-              <p className="text-slate-400 text-xs font-semibold">Đang tải bài viết...</p>
-            </div>
-          ) : error ? (
-            <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
-              <p className="text-red-500 text-sm font-semibold">{error}</p>
-            </div>
-          ) : postsList.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center flex flex-col items-center justify-center space-y-3">
-              <span className="text-4xl">📝</span>
-              <h3 className="text-sm font-bold text-slate-700">Chưa có bài viết nào</h3>
-              <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                Trang cá nhân này chưa chia sẻ kiến thức nào. Hãy quay lại sau nhé!
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {postsList.map((post) => (
-                <PostCard key={post.id} post={post} currentUser={currentUser} />
-              ))}
-            </div>
-          )}
+            {isLoading ? (
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 flex flex-col items-center justify-center min-h-[200px]">
+                <Loader2 size={24} className="animate-spin text-blue-500 mb-2" />
+                <p className="text-slate-400 text-xs font-semibold">{t("loadingPosts")}</p>
+              </div>
+            ) : error ? (
+              <div className="bg-white rounded-2xl border border-slate-100 p-8 text-center">
+                <p className="text-red-500 text-sm font-semibold">{t("loadError")}</p>
+              </div>
+            ) : postsList.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center flex flex-col items-center justify-center space-y-3">
+                <span className="text-4xl">📝</span>
+                <h3 className="text-sm font-bold text-slate-700">{t("noPosts")}</h3>
+                <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+                  {t("noPostsDesc")}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {postsList.map((post) => (
+                  <PostCard key={post.id} post={post} currentUser={currentUser} onProfileClick={() => {}} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === 1 && <ProfileAboutTab user={displayUser} isOwnProfile={isOwnProfile} />}
+      {activeTab === 2 && <ProfileFriendsTab user={displayUser} isOwnProfile={isOwnProfile} />}
+      {activeTab === 3 && <ProfilePhotosTab user={displayUser} isOwnProfile={isOwnProfile} />}
+      {activeTab === 4 && <ProfileVideosTab user={displayUser} isOwnProfile={isOwnProfile} />}
+      {activeTab === 5 && <ProfileGroupsTab user={displayUser} isOwnProfile={isOwnProfile} />}
+      {activeTab === 6 && (
+        <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center flex flex-col items-center justify-center space-y-3">
+          <span className="text-4xl">🎉</span>
+          <h3 className="text-sm font-bold text-slate-700">Sự kiện (Đang phát triển)</h3>
+          <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+            Tính năng này đang được phát triển, vui lòng quay lại sau!
+          </p>
+        </div>
+      )}
     </div>
   );
 }

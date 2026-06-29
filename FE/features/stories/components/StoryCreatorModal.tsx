@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { X, Image as ImageIcon, Type, Shield, Loader2, Palette, Brush, Eraser, RotateCcw, Smile, Sliders, Music, Play, Pause, Disc, Volume2 } from "lucide-react";
-import { uploadStoryFile, createStory, searchZingMp3, getZingMp3SongStream, getZingMp3SongLyrics } from "@/lib/story-api";
-import { cn } from "@/lib/utils";
 import { MUSIC_LIBRARY, Song } from "@/lib/music-data";
+import { createStory, getZingMp3SongLyrics, getZingMp3SongStream, searchZingMp3, uploadStoryFile } from "@/lib/story-api";
+import { cn } from "@/lib/utils";
+import { Brush, Disc, Eraser, Image as ImageIcon, Loader2, Music, Pause, Play, RotateCcw, Shield, Sliders, Smile, Type, Volume2, X } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useEffect, useRef, useState } from "react";
 
 interface StoryCreatorModalProps {
   isOpen: boolean;
@@ -113,6 +114,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
   const [isSearchingMusic, setIsSearchingMusic] = useState(false);
   const [isLoadingSongDetails, setIsLoadingSongDetails] = useState(false);
   const [creatorLyricIndex, setCreatorLyricIndex] = useState(-1);
+  const t = useTranslations("story");
 
   // Effect tìm kiếm ZingMp3 với debounce 500ms
   useEffect(() => {
@@ -174,12 +176,12 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
         });
         setIsMusicPlaying(true);
       } else {
-        alert("Không thể tải stream bài hát này từ ZingMp3 (có thể là bài hát bản quyền hoặc VIP). Vui lòng chọn bài khác!");
+        alert(t("musicNotSupport"));
         setSelectedSong(null);
       }
     } catch (err) {
       console.error("Lỗi lấy chi tiết nhạc ZingMp3:", err);
-      alert("Lỗi tải thông tin bài hát từ ZingMp3. Vui lòng thử lại!");
+      alert(t("musicLoadError"));
       setSelectedSong(null);
     } finally {
       setIsLoadingSongDetails(false);
@@ -202,7 +204,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
       } else if (audioRef.current.src !== selectedSong.audioUrl) {
         audioRef.current.src = selectedSong.audioUrl;
       }
-      
+
       audioRef.current.currentTime = musicStartOffset;
       audioRef.current.play().catch((e) => console.log("Audio preview blocked by browser policy:", e));
 
@@ -265,11 +267,11 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
     if (!isOpen) return;
 
     const interval = setInterval(() => {
-      const hasContent = 
-        textContent.trim() !== "" || 
-        mediaFile !== null || 
-        textOverlays.length > 0 || 
-        stickers.length > 0 || 
+      const hasContent =
+        textContent.trim() !== "" ||
+        mediaFile !== null ||
+        textOverlays.length > 0 ||
+        stickers.length > 0 ||
         activeFilter !== "none";
 
       if (hasContent) {
@@ -297,16 +299,16 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
     if (savedDraft) {
       try {
         const draft = JSON.parse(savedDraft);
-        const hasContent = 
-          draft.textContent || 
-          (draft.textOverlays && draft.textOverlays.length > 0) || 
-          (draft.stickers && draft.stickers.length > 0) || 
+        const hasContent =
+          draft.textContent ||
+          (draft.textOverlays && draft.textOverlays.length > 0) ||
+          (draft.stickers && draft.stickers.length > 0) ||
           draft.activeFilter !== "none";
 
         if (hasContent) {
           // Trì hoãn nhẹ để giao diện render đầy đủ trước khi hiển thị alert
           setTimeout(() => {
-            const confirmRestore = confirm("Phát hiện bản nháp chưa hoàn thành. Bạn có muốn khôi phục lại không?");
+            const confirmRestore = confirm(t("confirmRestore"));
             if (confirmRestore) {
               if (draft.tab) setTab(draft.tab);
               if (draft.textContent) setTextContent(draft.textContent);
@@ -331,15 +333,15 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
 
   // Đóng an toàn có cảnh báo xác nhận (Giai đoạn 4)
   const handleSafeClose = () => {
-    const hasContent = 
-      textContent.trim() !== "" || 
-      mediaFile !== null || 
-      textOverlays.length > 0 || 
-      stickers.length > 0 || 
+    const hasContent =
+      textContent.trim() !== "" ||
+      mediaFile !== null ||
+      textOverlays.length > 0 ||
+      stickers.length > 0 ||
       activeFilter !== "none";
 
     if (hasContent) {
-      const confirmClose = confirm("Bạn có chắc chắn muốn đóng? Bản nháp hiện tại của bạn sẽ bị xóa bỏ.");
+      const confirmClose = confirm(t("confirmClose"));
       if (!confirmClose) return;
     }
 
@@ -351,7 +353,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
   const handleFile = (file: File) => {
     // Giới hạn dung lượng 50MB
     if (file.size > 50 * 1024 * 1024) {
-      alert("Dung lượng tệp vượt quá giới hạn 50MB!");
+      alert(t("fileTooLarge"));
       return;
     }
 
@@ -366,7 +368,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
       video.onloadedmetadata = () => {
         window.URL.revokeObjectURL(video.src);
         if (video.duration > 30) {
-          alert("Thời lượng video vượt quá giới hạn 30 giây! Vui lòng chọn video ngắn hơn.");
+          alert(t("videoTooLong"));
           setMediaFile(null);
           setMediaPreview(null);
           setMediaType(null);
@@ -431,20 +433,20 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
     e.preventDefault();
     setSelectedOverlayId(overlayId);
     setSelectedStickerId(null); // Deselect sticker when text is selected
-    
+
     const textElement = e.currentTarget;
     const card = textElement.parentElement;
     if (!card) return;
-    
+
     const rect = card.getBoundingClientRect();
-    
+
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const relativeX = moveEvent.clientX - rect.left;
       const relativeY = moveEvent.clientY - rect.top;
-      
+
       const xPercent = Math.max(0, Math.min(100, (relativeX / rect.width) * 100));
       const yPercent = Math.max(0, Math.min(100, (relativeY / rect.height) * 100));
-      
+
       setTextOverlays((prev) =>
         prev.map((item) =>
           item.id === overlayId
@@ -453,12 +455,12 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
         )
       );
     };
-    
+
     const handleMouseUp = () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-    
+
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
   };
@@ -495,20 +497,20 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
     e.preventDefault();
     setSelectedStickerId(stickerId);
     setSelectedOverlayId(null); // Deselect text
-    
+
     const stickerElement = e.currentTarget;
     const card = stickerElement.parentElement;
     if (!card) return;
-    
+
     const rect = card.getBoundingClientRect();
-    
+
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const relativeX = moveEvent.clientX - rect.left;
       const relativeY = moveEvent.clientY - rect.top;
-      
+
       const xPercent = Math.max(0, Math.min(100, (relativeX / rect.width) * 100));
       const yPercent = Math.max(0, Math.min(100, (relativeY / rect.height) * 100));
-      
+
       setStickers((prev) =>
         prev.map((item) =>
           item.id === stickerId
@@ -517,12 +519,12 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
         )
       );
     };
-    
+
     const handleStickerMouseUp = () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleStickerMouseUp);
     };
-    
+
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleStickerMouseUp);
   };
@@ -534,11 +536,11 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    
+
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.strokeStyle = brushColor;
@@ -546,7 +548,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     setIsCanvasDrawing(true);
-    
+
     // Lưu lịch sử để phục vụ Hoàn tác (Undo)
     setDrawHistory((prev) => [...prev, canvas.toDataURL()]);
   };
@@ -557,11 +559,11 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    
+
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     ctx.lineTo(x, y);
     ctx.stroke();
   };
@@ -575,10 +577,10 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
     if (!canvas || drawHistory.length === 0) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    
+
     const previousState = drawHistory[drawHistory.length - 1];
     setDrawHistory((prev) => prev.slice(0, -1));
-    
+
     const img = new globalThis.Image();
     img.src = previousState;
     img.onload = () => {
@@ -601,7 +603,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
     try {
       if (tab === "text") {
         if (!textContent.trim()) return;
-        
+
         let textContentValue = textContent;
         if (selectedSong) {
           textContentValue = JSON.stringify({
@@ -631,7 +633,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
         const uploadRes = await uploadStoryFile(mediaFile, (progress) => {
           setUploadProgress(progress);
         });
-        
+
         // Trích xuất nét vẽ từ canvas nếu có vẽ tự do
         const canvas = canvasRef.current;
         let drawingData: string | undefined = undefined;
@@ -685,7 +687,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
       onClose();
     } catch (error) {
       console.error("Lỗi khi đăng story:", error);
-      alert("Đăng tin thất bại. Vui lòng thử lại!");
+      alert(t("postFailed"));
     } finally {
       setLoading(false);
     }
@@ -732,7 +734,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
     setMusicDuration(15);
     setMusicOverlayType("sticker");
     setIsMusicPlaying(false);
-    
+
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext("2d");
@@ -745,12 +747,12 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-900 w-full max-w-4xl h-[600px] rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row animate-in fade-in zoom-in duration-300">
-        
+
         {/* Sidebar điều khiển bên trái */}
         <div className="w-full md:w-80 border-r border-slate-100 dark:border-slate-800 p-6 flex flex-col justify-between bg-slate-50 dark:bg-slate-950">
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-slate-800 dark:text-white">Tạo tin mới</h2>
+              <h2 className="text-xl font-bold text-slate-800 dark:text-white">{t("addStory")}</h2>
               <button onClick={handleSafeClose} className="p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
                 <X className="w-5 h-5 text-slate-500" />
               </button>
@@ -762,45 +764,41 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                 onClick={() => { setTab("media"); handleReset(); }}
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-all",
-                  tab === "media" 
-                    ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-sm" 
+                  tab === "media"
+                    ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-sm"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-800"
                 )}
               >
-                <ImageIcon className="w-4 h-4" />
-                Ảnh/Video
-              </button>
+                <ImageIcon className="w-4 h-4" />{t("mediaStory")}</button>
               <button
                 onClick={() => { setTab("text"); handleReset(); }}
                 className={cn(
                   "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-all",
-                  tab === "text" 
-                    ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-sm" 
+                  tab === "text"
+                    ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-sm"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-800"
                 )}
               >
-                <Type className="w-4 h-4" />
-                Tin Chữ
-              </button>
+                <Type className="w-4 h-4" />{t("textStory")}</button>
             </div>
 
             {/* Nội dung Tab cấu hình */}
             {tab === "text" ? (
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nội dung tin chữ</label>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t("textContent")}</label>
                   <textarea
                     value={textContent}
                     onChange={(e) => setTextContent(e.target.value)}
-                    placeholder="Bắt đầu nhập chữ..."
+                    placeholder={t("startTyping")}
                     rows={4}
                     maxLength={200}
                     className="w-full mt-1.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Chọn Màu Nền</label>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t("chooseBackground")}</label>
                   <div className="grid grid-cols-3 gap-2 mt-2">
                     {GRADIENTS.map((grad) => (
                       <button
@@ -834,8 +832,8 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                       onClick={() => fileInputRef.current?.click()}
                       className={cn(
                         "w-full border-2 border-dashed rounded-2xl py-12 flex flex-col items-center justify-center gap-2 transition-all cursor-pointer bg-white dark:bg-slate-900 text-center",
-                        isDragging 
-                          ? "border-blue-500 bg-blue-50/20 dark:bg-blue-900/15 scale-[1.02] shadow-inner" 
+                        isDragging
+                          ? "border-blue-500 bg-blue-50/20 dark:bg-blue-900/15 scale-[1.02] shadow-inner"
                           : "border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500"
                       )}
                     >
@@ -870,11 +868,11 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                     {/* Thanh Tab chuyển đổi các công cụ */}
                     <div className="flex bg-slate-100 dark:bg-slate-900/80 p-0.5 rounded-xl text-xs gap-0.5">
                       {[
-                        { id: "text", name: "Chữ", icon: Type },
-                        { id: "filter", name: "Bộ lọc", icon: Sliders },
-                        { id: "draw", name: "Vẽ", icon: Brush },
-                        { id: "sticker", name: "Sticker", icon: Smile },
-                        { id: "music", name: "Nhạc", icon: Music },
+                        { id: "text", name: t("text"), icon: Type },
+                        { id: "filter", name: t("filters"), icon: Sliders },
+                        { id: "draw", name: t("draw"), icon: Brush },
+                        { id: "sticker", name: t("stickers"), icon: Smile },
+                        { id: "music", name: t("music"), icon: Music },
                       ].map((item) => {
                         const Icon = item.icon;
                         return (
@@ -910,15 +908,13 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                             onClick={handleAddOverlay}
                             className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow transition-all mb-3"
                           >
-                            <Type className="w-4 h-4" />
-                            Thêm chữ mới
-                          </button>
+                            <Type className="w-4 h-4" />{t("addNewText")}</button>
 
                           {textOverlays.length > 0 ? (
                             <div className="space-y-3">
                               {/* Dropdown danh sách các chữ đè */}
                               <div>
-                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Danh sách chữ đè</label>
+                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("textOverlayList")}</label>
                                 <div className="flex flex-col gap-1.5 mt-1 max-h-[85px] overflow-y-auto pr-1">
                                   {textOverlays.map((overlay) => (
                                     <div
@@ -955,12 +951,12 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                                     <div className="p-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl space-y-3 shadow-inner animate-in fade-in duration-200">
                                       {/* Nội dung chữ */}
                                       <div>
-                                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Nội dung chữ</label>
+                                        <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("textContent")}</label>
                                         <input
                                           type="text"
                                           value={activeOverlay.text}
                                           onChange={(e) => handleUpdateOverlayText(e.target.value)}
-                                          placeholder="Nhập chữ..."
+                                          placeholder={t("enterText")}
                                           className="w-full mt-1 p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                                         />
                                       </div>
@@ -968,7 +964,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                                       {/* Font chữ */}
                                       <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Font chữ</label>
+                                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("font")}</label>
                                           <select
                                             value={activeOverlay.fontStyle}
                                             onChange={(e) => handleUpdateOverlayStyle("fontStyle", e.target.value)}
@@ -984,7 +980,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
 
                                         {/* Cỡ chữ */}
                                         <div>
-                                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Kích cỡ ({activeOverlay.fontSize}px)</label>
+                                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("size")} ({activeOverlay.fontSize}px)</label>
                                           <input
                                             type="range"
                                             min="12"
@@ -1000,7 +996,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                                       <div className="grid grid-cols-2 gap-2">
                                         {/* Màu chữ */}
                                         <div>
-                                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Màu chữ</label>
+                                          <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("textColor")}</label>
                                           <div className="flex gap-1 mt-1 flex-wrap">
                                             {["#ffffff", "#facc15", "#ef4444", "#06b6d4", "#22c55e", "#ec4899", "#000000"].map((color) => (
                                               <button
@@ -1050,7 +1046,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                             </div>
                           ) : (
                             <div className="text-center py-6 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-950/20">
-                              <p className="text-slate-400 text-xs px-4">Hãy nhấn "Thêm chữ mới" để viết chữ kéo thả tùy ý trên tin!</p>
+                              <p className="text-slate-400 text-xs px-4">Hãy nhấn {t("addNewText")} để viết chữ kéo thả tùy ý trên tin!</p>
                             </div>
                           )}
                         </div>
@@ -1073,7 +1069,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                                 )}
                               >
                                 <span className="text-[10px]">{f.name}</span>
-                                <div 
+                                <div
                                   className="w-full h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-200 dark:bg-slate-700"
                                   style={{ filter: f.style }}
                                 />
@@ -1113,7 +1109,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
 
                               {/* Bảng màu vẽ */}
                               <div>
-                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Màu cọ</label>
+                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("brushColor")}</label>
                                 <div className="flex gap-1 mt-1 flex-wrap">
                                   {["#ef4444", "#eab308", "#22c55e", "#3b82f6", "#ec4899", "#a855f7", "#ffffff", "#000000"].map((color) => (
                                     <button
@@ -1154,9 +1150,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                                   disabled={drawHistory.length === 0}
                                   className="flex-1 flex items-center justify-center gap-1 py-1 px-2 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 disabled:opacity-40 disabled:pointer-events-none text-slate-700 dark:text-slate-300 font-semibold text-[9px] rounded-lg transition-all cursor-pointer"
                                 >
-                                  <RotateCcw className="w-3 h-3" />
-                                  Hoàn tác
-                                </button>
+                                  <RotateCcw className="w-3 h-3" />{t("undo")}</button>
                                 <button
                                   type="button"
                                   onClick={handleClearDraw}
@@ -1169,7 +1163,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                             </div>
                           ) : (
                             <div className="text-center py-6 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-950/20">
-                              <p className="text-slate-400 text-xs px-4">Hãy bật nút "Bật cọ vẽ tay" để vẽ tự do lên tin!</p>
+                              <p className="text-slate-400 text-xs px-4">Hãy bật nút {t("enableBrush")} để vẽ tự do lên tin!</p>
                             </div>
                           )}
                         </div>
@@ -1398,7 +1392,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
 
                               {/* Kiểu hiển thị trên Story */}
                               <div className="space-y-1.5">
-                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Kiểu hiển thị</label>
+                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("musicOverlayType")}</label>
                                 <div className="grid grid-cols-3 gap-1">
                                   {[
                                     { id: "sticker", name: "Sticker" },
@@ -1470,9 +1464,9 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                                         />
                                       ))}
                                     </div>
-                                    
+
                                     {/* Sóng nhạc Highlight trong phân khúc chọn */}
-                                    <div 
+                                    <div
                                       className="absolute top-0 bottom-0 bg-blue-600/10 border-l border-r border-blue-500 flex items-center justify-around overflow-hidden transition-all duration-150"
                                       style={{
                                         left: `${(musicStartOffset / selectedSong.duration) * 100}%`,
@@ -1487,7 +1481,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                                         />
                                       ))}
                                     </div>
-                                    
+
                                     <div className="text-[8px] font-bold text-slate-500 z-10 select-none">0:00</div>
                                     <div className="text-[8px] font-bold text-slate-500 z-10 select-none font-mono">
                                       {Math.floor(selectedSong.duration / 60)}:{(selectedSong.duration % 60).toString().padStart(2, "0")}
@@ -1588,16 +1582,16 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                   : "bg-blue-600 hover:bg-blue-700 hover:shadow-xl active:scale-95"
               )}
             >
-               {loading ? (
+              {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  {tab === "media" && uploadProgress > 0 
-                    ? `Đang tải lên tin (${uploadProgress}%)...`
-                    : "Đang tải lên tin..."
+                  {tab === "media" && uploadProgress > 0
+                    ? `${t("uploadingStory")} (${uploadProgress}%)`
+                    : t("uploadingStory")
                   }
                 </>
               ) : (
-                "Chia sẻ lên tin"
+                t("postStory")
               )}
             </button>
           </div>
@@ -1605,21 +1599,20 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
 
         {/* Vùng Preview hiển thị trực quan bên phải */}
         <div className="flex-1 bg-slate-950 flex items-center justify-center p-6 relative" onClick={() => setSelectedOverlayId(null)}>
-          <style dangerouslySetInnerHTML={{__html: `
+          <style dangerouslySetInnerHTML={{
+            __html: `
             @keyframes storyProgress {
               0% { transform: scaleX(0); }
               100% { transform: scaleX(1); }
             }
           `}} />
-          
-          <div className="absolute top-4 left-4 text-xs font-semibold text-white/60 bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-md z-30">
-            Khung xem trước
-          </div>
-          
+
+          <div className="absolute top-4 left-4 text-xs font-semibold text-white/60 bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-md z-30">{t("preview")}</div>
+
           <div className="w-[270px] h-[480px] rounded-3xl overflow-hidden shadow-2xl relative border-[6px] border-slate-800 dark:border-slate-900 bg-slate-950 flex flex-col justify-between transition-all duration-300">
             {/* Thanh tiến trình giả lập */}
             <div className="absolute top-3.5 left-3 right-3 h-1 bg-white/20 rounded-full overflow-hidden z-20">
-              <div 
+              <div
                 className="h-full bg-white rounded-full origin-left"
                 style={{
                   animation: "storyProgress 5s linear infinite",
@@ -1657,8 +1650,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                     ) : (
                       <div className="w-full text-center px-4 py-3 bg-black/50 dark:bg-slate-900/60 rounded-2xl backdrop-blur-md border border-white/10 shadow-lg flex flex-col items-center max-w-[220px]">
                         <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest flex items-center gap-1 mb-1.5">
-                          <Volume2 className="w-3 h-3 animate-pulse" /> Lời bài hát
-                        </span>
+                          <Volume2 className="w-3 h-3 animate-pulse" />{t("lyrics")}</span>
                         <div className="flex flex-col gap-0.5 transition-all duration-300">
                           {creatorLyricIndex > 0 && (
                             <p className="text-[8px] font-medium text-white/30 truncate max-w-[180px]">
@@ -1725,20 +1717,20 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                     )}
                   />
                 )}
-                
+
                 {/* Custom Text Overlays (Giai đoạn 2) */}
                 {mediaPreview && textOverlays.map((overlay) => {
-                  const fontStyleClass = 
+                  const fontStyleClass =
                     overlay.fontStyle === "serif" ? "font-serif" :
-                    overlay.fontStyle === "mono" ? "font-mono tracking-wider" :
-                    overlay.fontStyle === "handwritten" ? "font-serif italic tracking-wide" :
-                    overlay.fontStyle === "bold" ? "font-sans font-black uppercase tracking-tight" :
-                    "font-sans";
+                      overlay.fontStyle === "mono" ? "font-mono tracking-wider" :
+                        overlay.fontStyle === "handwritten" ? "font-serif italic tracking-wide" :
+                          overlay.fontStyle === "bold" ? "font-sans font-black uppercase tracking-tight" :
+                            "font-sans";
 
-                  const highlightStyle = 
+                  const highlightStyle =
                     overlay.backgroundColor === "black" ? "bg-black/75 px-3 py-1.5 rounded-xl shadow-md" :
-                    overlay.backgroundColor === "white" ? "bg-white text-slate-900 px-3 py-1.5 rounded-xl shadow-md" :
-                    "px-3 py-1.5";
+                      overlay.backgroundColor === "white" ? "bg-white text-slate-900 px-3 py-1.5 rounded-xl shadow-md" :
+                        "px-3 py-1.5";
 
                   return (
                     <div
@@ -1748,10 +1740,10 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                           handleMouseDown(e, overlay.id);
                         }
                       }}
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (!isDrawingEnabled) {
-                          setSelectedOverlayId(overlay.id); 
+                          setSelectedOverlayId(overlay.id);
                           setSelectedStickerId(null);
                         }
                       }}
@@ -1783,10 +1775,10 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                         handleStickerMouseDown(e, sticker.id);
                       }
                     }}
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (!isDrawingEnabled) {
-                        setSelectedStickerId(sticker.id); 
+                        setSelectedStickerId(sticker.id);
                         setSelectedOverlayId(null);
                       }
                     }}
@@ -1829,8 +1821,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                     ) : (
                       <div className="w-full text-center px-4 py-3 bg-black/50 dark:bg-slate-900/60 rounded-2xl backdrop-blur-md border border-white/10 shadow-lg flex flex-col items-center max-w-[220px]">
                         <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest flex items-center gap-1 mb-1.5">
-                          <Volume2 className="w-3 h-3 animate-pulse" /> Lời bài hát
-                        </span>
+                          <Volume2 className="w-3 h-3 animate-pulse" />{t("lyrics")}</span>
                         <div className="flex flex-col gap-0.5 transition-all duration-300">
                           {creatorLyricIndex > 0 && (
                             <p className="text-[8px] font-medium text-white/30 truncate max-w-[180px]">
@@ -1852,7 +1843,7 @@ export default function StoryCreatorModal({ isOpen, onClose, onSuccess, initialS
                 )}
               </div>
             )}
-            
+
             {/* Header giả lập ở góc trên */}
             <div className="absolute top-6 left-3 right-3 flex items-center gap-2 z-10 pointer-events-none">
               <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md border border-white/30" />

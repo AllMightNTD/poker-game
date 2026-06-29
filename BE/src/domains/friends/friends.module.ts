@@ -15,6 +15,8 @@ import { GetPendingRequestsUseCase } from './applications/use-cases/get-pending-
 import { GetSentRequestsUseCase } from './applications/use-cases/get-sent-requests.use-case';
 import { CountPendingRequestsUseCase } from './applications/use-cases/count-pending-requests.use-case';
 import { GetFriendSuggestionsUseCase } from './applications/use-cases/get-friend-suggestions.use-case';
+import { SearchFriendsUseCase } from './applications/use-cases/search-friends.use-case';
+import { GetMutualFriendsUseCase } from './applications/use-cases/get-mutual-friends.use-case';
 
 const useCases = [
   GetFriendsUseCase,
@@ -27,12 +29,12 @@ const useCases = [
   GetSentRequestsUseCase,
   CountPendingRequestsUseCase,
   GetFriendSuggestionsUseCase,
+  SearchFriendsUseCase,
+  GetMutualFriendsUseCase,
 ];
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Friend, FriendRequest, User]),
-  ],
+  imports: [TypeOrmModule.forFeature([Friend, FriendRequest, User])],
   providers: [
     ...useCases,
     {
@@ -40,9 +42,6 @@ const useCases = [
       useClass: TypeOrmFriendRepository,
     },
   ],
-  exports: [
-    'IFriendRepository',
-    ...useCases,
-  ],
+  exports: ['IFriendRepository', ...useCases],
 })
 export class FriendsModule {}

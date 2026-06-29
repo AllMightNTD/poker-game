@@ -13,6 +13,6 @@ export const config = new DocumentBuilder()
       description: 'Enter JWT token, e.g. "Bearer <token>"',
       in: 'header',
     },
-    'access-token', 
+    'access-token',
   )
   .build();

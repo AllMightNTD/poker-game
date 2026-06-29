@@ -1,4 +1,10 @@
-import { BaseEntity, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import {
+  BaseEntity,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryColumn,
+} from 'typeorm';
 import { Article } from './article.entity';
 import { Hashtag } from './hashtag.entity';
 
@@ -12,11 +18,15 @@ export class ArticleHashtag extends BaseEntity {
 
   // ---- Relations ----
 
-  @ManyToOne(() => Article, (article) => article.hashtags, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Article, (article) => article.hashtags, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'article_id' })
   article: Article;
 
-  @ManyToOne(() => Hashtag, (hashtag) => hashtag.article_hashtags, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Hashtag, (hashtag) => hashtag.article_hashtags, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'hashtag_id' })
   hashtag: Hashtag;
 }

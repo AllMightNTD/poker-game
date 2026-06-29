@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { FriendRequest } from "../types/friends.types";
 import { Loader2, Check, X, Calendar } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface FriendRequestCardProps {
   request: FriendRequest;
@@ -16,12 +17,13 @@ export function FriendRequestCard({
   onAccept,
   onDecline,
 }: FriendRequestCardProps) {
+  const t = useTranslations("friendRequest");
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionType, setActionType] = useState<"accept" | "decline" | null>(null);
 
   const sender = request.sender;
   const avatarUrl = sender?.profile?.avatar_url || "/assets/images/default-avatar.png";
-  const fullName = sender?.profile?.full_name || sender?.email || "Người dùng";
+  const fullName = sender?.profile?.full_name || sender?.email || t("user");
   const username = sender?.profile?.username ? `@${sender.profile.username}` : "";
   const requestDate = new Date(request.created_at).toLocaleDateString("vi-VN", {
     day: "numeric",
@@ -76,7 +78,7 @@ export function FriendRequestCard({
 
           <div className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-zinc-500 mb-4">
             <Calendar className="w-3.5 h-3.5" />
-            <span>Gửi ngày {requestDate}</span>
+            <span>{t("sentDate", { date: requestDate })}</span>
           </div>
         </div>
 
@@ -92,7 +94,7 @@ export function FriendRequestCard({
             ) : (
               <Check className="w-4 h-4" />
             )}
-            Chấp nhận
+            {t("accept")}
           </button>
           <button
             onClick={handleDecline}
@@ -104,7 +106,7 @@ export function FriendRequestCard({
             ) : (
               <X className="w-4 h-4" />
             )}
-            Từ chối
+            {t("decline")}
           </button>
         </div>
       </div>

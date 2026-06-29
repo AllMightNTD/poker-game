@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, IsNull } from 'typeorm';
 import { ICommentRepository } from '../../domain/repositories/comment.repository.interface';
@@ -19,7 +24,9 @@ export class TypeOrmCommentRepository implements ICommentRepository {
     private readonly dataSource: DataSource,
   ) {}
 
-  private async getRecipientUserIds(post: Post): Promise<{ recipientIds: string[]; audience: string }> {
+  private async getRecipientUserIds(
+    post: Post,
+  ): Promise<{ recipientIds: string[]; audience: string }> {
     const authorId = post.user_id;
 
     if (post.audience === Audience.PUBLIC) {
@@ -28,13 +35,12 @@ export class TypeOrmCommentRepository implements ICommentRepository {
       return { recipientIds: [authorId], audience: 'only_me' };
     } else if (post.audience === Audience.FRIENDS) {
       const friends = await this.dataSource.manager.find(Friend, {
-        where: [
-          { user_id: authorId },
-          { friend_id: authorId },
-        ],
+        where: [{ user_id: authorId }, { friend_id: authorId }],
       });
 
-      const friendIds = friends.map((f) => (f.user_id === authorId ? f.friend_id : f.user_id));
+      const friendIds = friends.map((f) =>
+        f.user_id === authorId ? f.friend_id : f.user_id,
+      );
       const recipientIds = Array.from(new Set([authorId, ...friendIds]));
       return { recipientIds, audience: 'friends' };
     }
@@ -52,15 +58,12 @@ export class TypeOrmCommentRepository implements ICommentRepository {
     const sort = query.sort || 'oldest';
     const skip = (page - 1) * limit;
 
-    if (targetType === CommentTargetType.POST) {
-      const post = await this.postRepository.findOne({ where: { id: targetId } });
-      if (!post) throw new NotFoundException('Post not found');
-    }
+    const post = await this.postRepository.findOne({ where: { id: targetId } });
+    if (!post) throw new NotFoundException('Post not found');
 
     const [comments, total] = await this.commentRepository.findAndCount({
       where: {
-        target_type: targetType,
-        target_id: targetId,
+        post_id: targetId,
         parent_id: IsNull(),
         is_hidden: false,
       },
@@ -74,17 +77,19 @@ export class TypeOrmCommentRepository implements ICommentRepository {
 
     const commentsWithReplies = await Promise.all(
       comments.map(async (comment) => {
-        const [replies, replyCount] = await this.commentRepository.findAndCount({
-          where: {
-            parent_id: comment.id,
-            is_hidden: false,
+        const [replies, replyCount] = await this.commentRepository.findAndCount(
+          {
+            where: {
+              parent_id: comment.id,
+              is_hidden: false,
+            },
+            relations: ['user', 'user.profile'],
+            order: {
+              created_at: 'ASC',
+            },
+            take: 3,
           },
-          relations: ['user', 'user.profile'],
-          order: {
-            created_at: 'ASC',
-          },
-          take: 3,
-        });
+        );
 
         return {
           ...comment,
@@ -113,7 +118,9 @@ export class TypeOrmCommentRepository implements ICommentRepository {
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const parentComment = await this.commentRepository.findOne({ where: { id: commentId } });
+    const parentComment = await this.commentRepository.findOne({
+      where: { id: commentId },
+    });
     if (!parentComment) {
       throw new NotFoundException('Parent comment not found');
     }
@@ -143,24 +150,25 @@ export class TypeOrmCommentRepository implements ICommentRepository {
   }
 
   async createComment(userId: string, dto: any) {
-    const { target_type, target_id, parent_id, content, media_url, sticker_url } = dto;
+    const { target_id, parent_id, content, media_url, sticker_url, type } = dto;
+    const postId = target_id || dto.post_id;
 
     if (!content?.trim() && !media_url && !sticker_url) {
-      throw new BadRequestException('Comment must contain text, media, or a sticker');
+      throw new BadRequestException(
+        'Comment must contain text, media, or a sticker',
+      );
     }
 
-    let post: Post | null = null;
-    if (target_type === CommentTargetType.POST) {
-      post = await this.postRepository.findOne({ where: { id: target_id } });
-      if (!post) throw new NotFoundException('Post not found');
-    } else {
-      throw new BadRequestException('Unsupported target type');
-    }
+    const post = await this.postRepository.findOne({ where: { id: postId } });
+    if (!post) throw new NotFoundException('Post not found');
 
     let parentComment: Comment | null = null;
     if (parent_id) {
-      parentComment = await this.commentRepository.findOne({ where: { id: parent_id } });
-      if (!parentComment) throw new NotFoundException('Parent comment not found');
+      parentComment = await this.commentRepository.findOne({
+        where: { id: parent_id },
+      });
+      if (!parentComment)
+        throw new NotFoundException('Parent comment not found');
       if (parentComment.parent_id) {
         dto.parent_id = parentComment.parent_id;
       }
@@ -172,23 +180,33 @@ export class TypeOrmCommentRepository implements ICommentRepository {
 
     try {
       const newComment = queryRunner.manager.create(Comment, {
-        target_type,
-        target_id,
+        post_id: postId,
         parent_id: dto.parent_id || null,
         user_id: userId,
         content: content?.trim(),
         media_url,
         sticker_url,
+        type: type || (media_url ? 'media' : 'text'),
       });
 
       const savedComment = await queryRunner.manager.save(Comment, newComment);
 
       if (dto.parent_id) {
-        await queryRunner.manager.increment(Comment, { id: dto.parent_id }, 'reply_count', 1);
+        await queryRunner.manager.increment(
+          Comment,
+          { id: dto.parent_id },
+          'reply_count',
+          1,
+        );
       }
 
-      if (target_type === CommentTargetType.POST && post) {
-        await queryRunner.manager.increment(Post, { id: target_id }, 'comment_count', 1);
+      if (post) {
+        await queryRunner.manager.increment(
+          Post,
+          { id: postId },
+          'comment_count',
+          1,
+        );
       }
 
       await queryRunner.commitTransaction();
@@ -202,10 +220,14 @@ export class TypeOrmCommentRepository implements ICommentRepository {
         const { recipientIds, audience } = await this.getRecipientUserIds(post);
         const payload = {
           ...fullComment,
-          postId: target_id,
+          postId: postId,
           parentId: dto.parent_id || null,
         };
-        this.commentGateway.broadcastCommentCreated(payload, recipientIds, audience);
+        this.commentGateway.broadcastCommentCreated(
+          payload,
+          recipientIds,
+          audience,
+        );
       }
 
       return fullComment;
@@ -218,13 +240,17 @@ export class TypeOrmCommentRepository implements ICommentRepository {
   }
 
   async updateComment(userId: string, commentId: string, dto: any) {
-    const comment = await this.commentRepository.findOne({ where: { id: commentId } });
+    const comment = await this.commentRepository.findOne({
+      where: { id: commentId },
+    });
     if (!comment) {
       throw new NotFoundException('Comment not found');
     }
 
     if (comment.user_id !== userId) {
-      throw new ForbiddenException('You are not authorized to edit this comment');
+      throw new ForbiddenException(
+        'You are not authorized to edit this comment',
+      );
     }
 
     const { content, media_url, sticker_url } = dto;
@@ -243,39 +269,47 @@ export class TypeOrmCommentRepository implements ICommentRepository {
       relations: ['user', 'user.profile'],
     });
 
-    if (comment.target_type === CommentTargetType.POST) {
-      const post = await this.postRepository.findOne({ where: { id: comment.target_id } });
-      if (post) {
-        const { recipientIds, audience } = await this.getRecipientUserIds(post);
-        const payload = {
-          ...fullComment,
-          postId: comment.target_id,
-          parentId: comment.parent_id || null,
-        };
-        this.commentGateway.broadcastCommentUpdated(payload, recipientIds, audience);
-      }
+    const post = await this.postRepository.findOne({
+      where: { id: comment.post_id },
+    });
+    if (post) {
+      const { recipientIds, audience } = await this.getRecipientUserIds(post);
+      const payload = {
+        ...fullComment,
+        postId: comment.post_id,
+        parentId: comment.parent_id || null,
+      };
+      this.commentGateway.broadcastCommentUpdated(
+        payload,
+        recipientIds,
+        audience,
+      );
     }
 
     return fullComment;
   }
 
   async deleteComment(userId: string, commentId: string) {
-    const comment = await this.commentRepository.findOne({ where: { id: commentId } });
+    const comment = await this.commentRepository.findOne({
+      where: { id: commentId },
+    });
     if (!comment) {
       throw new NotFoundException('Comment not found');
     }
 
     let isPostAuthor = false;
     let post: Post | null = null;
-    if (comment.target_type === CommentTargetType.POST) {
-      post = await this.postRepository.findOne({ where: { id: comment.target_id } });
-      if (post && post.user_id === userId) {
-        isPostAuthor = true;
-      }
+    post = await this.postRepository.findOne({
+      where: { id: comment.post_id },
+    });
+    if (post && post.user_id === userId) {
+      isPostAuthor = true;
     }
 
     if (comment.user_id !== userId && !isPostAuthor) {
-      throw new ForbiddenException('You are not authorized to delete this comment');
+      throw new ForbiddenException(
+        'You are not authorized to delete this comment',
+      );
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -284,23 +318,38 @@ export class TypeOrmCommentRepository implements ICommentRepository {
 
     try {
       if (comment.parent_id) {
-        await queryRunner.manager.decrement(Comment, { id: comment.parent_id }, 'reply_count', 1);
+        await queryRunner.manager.decrement(
+          Comment,
+          { id: comment.parent_id },
+          'reply_count',
+          1,
+        );
       } else {
         const childRepliesCount = await this.commentRepository.count({
           where: { parent_id: comment.id },
         });
 
-        if (comment.target_type === CommentTargetType.POST && post) {
+        if (post) {
           const totalToDecrement = childRepliesCount + 1;
-          await queryRunner.manager.decrement(Post, { id: comment.target_id }, 'comment_count', totalToDecrement);
+          await queryRunner.manager.decrement(
+            Post,
+            { id: comment.post_id },
+            'comment_count',
+            totalToDecrement,
+          );
         }
 
         await queryRunner.manager.delete(Comment, { parent_id: comment.id });
       }
 
-      if (!comment.parent_id && comment.target_type === CommentTargetType.POST && post && comment.parent_id === null) {
-      } else if (comment.parent_id && comment.target_type === CommentTargetType.POST && post) {
-        await queryRunner.manager.decrement(Post, { id: comment.target_id }, 'comment_count', 1);
+      if (!comment.parent_id && post && comment.parent_id === null) {
+      } else if (comment.parent_id && post) {
+        await queryRunner.manager.decrement(
+          Post,
+          { id: comment.post_id },
+          'comment_count',
+          1,
+        );
       }
 
       await queryRunner.manager.delete(Comment, { id: commentId });
@@ -312,9 +361,13 @@ export class TypeOrmCommentRepository implements ICommentRepository {
         const payload = {
           commentId,
           parentId: comment.parent_id || undefined,
-          postId: comment.target_id,
+          postId: comment.post_id,
         };
-        this.commentGateway.broadcastCommentDeleted(payload, recipientIds, audience);
+        this.commentGateway.broadcastCommentDeleted(
+          payload,
+          recipientIds,
+          audience,
+        );
       }
 
       return { success: true };

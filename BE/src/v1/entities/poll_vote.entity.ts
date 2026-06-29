@@ -34,7 +34,9 @@ export class PollVote extends BaseEntity {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => PollOption, (option) => option.votes, { onDelete: 'CASCADE' })
+  @ManyToOne(() => PollOption, (option) => option.votes, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'option_id' })
   option: PollOption;
 }

@@ -4,6 +4,9 @@ import { X, MessageCircle, Share2, ThumbsUp, MoreHorizontal, Bookmark, Edit3, Tr
 import { motion, AnimatePresence } from "framer-motion";
 import { cn, formatCount } from "../../lib/utils";
 import CommentSection from "./CommentSection";
+import EmojiPickerPopup from "./EmojiPickerPopup";
+import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface PostDetailModalProps {
   post: any;
@@ -18,15 +21,6 @@ interface PostDetailModalProps {
   onReactionSelect: (reactionType: string | null) => void;
 }
 
-const REACTIONS = [
-  { type: "like", label: "Thích", emoji: "👍", color: "text-blue-500" },
-  { type: "love", label: "Yêu thích", emoji: "❤️", color: "text-rose-500" },
-  { type: "haha", label: "Haha", emoji: "😆", color: "text-amber-500" },
-  { type: "wow", label: "Wow", emoji: "😮", color: "text-yellow-500" },
-  { type: "sad", label: "Buồn", emoji: "😢", color: "text-blue-400" },
-  { type: "angry", label: "Phẫn nộ", emoji: "😡", color: "text-orange-600" },
-];
-
 export default function PostDetailModal({
   post,
   currentUser,
@@ -39,6 +33,16 @@ export default function PostDetailModal({
   stats,
   onReactionSelect,
 }: PostDetailModalProps) {
+  const t = useTranslations("post");
+  const REACTIONS = [
+    { type: "like", label: t("like"), emoji: "👍", color: "text-blue-500" },
+    { type: "love", label: t("love"), emoji: "❤️", color: "text-rose-500" },
+    { type: "haha", label: t("haha"), emoji: "😆", color: "text-amber-500" },
+    { type: "wow", label: t("wow"), emoji: "😮", color: "text-yellow-500" },
+    { type: "sad", label: t("sad"), emoji: "😢", color: "text-blue-400" },
+    { type: "angry", label: t("angry"), emoji: "😡", color: "text-orange-600" },
+  ];
+
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const pickerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -59,7 +63,7 @@ export default function PostDetailModal({
     if (currentReaction) {
       onReactionSelect(null);
     } else {
-      onReactionSelect("like");
+      onReactionSelect("👍");
     }
   };
 
@@ -76,9 +80,9 @@ export default function PostDetailModal({
 
   // Lấy icon reaction hiện tại
   const getReactionDisplay = () => {
-    if (!currentReaction) return { emoji: "👍", label: "Thích", color: "text-slate-500" };
-    const react = REACTIONS.find((r) => r.type === currentReaction);
-    return react ? { emoji: react.emoji, label: react.label, color: react.color } : { emoji: "👍", label: "Thích", color: "text-slate-500" };
+    if (!currentReaction) return { emoji: "👍", label: t("like"), color: "text-slate-500" };
+    const react = REACTIONS.find((r) => r.type === currentReaction || r.emoji === currentReaction);
+    return react ? { emoji: react.emoji, label: react.label, color: react.color } : { emoji: currentReaction, label: t("like"), color: "text-blue-500" };
   };
 
   const activeReaction = getReactionDisplay();
@@ -125,7 +129,7 @@ export default function PostDetailModal({
               {/* Grid nếu có nhiều ảnh */}
               {post.images.length > 1 && (
                 <div className="absolute bottom-4 left-4 bg-black/60 px-3 py-1 rounded-full text-white text-xs font-semibold">
-                  + {post.images.length - 1} ảnh khác
+                  {t("otherImages", { count: post.images.length - 1 })}
                 </div>
               )}
             </div>
@@ -176,12 +180,12 @@ export default function PostDetailModal({
               <div className="flex items-center justify-between pt-3 border-t border-slate-100 shrink-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-slate-500 font-medium">
-                    {formatCount(likeCount)} Lượt tương tác
+                    {t("interactions", { count: formatCount(likeCount) })}
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-slate-400">
-                  <span>{commentCount} Bình luận</span>
-                  <span>{post.shares || 0} Chia sẻ</span>
+                  <span>{t("comments", { count: commentCount })}</span>
+                  <span>{t("shares", { count: post.shares || 0 })}</span>
                 </div>
               </div>
 
@@ -223,7 +227,7 @@ export default function PostDetailModal({
                             animate={{ scale: 1 }}
                             transition={{ delay: index * 0.03 }}
                             onClick={() => {
-                              onReactionSelect(react.type === currentReaction ? null : react.type);
+                              onReactionSelect(react.emoji === currentReaction ? null : react.emoji);
                               setIsPickerOpen(false);
                             }}
                             className="w-9 h-9 hover:bg-slate-50 rounded-full flex flex-col items-center justify-center transition-all duration-200 hover:scale-130 active:scale-95 cursor-pointer"
@@ -232,6 +236,35 @@ export default function PostDetailModal({
                             <span className="text-xl leading-none">{react.emoji}</span>
                           </motion.button>
                         ))}
+                        
+                        <div className="relative">
+                          <motion.button
+                            type="button"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: REACTIONS.length * 0.03 }}
+                            whileHover={{ scale: 1.1, y: -2 }}
+                            className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center hover:bg-slate-200 text-slate-500 shrink-0 ml-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsPickerOpen(true);
+                            }}
+                          >
+                            <Plus size={16} />
+                          </motion.button>
+                          {isPickerOpen && (
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2">
+                              <EmojiPickerPopup
+                                onEmojiSelect={(emojiData) => {
+                                  onReactionSelect(emojiData.native);
+                                  setIsPickerOpen(false);
+                                }}
+                                onClickOutside={() => {}}
+                                position="top"
+                              />
+                            </div>
+                          )}
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -240,14 +273,14 @@ export default function PostDetailModal({
                 <div className="flex-1">
                   <button className="w-full flex items-center justify-center gap-2 py-2 hover:bg-slate-50 rounded-xl text-slate-500 transition-colors">
                     <MessageCircle size={15} />
-                    <span className="text-xs font-bold">Bình luận</span>
+                    <span className="text-xs font-bold">{t("comment")}</span>
                   </button>
                 </div>
 
                 <div className="flex-1">
                   <button className="w-full flex items-center justify-center gap-2 py-2 hover:bg-slate-50 rounded-xl text-slate-500 transition-colors">
                     <Share2 size={15} />
-                    <span className="text-xs font-bold">Chia sẻ</span>
+                    <span className="text-xs font-bold">{t("share")}</span>
                   </button>
                 </div>
               </div>

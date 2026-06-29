@@ -1,5 +1,9 @@
 import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
-import { Audience, ProfileVisibility, TwoFactorMethod } from 'src/constants/enums';
+import {
+  Audience,
+  ProfileVisibility,
+  TwoFactorMethod,
+} from 'src/constants/enums';
 
 export class UpdateSettingsDto {
   @IsEnum(Audience)

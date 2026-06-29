@@ -9,6 +9,10 @@ export class ToggleArchiveConversationUseCase {
   ) {}
 
   async execute(userId: string, conversationId: string, isArchived: boolean) {
-    return this.chatRepository.toggleArchiveConversation(userId, conversationId, isArchived);
+    return this.chatRepository.toggleArchiveConversation(
+      userId,
+      conversationId,
+      isArchived,
+    );
   }
 }

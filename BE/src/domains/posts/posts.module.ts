@@ -11,6 +11,9 @@ import { GetFeedPostsUseCase } from './applications/use-cases/get-feed-posts.use
 import { GetProfilePostsUseCase } from './applications/use-cases/get-profile-posts.use-case';
 import { ToggleReactionUseCase } from './applications/use-cases/toggle-reaction.use-case';
 import { UpdatePostUseCase } from './applications/use-cases/update-post.use-case';
+import { DeletePostUseCase } from './applications/use-cases/delete-post.use-case';
+import { GetProfileMediaUseCase } from './applications/use-cases/get-profile-media.use-case';
+import { DeleteMediaUseCase } from './applications/use-cases/delete-media.use-case';
 
 const useCases = [
   CreatePostUseCase,
@@ -18,12 +21,13 @@ const useCases = [
   GetProfilePostsUseCase,
   ToggleReactionUseCase,
   UpdatePostUseCase,
+  DeletePostUseCase,
+  GetProfileMediaUseCase,
+  DeleteMediaUseCase,
 ];
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Post, PostMedia, Reaction]),
-  ],
+  imports: [TypeOrmModule.forFeature([Post, PostMedia, Reaction])],
   providers: [
     ...useCases,
     PostGateway,
@@ -32,10 +36,6 @@ const useCases = [
       useClass: TypeOrmPostRepository,
     },
   ],
-  exports: [
-    'IPostRepository',
-    ...useCases,
-    PostGateway,
-  ],
+  exports: ['IPostRepository', ...useCases, PostGateway],
 })
 export class PostsModule {}

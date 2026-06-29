@@ -15,12 +15,16 @@ export class ResetPasswordUseCase {
 
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
-    const user = await this.authRepository.findUserByResetPasswordToken(hashedToken);
+    const user =
+      await this.authRepository.findUserByResetPasswordToken(hashedToken);
     if (!user) {
       throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
     }
 
-    if (!user.reset_password_expires_at || user.reset_password_expires_at.getTime() < Date.now()) {
+    if (
+      !user.reset_password_expires_at ||
+      user.reset_password_expires_at.getTime() < Date.now()
+    ) {
       throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
     }
 

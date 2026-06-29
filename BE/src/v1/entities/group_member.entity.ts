@@ -19,10 +19,18 @@ export class GroupMember extends BaseEntity {
   @PrimaryColumn({ type: 'varchar' })
   user_id: string;
 
-  @Column({ type: 'enum', enum: GroupMemberRole, default: GroupMemberRole.MEMBER })
+  @Column({
+    type: 'enum',
+    enum: GroupMemberRole,
+    default: GroupMemberRole.MEMBER,
+  })
   role: GroupMemberRole;
 
-  @Column({ type: 'enum', enum: GroupMemberStatus, default: GroupMemberStatus.ACTIVE })
+  @Column({
+    type: 'enum',
+    enum: GroupMemberStatus,
+    default: GroupMemberStatus.ACTIVE,
+  })
   status: GroupMemberStatus;
 
   @Column({ type: 'varchar', nullable: true })

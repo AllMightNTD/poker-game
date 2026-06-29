@@ -11,11 +11,16 @@ import {
   Trash2, 
   MessageCircle,
   Play,
-  CornerDownRight
+  CornerDownRight,
+  Mic
 } from "lucide-react";
+import VoiceRecorderInput from "./VoiceRecorderInput";
+import VoiceCommentPlayer from "./VoiceCommentPlayer";
 import api from "@/lib/axios";
 import { useSocket } from "@/components/providers/SocketProvider";
 import { AnimatePresence, motion } from "framer-motion";
+import { useTranslations } from "next-intl";
+import { useMutation } from "@tanstack/react-query";
 
 interface CommentSectionProps {
   postId: string;
@@ -35,6 +40,7 @@ const getMediaUrl = (url: string) => {
 };
 
 export default function CommentSection({ postId, currentUser, onCommentCountChange }: CommentSectionProps) {
+  const t = useTranslations("comment");
   const { socket } = useSocket();
   const [comments, setComments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,22 +51,20 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
 
   // Ô nhập comment gốc
   const [inputText, setInputText] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadedMedia, setUploadedMedia] = useState<{ file_url: string; type: "image" | "video" } | null>(null);
+  const [uploadedMedia, setUploadedMedia] = useState<{ file_url: string; type: "image" | "video" | "voice" } | null>(null);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isRecordingMode, setIsRecordingMode] = useState(false);
 
   // States quản lý việc trả lời comment (Reply)
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
-  const [isReplyUploading, setIsReplyUploading] = useState(false);
-  const [uploadedReplyMedia, setUploadedReplyMedia] = useState<{ file_url: string; type: "image" | "video" } | null>(null);
+  const [uploadedReplyMedia, setUploadedReplyMedia] = useState<{ file_url: string; type: "image" | "video" | "voice" } | null>(null);
   const [isReplyEmojiOpen, setIsReplyEmojiOpen] = useState(false);
 
   // States quản lý việc sửa comment (Edit)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
-  const [isEditUploading, setIsEditUploading] = useState(false);
-  const [uploadedEditMedia, setUploadedEditMedia] = useState<{ file_url: string; type: "image" | "video" } | null>(null);
+  const [uploadedEditMedia, setUploadedEditMedia] = useState<{ file_url: string; type: "image" | "video" | "voice" } | null>(null);
 
   // Quản lý dropdown action 3 chấm của comment
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -241,113 +245,123 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
     }
   };
 
-  // Upload tệp đính kèm bình luận
-  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>, mode: "create" | "reply" | "edit") => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (mode === "create") setIsUploading(true);
-    else if (mode === "reply") setIsReplyUploading(true);
-    else if (mode === "edit") setIsEditUploading(true);
-
-    const formData = new FormData();
-    formData.append("files", file);
-
-    try {
+  const uploadCommentMediaMutation = useMutation({
+    mutationFn: async ({ file, mode }: { file: File, mode: "create" | "reply" | "edit" }) => {
+      const formData = new FormData();
+      formData.append("files", file);
       const res = await api.post("/api/v1/comment/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
       const media = res.data.metadata[0];
-      const parsedMedia = {
+      return {
         file_url: media.file_url,
-        type: media.type === "video" ? "video" : ("image" as any),
+        type: media.type === "video" ? "video" : (file.type.includes("audio") ? "voice" : "image" as any),
+        mode
       };
-
-      if (mode === "create") setUploadedMedia(parsedMedia);
-      else if (mode === "reply") setUploadedReplyMedia(parsedMedia);
-      else if (mode === "edit") setUploadedEditMedia(parsedMedia);
-    } catch (err) {
+    },
+    onSuccess: (data) => {
+      if (data.mode === "create") setUploadedMedia(data);
+      else if (data.mode === "reply") setUploadedReplyMedia(data);
+      else if (data.mode === "edit") setUploadedEditMedia(data);
+    },
+    onError: (err) => {
       console.error("Upload file comment failed:", err);
       alert("Không thể tải tệp lên. Vui lòng thử lại!");
-    } finally {
-      setIsUploading(false);
-      setIsReplyUploading(false);
-      setIsEditUploading(false);
-      if (e.target) e.target.value = "";
     }
+  });
+
+  const handleUploadFile = (e: React.ChangeEvent<HTMLInputElement>, mode: "create" | "reply" | "edit") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    uploadCommentMediaMutation.mutate({ file, mode }, {
+      onSettled: () => {
+        if (e.target) e.target.value = "";
+      }
+    });
   };
 
-  // Submit comment mới
-  const handleSubmitComment = async () => {
-    if (!inputText.trim() && !uploadedMedia) return;
-
-    try {
-      await api.post("/api/v1/comment", {
-        target_type: "post",
-        target_id: postId,
-        content: inputText,
-        media_url: uploadedMedia?.file_url || undefined,
-      });
-
-      // Reset states
+  const createCommentMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      await api.post("/api/v1/comment", payload);
+    },
+    onSuccess: () => {
       setInputText("");
       setUploadedMedia(null);
       setIsEmojiPickerOpen(false);
-    } catch (err) {
-      console.error("Create comment failed:", err);
-    }
+    },
+    onError: (err) => console.error("Create comment failed:", err)
+  });
+
+  const handleSubmitComment = () => {
+    if (!inputText.trim() && !uploadedMedia) return;
+    createCommentMutation.mutate({
+      target_type: "post",
+      target_id: postId,
+      content: inputText,
+      media_url: uploadedMedia?.file_url || undefined,
+      type: uploadedMedia?.type === "voice" ? "voice" : (uploadedMedia ? "media" : "text"),
+    });
   };
 
-  // Submit reply
-  const handleSubmitReply = async (parentId: string) => {
-    if (!replyText.trim() && !uploadedReplyMedia) return;
-
-    try {
-      await api.post("/api/v1/comment", {
-        target_type: "post",
-        target_id: postId,
-        parent_id: parentId,
-        content: replyText,
-        media_url: uploadedReplyMedia?.file_url || undefined,
-      });
-
-      // Reset states
+  const replyCommentMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      await api.post("/api/v1/comment", payload);
+    },
+    onSuccess: () => {
       setReplyingToId(null);
       setReplyText("");
       setUploadedReplyMedia(null);
       setIsReplyEmojiOpen(false);
-    } catch (err) {
-      console.error("Create reply failed:", err);
-    }
+    },
+    onError: (err) => console.error("Create reply failed:", err)
+  });
+
+  const handleSubmitReply = (parentId: string) => {
+    if (!replyText.trim() && !uploadedReplyMedia) return;
+    replyCommentMutation.mutate({
+      target_type: "post",
+      target_id: postId,
+      parent_id: parentId,
+      content: replyText,
+      media_url: uploadedReplyMedia?.file_url || undefined,
+      type: uploadedReplyMedia?.type === "voice" ? "voice" : (uploadedReplyMedia ? "media" : "text"),
+    });
   };
 
-  // Submit chỉnh sửa comment
-  const handleSaveEdit = async (commentId: string) => {
-    if (!editText.trim() && !uploadedEditMedia) return;
-
-    try {
-      await api.put(`/api/v1/comment/${commentId}`, {
-        content: editText,
-        media_url: uploadedEditMedia?.file_url || null,
-      });
-
+  const editCommentMutation = useMutation({
+    mutationFn: async ({ id, payload }: { id: string, payload: any }) => {
+      await api.put(`/api/v1/comment/${id}`, payload);
+    },
+    onSuccess: () => {
       setEditingCommentId(null);
       setEditText("");
       setUploadedEditMedia(null);
-    } catch (err) {
-      console.error("Edit comment failed:", err);
-    }
+    },
+    onError: (err) => console.error("Edit comment failed:", err)
+  });
+
+  const handleSaveEdit = (commentId: string) => {
+    if (!editText.trim() && !uploadedEditMedia) return;
+    editCommentMutation.mutate({
+      id: commentId,
+      payload: {
+        content: editText,
+        media_url: uploadedEditMedia?.file_url || null,
+      }
+    });
   };
 
-  // Xóa comment
-  const handleDeleteComment = async (commentId: string) => {
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/api/v1/comment/${id}`);
+    },
+    onError: (err) => console.error("Delete comment failed:", err)
+  });
+
+  const handleDeleteComment = (commentId: string) => {
     if (!confirm("Bạn có chắc chắn muốn xóa bình luận này?")) return;
-    try {
-      await api.delete(`/api/v1/comment/${commentId}`);
-    } catch (err) {
-      console.error("Delete comment failed:", err);
-    }
+    deleteCommentMutation.mutate(commentId);
   };
 
   // Tải thêm reply
@@ -415,27 +429,49 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
             </div>
           )}
 
-          {isUploading && (
+          {uploadCommentMediaMutation.isPending && uploadCommentMediaMutation.variables?.mode === "create" && (
             <div className="flex items-center gap-1.5 py-1.5 px-2 bg-slate-50 border border-dashed border-slate-200 rounded-lg mb-2 text-[10px] font-bold text-slate-500">
               <Loader2 size={12} className="animate-spin text-blue-500" />
               Đang tải lên...
             </div>
           )}
 
-          <textarea
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Viết bình luận công khai..."
-            className="w-full bg-transparent text-xs text-slate-700 placeholder:text-slate-400 outline-none resize-none px-2 py-1"
-            rows={1}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmitComment();
-              }
-            }}
-          />
+          {isRecordingMode ? (
+            <VoiceRecorderInput
+              onRecordingComplete={(blob) => {
+                const file = new File([blob], "voice.webm", { type: "audio/webm" });
+                uploadCommentMediaMutation.mutate({ file, mode: "create" }, {
+                  onSuccess: (data) => {
+                    createCommentMutation.mutate({
+                      target_type: "post",
+                      target_id: postId,
+                      content: "",
+                      media_url: data.file_url,
+                      type: "voice",
+                    });
+                    setIsRecordingMode(false);
+                  }
+                });
+              }}
+              onCancel={() => setIsRecordingMode(false)}
+            />
+          ) : (
+            <textarea
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder={t("writeComment")}
+              className="w-full bg-transparent text-xs text-slate-700 placeholder:text-slate-400 outline-none resize-none px-2 py-1"
+              rows={1}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmitComment();
+                }
+              }}
+            />
+          )}
 
+          {!isRecordingMode && (
           <div className="flex items-center justify-between border-t border-slate-50 pt-1.5 mt-1 px-1">
             <div className="flex items-center gap-1 relative" ref={emojiRef}>
               <input
@@ -460,6 +496,14 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
                 title="Emoji"
               >
                 <Smile size={15} />
+              </button>
+
+              <button
+                onClick={() => setIsRecordingMode(true)}
+                className="p-1.5 hover:bg-slate-50 hover:text-red-500 rounded-full transition-colors text-slate-400"
+                title="Voice"
+              >
+                <Mic size={15} />
               </button>
 
               {/* Emoji Quick Picker */}
@@ -487,12 +531,13 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
 
             <button
               onClick={handleSubmitComment}
-              disabled={isUploading || (!inputText.trim() && !uploadedMedia)}
+              disabled={uploadCommentMediaMutation.isPending || createCommentMutation.isPending || (!inputText.trim() && !uploadedMedia)}
               className="p-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-200 disabled:to-slate-200 text-white rounded-xl shadow-xs transition-all duration-200 flex items-center justify-center gap-1"
             >
               <Send size={12} />
             </button>
           </div>
+          )}
         </div>
       </div>
 
@@ -500,11 +545,11 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
       {isLoading ? (
         <div className="flex justify-center items-center py-4">
           <Loader2 size={16} className="animate-spin text-blue-500 mr-1.5" />
-          <span className="text-[10px] font-bold text-slate-400">Đang tải bình luận...</span>
+          <span className="text-[10px] font-bold text-slate-400">{t("loading")}</span>
         </div>
       ) : comments.length === 0 ? (
         <div className="text-center py-3 text-[10px] font-semibold text-slate-400">
-          Chưa có bình luận nào. Hãy trở thành người đầu tiên tương tác nhé! 💬
+          {t("noComments")}
         </div>
       ) : (
         <div className="space-y-4">
@@ -517,13 +562,13 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
               {isLoadingMore ? (
                 <Loader2 size={13} className="animate-spin text-blue-500" />
               ) : (
-                "Hiển thị thêm bình luận"
+                t("loadMore")
               )}
             </button>
           )}
 
           {comments.map((comment) => {
-            const author = comment.user?.profile?.full_name || comment.user?.email || "Người dùng ẩn danh";
+            const author = comment.user?.profile?.full_name || comment.user?.email || t("anonymous");
             const avatar = comment.user?.profile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${author}`;
             const isEditing = editingCommentId === comment.id;
 
@@ -567,13 +612,13 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
                             onClick={() => setEditingCommentId(null)}
                             className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-[10px] font-bold text-slate-500"
                           >
-                            Hủy
+                            {t("cancel")}
                           </button>
                           <button
                             onClick={() => handleSaveEdit(comment.id)}
                             className="px-2.5 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-[10px] font-bold shadow-xs"
                           >
-                            Lưu
+                            {t("save")}
                           </button>
                         </div>
                       </div>
@@ -589,7 +634,9 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
 
                         {comment.media_url && (
                           <div className="mt-2 rounded-xl overflow-hidden max-w-xs shadow-xs border border-slate-100/50">
-                            {comment.media_url.endsWith(".mp4") || comment.media_url.includes("video") ? (
+                            {comment.type === "voice" || comment.media_url.endsWith(".webm") || comment.media_url.endsWith(".mp3") ? (
+                              <VoiceCommentPlayer url={getMediaUrl(comment.media_url)} />
+                            ) : comment.media_url.endsWith(".mp4") || comment.media_url.includes("video") ? (
                               <video src={getMediaUrl(comment.media_url)} className="w-full object-cover max-h-48" controls />
                             ) : (
                               <img src={getMediaUrl(comment.media_url)} className="w-full object-cover max-h-48" alt="comment asset" />
@@ -611,7 +658,7 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
                           }}
                           className="hover:text-blue-500 transition-colors cursor-pointer flex items-center gap-0.5"
                         >
-                          <CornerDownRight size={10} /> Phản hồi
+                          <CornerDownRight size={10} /> {t("reply")}
                         </button>
 
                         {/* Dropdown Menu actions 3 chấm */}
@@ -642,24 +689,26 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
                                       }}
                                       className="w-full px-3 py-1.5 hover:bg-slate-50 text-[10px] font-semibold text-slate-700 flex items-center gap-1.5"
                                     >
-                                      <Edit3 size={11} className="text-blue-500" /> Sửa
+                                      <Edit3 size={11} className="text-blue-500" /> {t("edit")}
                                     </button>
                                     <button
                                       onClick={() => {
-                                        handleDeleteComment(comment.id);
-                                        setActiveMenuId(null);
+                                        if (confirm(t("deleteConfirm"))) {
+                                          handleDeleteComment(comment.id);
+                                          setActiveMenuId(null);
+                                        }
                                       }}
                                       className="w-full px-3 py-1.5 hover:bg-slate-50 text-[10px] font-semibold text-rose-600 flex items-center gap-1.5"
                                     >
-                                      <Trash2 size={11} /> Xóa
+                                      <Trash2 size={11} /> {t("delete")}
                                     </button>
                                   </>
                                 ) : (
                                   <button
-                                    onClick={() => alert("Chức năng báo cáo bình luận.")}
+                                    onClick={() => alert(t("report"))}
                                     className="w-full px-3 py-1.5 hover:bg-slate-50 text-[10px] font-semibold text-slate-500 flex items-center gap-1.5"
                                   >
-                                    Báo cáo
+                                    {t("report")}
                                   </button>
                                 )}
                               </motion.div>
@@ -697,10 +746,10 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
                               />
                               <div className="flex justify-end gap-1 mt-1">
                                 <button onClick={() => setEditingCommentId(null)} className="px-2 py-0.5 bg-slate-100 rounded-md text-[9px] font-bold text-slate-500">
-                                  Hủy
+                                  {t("cancel")}
                                 </button>
                                 <button onClick={() => handleSaveEdit(reply.id)} className="px-2 py-0.5 bg-blue-600 text-white rounded-md text-[9px] font-bold">
-                                  Lưu
+                                  {t("save")}
                                 </button>
                               </div>
                             </div>
@@ -714,7 +763,9 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
                               </p>
                               {reply.media_url && (
                                 <div className="mt-1.5 rounded-lg overflow-hidden max-w-xs border border-slate-100/50">
-                                  {reply.media_url.endsWith(".mp4") || reply.media_url.includes("video") ? (
+                                  {reply.type === "voice" || reply.media_url.endsWith(".webm") || reply.media_url.endsWith(".mp3") ? (
+                                    <VoiceCommentPlayer url={getMediaUrl(reply.media_url)} />
+                                  ) : reply.media_url.endsWith(".mp4") || reply.media_url.includes("video") ? (
                                     <video src={getMediaUrl(reply.media_url)} className="w-full object-cover max-h-36" controls />
                                   ) : (
                                     <img src={getMediaUrl(reply.media_url)} className="w-full object-cover max-h-36" alt="reply asset" />
@@ -788,7 +839,7 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
                       onClick={() => handleLoadMoreReplies(comment.id, comment.replies?.length || 0)}
                       className="text-[10px] font-bold text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1 cursor-pointer pl-1 mt-1"
                     >
-                      <CornerDownRight size={10} /> Xem thêm phản hồi ({comment.reply_count - (comment.replies?.length || 0)})
+                      <CornerDownRight size={10} /> {t("loadMoreReplies", { count: comment.reply_count - (comment.replies?.length || 0) })}
                     </button>
                   )}
 
@@ -817,8 +868,8 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
                           </div>
                         )}
 
-                        {isReplyUploading && (
-                          <div className="flex items-center gap-1 py-1 px-1.5 bg-slate-50 border border-dashed border-slate-200 rounded-md mb-2 text-[9px] font-bold text-slate-500">
+                        {uploadCommentMediaMutation.isPending && uploadCommentMediaMutation.variables?.mode === "reply" && (
+                          <div className="flex items-center gap-1 py-1 px-2 bg-slate-50 border border-dashed border-slate-200 rounded-md mb-2 text-[9px] font-bold text-slate-500">
                             <Loader2 size={10} className="animate-spin text-blue-500" />
                             Đang tải lên...
                           </div>
@@ -889,8 +940,8 @@ export default function CommentSection({ postId, currentUser, onCommentCountChan
 
                           <button
                             onClick={() => handleSubmitReply(comment.id)}
-                            disabled={isReplyUploading || (!replyText.trim() && !uploadedReplyMedia)}
-                            className="p-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-200 disabled:to-slate-200 text-white rounded-lg shadow-xs transition-all duration-200 flex items-center justify-center"
+                            disabled={uploadCommentMediaMutation.isPending || replyCommentMutation.isPending || (!replyText.trim() && !uploadedReplyMedia)}
+                            className="p-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-200 disabled:to-slate-200 text-white rounded-md shadow-xs transition-colors flex items-center justify-center gap-1"
                           >
                             <Send size={10} />
                           </button>

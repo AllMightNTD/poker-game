@@ -10,8 +10,8 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
       clientID: configService.get<string>('FACEBOOK_APP_ID'),
       clientSecret: configService.get<string>('FACEBOOK_APP_SECRET'),
       callbackURL: configService.get<string>('FACEBOOK_CALLBACK_URL'),
-      scope: 'email',
-      profileFields: ['emails', 'name', 'photos'],
+      scope: ['public_profile', 'email'],
+      profileFields: ['id', 'emails', 'name', 'photos'],
     });
   }
 

@@ -1,11 +1,17 @@
 "use client";
 
-import { ArrowLeft, Mail, Zap, CheckCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, Mail, Zap } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
+import { useRouter as useI18nRouter, usePathname } from "@/i18n/routing";
 import Link from "next/link";
-import React from "react";
 import { useForgotPassword } from "../hooks/use-forgot-password";
 
 export function ForgotPasswordForm() {
+  const t = useTranslations("forgotPassword");
+  const locale = useLocale();
+  const i18nRouter = useI18nRouter();
+  const pathname = usePathname();
+
   const {
     register,
     handleSubmit,
@@ -15,65 +21,77 @@ export function ForgotPasswordForm() {
     setIsSuccess,
     errorMessage,
     successMessage,
-  } = useForgotPassword();
+  } = useForgotPassword(t);
+
+  const changeLanguage = (newLocale: string) => {
+    localStorage.setItem("know_block_locale", newLocale);
+    i18nRouter.replace(pathname, { locale: newLocale });
+  };
+
+  const inputBase =
+    "w-full pl-12 pr-4 py-3.5 rounded-2xl border outline-none transition-all duration-300 text-slate-700 placeholder:text-slate-400 focus:ring-4 focus:ring-blue-500/10 bg-white/60";
 
   return (
-    <div className="flex min-h-screen bg-white font-sans w-full">
-      {/* Left side - Illustration (Desktop Only) */}
-      <div className="hidden lg:flex lg:w-5/12 bg-blue-50/50 flex-col p-12 relative overflow-hidden">
-        <div className="flex items-center gap-2 text-blue-600 mb-20">
-          <Zap size={32} fill="currentColor" className="text-emerald-400" />
-          <span className="text-3xl font-black tracking-tight">Sociala.</span>
-        </div>
+    // NỀN THUẦN SOCIALA: Đồng nhất, đan xen CSS Gradient mềm mại, không sử dụng ảnh ngoài
+    <div className="relative min-h-screen w-full flex flex-col justify-between font-sans bg-slate-50 overflow-hidden">
 
-        <div className="flex-1 flex flex-col justify-center items-center">
-          <svg
-            viewBox="0 0 500 400"
-            className="w-full max-w-md drop-shadow-sm"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <rect width="400" height="300" x="50" y="50" rx="4" fill="white" />
-            <path d="M100 100 Q 150 50 200 100 T 300 100" stroke="#E2E8F0" strokeWidth="2" />
-            <circle cx="160" cy="180" r="25" fill="#1E293B" />
-            <path d="M160 205 L140 320 L180 320 Z" fill="#2563EB" />
-            <circle cx="340" cy="190" r="22" fill="#4B5563" />
-            <path d="M340 212 L310 320 L370 320 Z" fill="#2563EB" />
-            <path d="M200 220 L300 220" stroke="#FCA5A5" strokeWidth="4" strokeLinecap="round" />
-          </svg>
-        </div>
-      </div>
+      {/* CÁC KHỐI NỀN SINH ĐỘNG (ABSTRACT BLOBS) - Đồng bộ hiệu ứng màu sắc */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-gradient-to-tr from-blue-200/40 to-sky-100/30 rounded-full blur-[80px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-5%] w-[45vw] h-[45vw] bg-gradient-to-br from-blue-300/20 to-teal-100/30 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-[30%] right-[15%] w-[30vw] h-[30vw] bg-blue-50/60 rounded-full blur-[60px] pointer-events-none" />
 
-      {/* Right side - Forgot Password Form */}
-      <div className="w-full lg:w-7/12 flex flex-col items-center px-6 lg:px-20 py-12">
-        <div className="w-full flex justify-between items-center mb-16">
-          <Link href="/login" className="flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-blue-600 transition-colors">
-            <ArrowLeft size={16} />
-            Quay lại Đăng nhập
-          </Link>
-          <div className="flex gap-3">
-            <Link href="/login" className="px-8 py-2.5 rounded-full bg-slate-800 text-white text-sm font-bold shadow-lg">
-              Login
-            </Link>
-            <Link href="/register" className="px-8 py-2.5 rounded-full bg-blue-600 text-white text-sm font-bold shadow-lg">
-              Register
-            </Link>
+      {/* HEADER ĐỒNG NHẤT */}
+      <header className="w-full px-6 lg:px-16 py-8 flex items-center justify-between relative z-10">
+        <div className="flex items-center gap-3 text-blue-600 group">
+          <div className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl shadow-md shadow-blue-500/20 transform transition-transform group-hover:scale-105 duration-300">
+            <Zap size={24} fill="currentColor" />
           </div>
+          <span className="text-2xl font-black tracking-tight text-slate-800">
+            Sociala<span className="text-blue-500">.</span>
+          </span>
         </div>
+        <div className="flex items-center gap-3 text-xs font-bold text-slate-400 bg-white/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-slate-200/50 shadow-sm">
+          <span 
+            onClick={() => changeLanguage("en")}
+            className={`cursor-pointer transition-colors ${locale === "en" ? "text-blue-600" : "hover:text-blue-500"}`}
+          >EN</span>
+          <span className="text-slate-200">|</span>
+          <span 
+            onClick={() => changeLanguage("ja")}
+            className={`cursor-pointer transition-colors ${locale === "ja" ? "text-blue-600" : "hover:text-blue-500"}`}
+          >JA</span>
+          <span className="text-slate-200">|</span>
+          <span 
+            onClick={() => changeLanguage("vi")}
+            className={`cursor-pointer transition-colors ${locale === "vi" ? "text-blue-600" : "hover:text-blue-500"}`}
+          >VI</span>
+        </div>
+      </header>
 
-        <div className="w-full max-w-md flex flex-col my-auto">
+      {/* KHU VỰC TRUNG TÂM: CARD GLASSMORPHISM TẬP TRUNG TỐI ĐA VÀO FORM */}
+      <main className="flex-1 flex items-center justify-center px-4 py-8 relative z-10">
+        <div className="w-full max-w-[460px] bg-white/80 backdrop-blur-2xl rounded-[32px] shadow-xl shadow-blue-900/5 border border-white p-8 lg:p-12 flex flex-col">
+
           {!isSuccess ? (
             <>
-              <h1 className="text-3xl font-bold text-slate-800 mb-3">
-                Khôi phục mật khẩu
-              </h1>
-              <p className="text-slate-500 mb-10">
-                Nhập địa chỉ email đã đăng ký của bạn. Chúng tôi sẽ gửi một liên kết bảo mật để bạn đặt lại mật khẩu mới.
-              </p>
+              {/* Nút quay lại tinh tế nằm ngay trên phần tiêu đề form */}
+              <Link href="/login" className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-blue-500 transition-colors mb-6 self-start">
+                <ArrowLeft size={14} />
+                {t("returnLogin")}
+              </Link>
 
-              <form className="space-y-6" onSubmit={handleSubmit}>
+              <div className="mb-6">
+                <h1 className="text-3xl font-black text-slate-800 tracking-tight leading-tight">
+                  {t("passwordRecovery")}
+                </h1>
+                <p className="text-slate-400 text-sm mt-2 font-medium leading-relaxed">
+                  {t("description")}
+                </p>
+              </div>
+
+              <form className="space-y-4" onSubmit={handleSubmit}>
                 {errorMessage && (
-                  <div className="p-4 text-sm text-red-500 bg-red-50 rounded-xl border border-red-200">
+                  <div className="p-4 text-xs font-semibold text-red-500 bg-red-50 rounded-2xl border border-red-100">
                     {errorMessage}
                   </div>
                 )}
@@ -81,23 +99,24 @@ export function ForgotPasswordForm() {
                 {/* Email Input */}
                 <div className="space-y-1">
                   <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
+                    <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300`} size={18} />
                     <input
                       type="email"
-                      placeholder="Nhập Email của bạn"
+                      placeholder={t("email")}
                       {...register("email")}
-                      className={`w-full pl-12 pr-4 py-4 rounded-xl border ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500'} focus:ring-1 outline-none transition-all text-slate-600 placeholder:text-slate-400`}
+                      className={`${inputBase} ${errors.email ? 'border-red-400 ring-2 ring-red-100 bg-red-50/30' : 'border-slate-200/80 focus:border-blue-500'}`}
                     />
                   </div>
                   {errors.email && (
-                    <p className="text-red-500 text-sm ml-1">{errors.email.message}</p>
+                    <p className="text-red-500 text-xs ml-1 font-medium mt-1">{errors.email.message}</p>
                   )}
                 </div>
 
+                {/* Submit Button - Gradient màu thương hiệu */}
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-4 rounded-xl bg-slate-800 text-white font-bold text-lg shadow-xl hover:bg-slate-700 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold text-base shadow-lg shadow-blue-500/20 hover:opacity-95 hover:shadow-xl hover:shadow-blue-500/30 active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
                     <>
@@ -105,43 +124,51 @@ export function ForgotPasswordForm() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Đang xử lý...
+                      {t("processing")}
                     </>
                   ) : (
-                    "Gửi yêu cầu khôi phục"
+                    t("sendResetLink")
                   )}
                 </button>
               </form>
             </>
           ) : (
-            <div className="flex flex-col items-center text-center animate-fade-in">
-              <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-8 border border-emerald-100 shadow-sm">
-                <CheckCircle size={44} className="animate-bounce" />
+            /* TRẠNG THÁI GỬI EMAIL THÀNH CÔNG THUẦN SẮC TRẮNG XANH */
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/20">
+                <CheckCircle size={32} />
               </div>
-              <h2 className="text-2xl font-bold text-slate-800 mb-4">
-                Yêu cầu đã được gửi!
+
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                {t("requestSent")}
               </h2>
-              <p className="text-slate-500 mb-8 leading-relaxed">
+              <p className="text-slate-400 text-sm mt-2 mb-8 font-medium leading-relaxed">
                 {successMessage}
               </p>
-              <div className="w-full space-y-3">
+
+              <div className="w-full space-y-2.5">
                 <Link
                   href="/login"
-                  className="block w-full py-4 rounded-xl bg-slate-800 text-white font-bold text-lg shadow-xl hover:bg-slate-700 transition-colors text-center"
+                  className="block w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold text-base shadow-lg shadow-blue-500/20 hover:opacity-95 text-center transition-all"
                 >
-                  Quay lại Đăng nhập
+                  {t("returnLogin")}
                 </Link>
                 <button
                   onClick={() => setIsSuccess(false)}
-                  className="block w-full py-4 rounded-xl bg-slate-100 text-slate-600 font-bold text-lg hover:bg-slate-200 transition-colors text-center"
+                  className="block w-full py-4 rounded-2xl bg-slate-100/80 text-slate-500 font-bold text-sm hover:bg-slate-200/80 hover:text-slate-700 transition-colors text-center"
                 >
-                  Gửi lại yêu cầu với email khác
+                  {t("sendResetLinkDifferentEmail")}
                 </button>
               </div>
             </div>
           )}
         </div>
-      </div>
+      </main>
+
+      {/* FOOTER ĐỒNG NHẤT */}
+      <footer className="w-full py-6 text-center text-[11px] font-bold text-slate-400 tracking-wider relative z-10">
+        SOCIALA NETWORK &copy; {new Date().getFullYear()}
+      </footer>
     </div>
   );
 }

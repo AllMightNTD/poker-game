@@ -93,6 +93,12 @@ export enum PresenceStatus {
 // Content — Post Enums
 // ============================================================
 
+export enum PostStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+}
+
 export enum PostType {
   TEXT = 'text',
   PHOTO = 'photo',
@@ -168,6 +174,12 @@ export enum ReactionType {
   WOW = 'wow',
   SAD = 'sad',
   ANGRY = 'angry',
+}
+
+export enum CommentType {
+  TEXT = 'text',
+  VOICE = 'voice',
+  MEDIA = 'media',
 }
 
 export enum CommentTargetType {

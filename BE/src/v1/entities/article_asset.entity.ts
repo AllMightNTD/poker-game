@@ -32,7 +32,9 @@ export class ArticleAsset extends BaseEntity {
 
   // ---- Relations ----
 
-  @ManyToOne(() => Article, (article) => article.assets, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Article, (article) => article.assets, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'article_id' })
   article: Article;
 }

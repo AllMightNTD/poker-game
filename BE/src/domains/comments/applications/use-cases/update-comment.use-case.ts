@@ -9,6 +9,10 @@ export class UpdateCommentUseCase {
   ) {}
 
   async execute(userId: string, commentId: string, updateCommentDto: any) {
-    return this.commentRepository.updateComment(userId, commentId, updateCommentDto);
+    return this.commentRepository.updateComment(
+      userId,
+      commentId,
+      updateCommentDto,
+    );
   }
 }

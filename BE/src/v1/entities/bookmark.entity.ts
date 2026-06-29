@@ -39,7 +39,9 @@ export class Bookmark extends BaseEntity {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => BookmarkCollection, (collection) => collection.bookmarks, { onDelete: 'SET NULL' })
+  @ManyToOne(() => BookmarkCollection, (collection) => collection.bookmarks, {
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'collection_id' })
   collection: BookmarkCollection;
 }

@@ -36,12 +36,13 @@ const storage = diskStorage({
 @Controller('')
 @UseGuards(AuthGuard)
 export class ChatController {
-  constructor(
-    private readonly chatService: ChatService,
-  ) { }
+  constructor(private readonly chatService: ChatService) {}
 
   @Get('/conversation/:friendId')
-  async getOrCreateConversation(@Request() req, @Param('friendId') friendId: string) {
+  async getOrCreateConversation(
+    @Request() req,
+    @Param('friendId') friendId: string,
+  ) {
     return this.chatService.getOrCreateConversation(req.user.sub, friendId);
   }
 
@@ -53,7 +54,10 @@ export class ChatController {
     @Query('limit') limit = 20,
   ) {
     // Kiểm tra xem user có trong conversation này không
-    const isParticipant = await this.chatService.checkParticipant(req.user.sub, conversationId);
+    const isParticipant = await this.chatService.checkParticipant(
+      req.user.sub,
+      conversationId,
+    );
     if (!isParticipant) {
       return { data: [], total: 0 };
     }
@@ -67,7 +71,15 @@ export class ChatController {
     @Query('page') page = 1,
     @Query('limit') limit = 20,
     @Query('search') search?: string,
-    @Query('tab') tab?: 'all' | 'unread' | 'group' | 'request' | 'archived' | 'hidden' | 'spam',
+    @Query('tab')
+    tab?:
+      | 'all'
+      | 'unread'
+      | 'group'
+      | 'request'
+      | 'archived'
+      | 'hidden'
+      | 'spam',
   ) {
     return this.chatService.getConversations(
       req.user.sub,
@@ -81,9 +93,13 @@ export class ChatController {
   @Post('/conversations/seen')
   async markSeen(
     @Request() req,
-    @Body() body: { conversation_id: string; message_id: string }
+    @Body() body: { conversation_id: string; message_id: string },
   ) {
-    await this.chatService.markAsRead(req.user.sub, body.conversation_id, body.message_id);
+    await this.chatService.markAsRead(
+      req.user.sub,
+      body.conversation_id,
+      body.message_id,
+    );
     return { success: true };
   }
 
@@ -95,13 +111,21 @@ export class ChatController {
 
   @Post('/conversations/:id/pin')
   async pinConversation(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.togglePinConversation(req.user.sub, conversationId, true);
+    const success = await this.chatService.togglePinConversation(
+      req.user.sub,
+      conversationId,
+      true,
+    );
     return { success };
   }
 
   @Post('/conversations/:id/unpin')
   async unpinConversation(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.togglePinConversation(req.user.sub, conversationId, false);
+    const success = await this.chatService.togglePinConversation(
+      req.user.sub,
+      conversationId,
+      false,
+    );
     return { success };
   }
 
@@ -113,16 +137,27 @@ export class ChatController {
     @Query('limit') limit = 20,
     @Query('type') type?: 'image' | 'video' | 'file',
   ) {
-    const isParticipant = await this.chatService.checkParticipant(req.user.sub, conversationId);
+    const isParticipant = await this.chatService.checkParticipant(
+      req.user.sub,
+      conversationId,
+    );
     if (!isParticipant) {
       return { data: [], total: 0 };
     }
-    return this.chatService.getMedia(conversationId, Number(page), Number(limit), type);
+    return this.chatService.getMedia(
+      conversationId,
+      Number(page),
+      Number(limit),
+      type,
+    );
   }
 
   @Delete('/conversations/:id/leave')
   async leaveConversation(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.leaveConversation(req.user.sub, conversationId);
+    const success = await this.chatService.leaveConversation(
+      req.user.sub,
+      conversationId,
+    );
     return { success };
   }
 
@@ -135,13 +170,13 @@ export class ChatController {
         const allowedImageExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
         const allowedVideoExts = ['.mp4', '.mov', '.webm'];
         const ext = extname(file.originalname).toLowerCase();
-        
+
         if (allowedImageExts.includes(ext) || allowedVideoExts.includes(ext)) {
           cb(null, true);
         } else {
           cb(new BadRequestException('Invalid file type'), false);
         }
-      }
+      },
     }),
   )
   async uploadFiles(@UploadedFiles() files: Express.Multer.File[]) {
@@ -149,9 +184,13 @@ export class ChatController {
       throw new BadRequestException('No files uploaded');
     }
 
-    const metadata = files.map(file => {
+    const metadata = files.map((file) => {
       const fileUrl = `/uploads/chat/${file.filename}`;
-      const isVideo = file.mimetype.startsWith('video/') || ['.mp4', '.mov', '.webm'].includes(extname(file.filename).toLowerCase());
+      const isVideo =
+        file.mimetype.startsWith('video/') ||
+        ['.mp4', '.mov', '.webm'].includes(
+          extname(file.filename).toLowerCase(),
+        );
       const fileType = isVideo ? 'video' : 'image';
 
       // Validate size
@@ -174,67 +213,131 @@ export class ChatController {
 
   @Post('/conversations/:id/mute')
   async muteConversation(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.toggleMuteConversation(req.user.sub, conversationId, true);
+    const success = await this.chatService.toggleMuteConversation(
+      req.user.sub,
+      conversationId,
+      true,
+    );
     return { success };
   }
 
   @Post('/conversations/:id/unmute')
-  async unmuteConversation(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.toggleMuteConversation(req.user.sub, conversationId, false);
+  async unmuteConversation(
+    @Request() req,
+    @Param('id') conversationId: string,
+  ) {
+    const success = await this.chatService.toggleMuteConversation(
+      req.user.sub,
+      conversationId,
+      false,
+    );
     return { success };
   }
 
   @Post('/conversations/:id/archive')
-  async archiveConversation(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.toggleArchiveConversation(req.user.sub, conversationId, true);
+  async archiveConversation(
+    @Request() req,
+    @Param('id') conversationId: string,
+  ) {
+    const success = await this.chatService.toggleArchiveConversation(
+      req.user.sub,
+      conversationId,
+      true,
+    );
     return { success };
   }
 
   @Post('/conversations/:id/unarchive')
-  async unarchiveConversation(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.toggleArchiveConversation(req.user.sub, conversationId, false);
+  async unarchiveConversation(
+    @Request() req,
+    @Param('id') conversationId: string,
+  ) {
+    const success = await this.chatService.toggleArchiveConversation(
+      req.user.sub,
+      conversationId,
+      false,
+    );
     return { success };
   }
 
   @Post('/conversations/:id/hide')
   async hideConversation(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.toggleHideConversation(req.user.sub, conversationId, true);
+    const success = await this.chatService.toggleHideConversation(
+      req.user.sub,
+      conversationId,
+      true,
+    );
     return { success };
   }
 
   @Post('/conversations/:id/unhide')
-  async unhideConversation(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.toggleHideConversation(req.user.sub, conversationId, false);
+  async unhideConversation(
+    @Request() req,
+    @Param('id') conversationId: string,
+  ) {
+    const success = await this.chatService.toggleHideConversation(
+      req.user.sub,
+      conversationId,
+      false,
+    );
     return { success };
   }
 
   @Post('/conversations/:id/spam')
   async spamConversation(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.toggleSpamConversation(req.user.sub, conversationId, true);
+    const success = await this.chatService.toggleSpamConversation(
+      req.user.sub,
+      conversationId,
+      true,
+    );
     return { success };
   }
 
   @Post('/conversations/:id/unspam')
-  async unspamConversation(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.toggleSpamConversation(req.user.sub, conversationId, false);
+  async unspamConversation(
+    @Request() req,
+    @Param('id') conversationId: string,
+  ) {
+    const success = await this.chatService.toggleSpamConversation(
+      req.user.sub,
+      conversationId,
+      false,
+    );
     return { success };
   }
 
   @Post('/conversations/:id/request')
-  async requestConversation(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.toggleRequestConversation(req.user.sub, conversationId, true);
+  async requestConversation(
+    @Request() req,
+    @Param('id') conversationId: string,
+  ) {
+    const success = await this.chatService.toggleRequestConversation(
+      req.user.sub,
+      conversationId,
+      true,
+    );
     return { success };
   }
 
   @Post('/conversations/:id/unrequest')
-  async unrequestConversation(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.toggleRequestConversation(req.user.sub, conversationId, false);
+  async unrequestConversation(
+    @Request() req,
+    @Param('id') conversationId: string,
+  ) {
+    const success = await this.chatService.toggleRequestConversation(
+      req.user.sub,
+      conversationId,
+      false,
+    );
     return { success };
   }
 
   @Post('/conversations/:id/mark-unread')
   async markUnread(@Request() req, @Param('id') conversationId: string) {
-    const success = await this.chatService.markAsUnread(req.user.sub, conversationId);
+    const success = await this.chatService.markAsUnread(
+      req.user.sub,
+      conversationId,
+    );
     return { success };
   }
 

@@ -25,7 +25,11 @@ export class FriendRequest extends BaseEntity {
   @Column({ type: 'varchar' })
   receiver_id: string;
 
-  @Column({ type: 'enum', enum: FriendRequestStatus, default: FriendRequestStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: FriendRequestStatus,
+    default: FriendRequestStatus.PENDING,
+  })
   status: FriendRequestStatus;
 
   @Column({ type: 'varchar', length: 500, nullable: true })

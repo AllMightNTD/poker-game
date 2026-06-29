@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
-import { ReactionTargetType, ReactionType } from 'src/constants/enums';
+import { ReactionTargetType } from 'src/constants/enums';
 import { User } from './user.entity';
 
 @Entity('reactions')
@@ -26,8 +26,8 @@ export class Reaction extends BaseEntity {
   @Column({ type: 'varchar' })
   target_id: string;
 
-  @Column({ type: 'enum', enum: ReactionType })
-  type: ReactionType;
+  @Column({ type: 'varchar', length: 50, name: 'type' })
+  type: string;
 
   @CreateDateColumn()
   created_at: Date;

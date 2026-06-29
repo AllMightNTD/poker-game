@@ -14,7 +14,11 @@ export class UserPresence extends BaseEntity {
   @PrimaryColumn({ type: 'varchar' })
   user_id: string;
 
-  @Column({ type: 'enum', enum: PresenceStatus, default: PresenceStatus.OFFLINE })
+  @Column({
+    type: 'enum',
+    enum: PresenceStatus,
+    default: PresenceStatus.OFFLINE,
+  })
   status: PresenceStatus;
 
   @Column({ type: 'varchar', length: 255, nullable: true })

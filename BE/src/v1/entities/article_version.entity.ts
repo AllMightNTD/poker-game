@@ -45,7 +45,9 @@ export class ArticleVersion extends BaseEntity {
 
   // ---- Relations ----
 
-  @ManyToOne(() => Article, (article) => article.versions, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Article, (article) => article.versions, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'article_id' })
   article: Article;
 

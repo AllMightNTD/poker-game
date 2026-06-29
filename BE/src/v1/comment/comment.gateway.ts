@@ -15,7 +15,11 @@ export class CommentGateway {
   /**
    * Broadcast comment mới tới những user được phép xem
    */
-  broadcastCommentCreated(comment: any, recipientUserIds?: string[], audience?: string) {
+  broadcastCommentCreated(
+    comment: any,
+    recipientUserIds?: string[],
+    audience?: string,
+  ) {
     if (!this.server) return;
 
     if (audience === 'public') {
@@ -30,7 +34,11 @@ export class CommentGateway {
   /**
    * Broadcast comment cập nhật tới những user được phép xem
    */
-  broadcastCommentUpdated(comment: any, recipientUserIds?: string[], audience?: string) {
+  broadcastCommentUpdated(
+    comment: any,
+    recipientUserIds?: string[],
+    audience?: string,
+  ) {
     if (!this.server) return;
 
     if (audience === 'public') {
@@ -45,7 +53,11 @@ export class CommentGateway {
   /**
    * Broadcast xóa comment tới những user được phép xem
    */
-  broadcastCommentDeleted(payload: { commentId: string; parentId?: string; postId: string }, recipientUserIds?: string[], audience?: string) {
+  broadcastCommentDeleted(
+    payload: { commentId: string; parentId?: string; postId: string },
+    recipientUserIds?: string[],
+    audience?: string,
+  ) {
     if (!this.server) return;
 
     if (audience === 'public') {

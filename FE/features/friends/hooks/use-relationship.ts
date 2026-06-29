@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import api from "@/lib/axios";
+import { useCallback, useEffect, useState } from "react";
 import { FriendsService } from "../services/friends.service";
 
 export type RelationshipStatus =
@@ -22,43 +23,21 @@ export function useRelationship(targetUserId: string, currentUserId?: string) {
 
     setIsLoading(true);
     try {
-      // 1. Check friends list
-      const friendsResult = await FriendsService.getFriends(1, 100);
-      const isFriend = friendsResult.data.some(
-        (f) => f.friend_id === targetUserId
-      );
-      if (isFriend) {
+      const res = await api.get(`/api/v1/user/${targetUserId}/relationship`);
+      const rel = res.data?.metadata || res.data;
+
+      if (rel.isFriend) {
         setStatus("FRIENDS");
-        setIsLoading(false);
-        return;
-      }
-
-      // 2. Check incoming requests
-      const incomingResult = await FriendsService.getPendingRequests(1, 100);
-      const incomingReq = incomingResult.data.find(
-        (r) => r.sender_id === targetUserId
-      );
-      if (incomingReq) {
+      } else if (rel.requestReceived) {
         setStatus("REQUEST_RECEIVED");
-        setRequestId(incomingReq.id);
-        setIsLoading(false);
-        return;
-      }
-
-      // 3. Check outgoing requests
-      const outgoingResult = await FriendsService.getSentRequests(1, 100);
-      const outgoingReq = outgoingResult.data.find(
-        (r) => r.receiver_id === targetUserId
-      );
-      if (outgoingReq) {
+        setRequestId(rel.requestId);
+      } else if (rel.requestSent) {
         setStatus("REQUEST_SENT");
-        setRequestId(outgoingReq.id);
-        setIsLoading(false);
-        return;
+        setRequestId(rel.requestId);
+      } else {
+        setStatus("NOT_FRIEND");
+        setRequestId(null);
       }
-
-      setStatus("NOT_FRIEND");
-      setRequestId(null);
     } catch (error) {
       console.error("Lỗi khi kiểm tra quan hệ bạn bè:", error);
     } finally {

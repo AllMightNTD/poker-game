@@ -4,13 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AuthService } from "../services/auth.service";
 
-export const forgotPasswordSchema = z.object({
-  email: z.string().min(1, "Email không được để trống").email("Định dạng email không hợp lệ"),
+export const getForgotPasswordSchema = (t: any) => z.object({
+  email: z.string().min(1, t("validation.emptyEmail")).email(t("validation.invalidEmail")),
 });
 
-export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+export type ForgotPasswordFormValues = z.infer<ReturnType<typeof getForgotPasswordSchema>>;
 
-export function useForgotPassword() {
+export function useForgotPassword(t: any) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -20,7 +20,7 @@ export function useForgotPassword() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<ForgotPasswordFormValues>({
-    resolver: zodResolver(forgotPasswordSchema),
+    resolver: zodResolver(getForgotPasswordSchema(t)),
   });
 
   const onSubmit = async (data: ForgotPasswordFormValues) => {
@@ -29,14 +29,12 @@ export function useForgotPassword() {
       const result = await AuthService.forgotPassword(data);
       
       setSuccessMessage(
-        result?.message || 
-        "Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi đến hòm thư của bạn."
+        result?.message || t("api.successMessage")
       );
       setIsSuccess(true);
     } catch (error: any) {
       setErrorMessage(
-        error.response?.data?.message || 
-        "Đã xảy ra lỗi trong quá trình gửi yêu cầu. Vui lòng thử lại sau."
+        error.response?.data?.message || t("api.requestFailed")
       );
     }
   };

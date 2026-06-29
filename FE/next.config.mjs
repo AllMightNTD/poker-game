@@ -1,7 +1,12 @@
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   allowedDevOrigins: ['10.10.0.224', 'localhost', '127.0.0.1'],
   images: {
+    dangerouslyAllowSVG: true,
     remotePatterns: [
       {
         protocol: "https",
@@ -18,7 +23,6 @@ const nextConfig = {
         hostname: "picsum.photos",
         pathname: "/**",
       },
-      // Thêm tên miền Unsplash ở đây 🚀
       {
         protocol: "https",
         hostname: "images.unsplash.com",
@@ -28,4 +32,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

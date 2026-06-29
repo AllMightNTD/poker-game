@@ -30,7 +30,9 @@ export class ListingInquiry extends BaseEntity {
 
   // ---- Relations ----
 
-  @ManyToOne(() => Listing, (listing) => listing.inquiries, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Listing, (listing) => listing.inquiries, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'listing_id' })
   listing: Listing;
 

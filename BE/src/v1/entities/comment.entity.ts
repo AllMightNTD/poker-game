@@ -10,19 +10,17 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { CommentTargetType } from 'src/constants/enums';
+import { CommentType } from 'src/constants/enums';
 import { User } from './user.entity';
+import { Post } from './post.entity';
 
 @Entity('comments')
 export class Comment extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'enum', enum: CommentTargetType })
-  target_type: CommentTargetType;
-
   @Column({ type: 'varchar' })
-  target_id: string;
+  post_id: string;
 
   @Column({ type: 'varchar' })
   user_id: string;
@@ -32,6 +30,9 @@ export class Comment extends BaseEntity {
 
   @Column({ type: 'text', nullable: true })
   content: string;
+
+  @Column({ type: 'enum', enum: CommentType, default: CommentType.TEXT })
+  type: CommentType;
 
   @Column({ type: 'varchar', length: 1000, nullable: true })
   sticker_url: string;
@@ -63,10 +64,16 @@ export class Comment extends BaseEntity {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => Comment, (comment) => comment.replies, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Comment, (comment) => comment.replies, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'parent_id' })
   parent_comment: Comment;
 
   @OneToMany(() => Comment, (comment) => comment.parent_comment)
   replies: Comment[];
+
+  @ManyToOne(() => Post, (post) => post.comments, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'post_id' })
+  post: Post;
 }

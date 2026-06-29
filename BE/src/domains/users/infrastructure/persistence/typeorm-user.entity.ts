@@ -52,7 +52,11 @@ export class User extends BaseEntity {
   @Column({ type: 'boolean', default: true })
   is_active_status: boolean;
 
-  @Column({ type: 'enum', enum: MessagePermission, default: MessagePermission.EVERYONE })
+  @Column({
+    type: 'enum',
+    enum: MessagePermission,
+    default: MessagePermission.EVERYONE,
+  })
   message_permission: MessagePermission;
 
   @Column({ type: 'datetime', nullable: true })

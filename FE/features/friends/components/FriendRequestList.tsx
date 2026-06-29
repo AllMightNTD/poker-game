@@ -4,8 +4,10 @@ import React, { useEffect, useState } from "react";
 import { FriendRequestCard } from "./FriendRequestCard";
 import { useFriendRequests } from "../hooks/use-friend-requests";
 import { Users, Loader2, RefreshCw, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function FriendRequestList() {
+  const t = useTranslations("friendRequest");
   const {
     incomingRequests,
     isLoadingIncoming,
@@ -31,10 +33,10 @@ export function FriendRequestList() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-zinc-50">
-              Lời mời kết bạn
+              {t("title")}
             </h2>
             <p className="text-xs text-gray-500 dark:text-zinc-400">
-              Quản lý các kết nối xã hội của bạn
+              {t("manageConnections")}
             </p>
           </div>
         </div>
@@ -43,7 +45,7 @@ export function FriendRequestList() {
           onClick={() => fetchIncoming(1, 20)}
           disabled={isLoadingIncoming}
           className="p-2 hover:bg-gray-50 text-gray-500 hover:text-gray-900 rounded-lg transition-colors border border-gray-150 dark:border-zinc-700 dark:hover:bg-zinc-800 dark:text-zinc-400"
-          title="Tải lại danh sách"
+          title={t("reloadList")}
         >
           <RefreshCw className={`w-4 h-4 ${isLoadingIncoming ? "animate-spin" : ""}`} />
         </button>
@@ -59,7 +61,7 @@ export function FriendRequestList() {
               : "bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-zinc-850 dark:text-zinc-350 dark:hover:bg-zinc-800"
           }`}
         >
-          Lời mời đã nhận
+          {t("receivedRequests")}
           {pendingCount > 0 && (
             <span className={`ml-2 px-1.5 py-0.5 text-[10px] rounded-full font-bold ${
               activeTab === "incoming" ? "bg-white text-blue-600" : "bg-blue-600 text-white"
@@ -75,7 +77,7 @@ export function FriendRequestList() {
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
           <p className="text-sm text-gray-500 dark:text-zinc-400">
-            Đang tải danh sách lời mời kết bạn...
+            {t("loadingRequests")}
           </p>
         </div>
       ) : incomingRequests.length === 0 ? (
@@ -84,10 +86,10 @@ export function FriendRequestList() {
             <Users className="w-8 h-8" />
           </div>
           <h3 className="font-semibold text-gray-800 dark:text-zinc-200 mb-1">
-            Không có lời mời nào
+            {t("noPending")}
           </h3>
           <p className="text-xs text-gray-500 dark:text-zinc-450 text-center max-w-sm px-6">
-            Khi có ai đó gửi lời mời kết bạn cho bạn, lời mời đó sẽ hiển thị ở đây.
+            {t("noRequestsDesc")}
           </p>
         </div>
       ) : (

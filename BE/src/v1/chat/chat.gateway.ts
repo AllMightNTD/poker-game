@@ -7,7 +7,7 @@ import {
   OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
-  WebSocketServer
+  WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 
@@ -29,8 +29,7 @@ import { User } from '../entities/user.entity';
     whitelist: true,
   }),
 )
-export class ChatGateway
-  implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -39,7 +38,7 @@ export class ChatGateway
   constructor(
     private readonly jwtService: JwtService,
     private readonly chatService: ChatService,
-  ) { }
+  ) {}
 
   afterInit() {
     this.logger.log('WebSocket Server Initialized');
@@ -73,19 +72,24 @@ export class ChatGateway
         message: 'Successfully connected',
       });
 
-      this.logger.log(
-        `Client connected: ${client.id} (User: ${userId})`,
-      );
+      this.logger.log(`Client connected: ${client.id} (User: ${userId})`);
 
       // Broadcast presence status to friends
       if (presence) {
         const isActive = await this.chatService.getUserActiveStatus(userId);
-        const broadcastStatus = (presence.is_invisible || !isActive) ? PresenceStatus.OFFLINE : PresenceStatus.ONLINE;
-        await this.broadcastPresenceUpdate(userId, broadcastStatus, presence.last_seen_at);
+        const broadcastStatus =
+          presence.is_invisible || !isActive
+            ? PresenceStatus.OFFLINE
+            : PresenceStatus.ONLINE;
+        await this.broadcastPresenceUpdate(
+          userId,
+          broadcastStatus,
+          presence.last_seen_at,
+        );
       }
     } catch (error) {
       this.logger.error(`SOCKET AUTH ERROR: ${error.message}`);
-      client.emit("error", {
+      client.emit('error', {
         message: error.message,
       });
       client.disconnect();
@@ -95,16 +99,19 @@ export class ChatGateway
   async handleDisconnect(client: Socket) {
     const userId = client.data?.user?.id;
     await this.chatService.handleDisconnect(client.id);
-    this.logger.log(
-      `Socket disconnected: ${client.id}`,
-    );
+    this.logger.log(`Socket disconnected: ${client.id}`);
 
     if (userId) {
-      const activeConnections = await this.chatService.countActiveConnections(userId);
+      const activeConnections =
+        await this.chatService.countActiveConnections(userId);
       if (activeConnections === 0) {
         const presence = await this.chatService.getUserPresence(userId);
         const lastSeen = presence?.last_seen_at || new Date();
-        await this.broadcastPresenceUpdate(userId, PresenceStatus.OFFLINE, lastSeen);
+        await this.broadcastPresenceUpdate(
+          userId,
+          PresenceStatus.OFFLINE,
+          lastSeen,
+        );
       }
     }
   }
@@ -122,13 +129,20 @@ export class ChatGateway
     @MessageBody() data: { conversation_id: string },
   ) {
     const userId = client.data.user.id;
-    const isParticipant = await this.chatService.checkParticipant(userId, data.conversation_id);
+    const isParticipant = await this.chatService.checkParticipant(
+      userId,
+      data.conversation_id,
+    );
 
     if (isParticipant) {
       client.join(`conversation_${data.conversation_id}`);
-      this.logger.log(`User ${userId} joined conversation ${data.conversation_id}`);
+      this.logger.log(
+        `User ${userId} joined conversation ${data.conversation_id}`,
+      );
     } else {
-      client.emit('error', { message: 'You are not a participant of this conversation' });
+      client.emit('error', {
+        message: 'You are not a participant of this conversation',
+      });
     }
   }
 
@@ -139,10 +153,13 @@ export class ChatGateway
   ) {
     const userId = client.data.user.id;
 
-    console.log("sendMessage", dto);
+    console.log('sendMessage', dto);
 
     // 1. Kiểm tra participant
-    const isParticipant = await this.chatService.checkParticipant(userId, dto.conversation_id);
+    const isParticipant = await this.chatService.checkParticipant(
+      userId,
+      dto.conversation_id,
+    );
     if (!isParticipant) {
       client.emit('error', { message: 'Unauthorized' });
       return;
@@ -151,10 +168,18 @@ export class ChatGateway
     // 2. Lưu tin nhắn
     const savedMessage = await this.chatService.saveMessage(userId, dto);
 
-    // 3. Broadcast cho tất cả trong room NGOẠI TRỪ người gửi
-    client.to(`conversation_${dto.conversation_id}`).emit('newMessage', savedMessage);
+    // 3. Lấy tất cả người tham gia để gửi thông báo newMessage tới room cá nhân (user_xxx)
+    // Giúp MessagesPopup nhận được tin nhắn kể cả khi chưa mở MiniChatWindow
+    const participantIds = await this.chatService.getConversationParticipantIds(
+      dto.conversation_id,
+    );
+    participantIds.forEach((pId) => {
+      if (pId !== userId) {
+        this.server.to(`user_${pId}`).emit('newMessage', savedMessage);
+      }
+    });
 
-    // 4. Emit riêng messageSent cho người gửi để confirm
+    // 4. Emit riêng messageSent cho người gửi để confirm (vì đã bỏ qua ở bước 3)
     client.emit('messageSent', savedMessage);
   }
 
@@ -164,12 +189,17 @@ export class ChatGateway
     @MessageBody() data: { conversation_id: string; message_id: string },
   ) {
     const userId = client.data.user.id;
-    const deleted = await this.chatService.deleteMessage(userId, data.message_id);
+    const deleted = await this.chatService.deleteMessage(
+      userId,
+      data.message_id,
+    );
     if (deleted) {
-      this.server.to(`conversation_${data.conversation_id}`).emit('messageDeleted', {
-        message_id: data.message_id,
-        conversation_id: data.conversation_id,
-      });
+      this.server
+        .to(`conversation_${data.conversation_id}`)
+        .emit('messageDeleted', {
+          message_id: data.message_id,
+          conversation_id: data.conversation_id,
+        });
     } else {
       client.emit('error', { message: 'Failed to delete message' });
     }
@@ -181,7 +211,11 @@ export class ChatGateway
     @MessageBody() data: { conversation_id: string; message_id: string },
   ) {
     const userId = client.data.user.id;
-    await this.chatService.markAsRead(userId, data.conversation_id, data.message_id);
+    await this.chatService.markAsRead(
+      userId,
+      data.conversation_id,
+      data.message_id,
+    );
     this.server.to(`conversation_${data.conversation_id}`).emit('messageSeen', {
       user_id: userId,
       conversation_id: data.conversation_id,
@@ -195,14 +229,22 @@ export class ChatGateway
     @MessageBody() data: { conversation_id: string; theme_color: string },
   ) {
     const userId = client.data.user.id;
-    const color = await this.chatService.updateThemeColor(userId, data.conversation_id, data.theme_color);
+    const color = await this.chatService.updateThemeColor(
+      userId,
+      data.conversation_id,
+      data.theme_color,
+    );
     if (color) {
-      this.server.to(`conversation_${data.conversation_id}`).emit('themeColorChanged', {
-        conversation_id: data.conversation_id,
-        theme_color: color,
-      });
+      this.server
+        .to(`conversation_${data.conversation_id}`)
+        .emit('themeColorChanged', {
+          conversation_id: data.conversation_id,
+          theme_color: color,
+        });
     } else {
-      client.emit('error', { message: 'Unauthorized or failed to update theme' });
+      client.emit('error', {
+        message: 'Unauthorized or failed to update theme',
+      });
     }
   }
 
@@ -212,32 +254,50 @@ export class ChatGateway
     @MessageBody() data: { conversation_id: string; emoji: string },
   ) {
     const userId = client.data.user.id;
-    const emoji = await this.chatService.updateMainEmoji(userId, data.conversation_id, data.emoji);
+    const emoji = await this.chatService.updateMainEmoji(
+      userId,
+      data.conversation_id,
+      data.emoji,
+    );
     if (emoji) {
-      this.server.to(`conversation_${data.conversation_id}`).emit('mainEmojiChanged', {
-        conversation_id: data.conversation_id,
-        emoji: emoji,
-      });
+      this.server
+        .to(`conversation_${data.conversation_id}`)
+        .emit('mainEmojiChanged', {
+          conversation_id: data.conversation_id,
+          emoji: emoji,
+        });
     } else {
-      client.emit('error', { message: 'Unauthorized or failed to update emoji' });
+      client.emit('error', {
+        message: 'Unauthorized or failed to update emoji',
+      });
     }
   }
 
   @SubscribeMessage('changeNickname')
   async handleChangeNickname(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { conversation_id: string; target_user_id: string; nickname: string },
+    @MessageBody()
+    data: { conversation_id: string; target_user_id: string; nickname: string },
   ) {
     const userId = client.data.user.id;
-    const res = await this.chatService.updateNickname(userId, data.conversation_id, data.target_user_id, data.nickname);
+    const res = await this.chatService.updateNickname(
+      userId,
+      data.conversation_id,
+      data.target_user_id,
+      data.nickname,
+    );
     if (res) {
-      this.server.to(`conversation_${data.conversation_id}`).emit('nicknameChanged', {
-        conversation_id: data.conversation_id,
-        target_user_id: data.target_user_id,
-        nickname: data.nickname,
-      });
+      this.server
+        .to(`conversation_${data.conversation_id}`)
+        .emit('nicknameChanged', {
+          conversation_id: data.conversation_id,
+          target_user_id: data.target_user_id,
+          nickname: data.nickname,
+        });
     } else {
-      client.emit('error', { message: 'Unauthorized or failed to update nickname' });
+      client.emit('error', {
+        message: 'Unauthorized or failed to update nickname',
+      });
     }
   }
 
@@ -247,20 +307,32 @@ export class ChatGateway
     @MessageBody() data: { conversation_id: string; background_image: string },
   ) {
     const userId = client.data.user.id;
-    const bgUrl = await this.chatService.updateBackgroundImage(userId, data.conversation_id, data.background_image);
+    const bgUrl = await this.chatService.updateBackgroundImage(
+      userId,
+      data.conversation_id,
+      data.background_image,
+    );
     if (bgUrl !== null) {
-      this.server.to(`conversation_${data.conversation_id}`).emit('backgroundImageChanged', {
-        conversation_id: data.conversation_id,
-        background_image: bgUrl,
-      });
+      this.server
+        .to(`conversation_${data.conversation_id}`)
+        .emit('backgroundImageChanged', {
+          conversation_id: data.conversation_id,
+          background_image: bgUrl,
+        });
     } else {
-      client.emit('error', { message: 'Unauthorized or failed to update background image' });
+      client.emit('error', {
+        message: 'Unauthorized or failed to update background image',
+      });
     }
   }
 
   // ---- NEW PRESENCE SYSTEM WEBSOCKET HANDLERS ----
 
-  async broadcastPresenceUpdate(userId: string, status: string, lastSeenAt: Date) {
+  async broadcastPresenceUpdate(
+    userId: string,
+    status: string,
+    lastSeenAt: Date,
+  ) {
     try {
       const friendIds = await this.chatService.getFriendUserIds(userId);
       for (const friendId of friendIds) {
@@ -271,7 +343,9 @@ export class ChatGateway
         });
       }
     } catch (error) {
-      this.logger.error(`Error broadcasting presence for user ${userId}: ${error.message}`);
+      this.logger.error(
+        `Error broadcasting presence for user ${userId}: ${error.message}`,
+      );
     }
   }
 
@@ -291,12 +365,24 @@ export class ChatGateway
   ) {
     const userId = client.data?.user?.id;
     if (userId) {
-      const newStatus = data.is_idle ? PresenceStatus.AWAY : PresenceStatus.ONLINE;
-      const presence = await this.chatService.updateUserPresenceStatus(userId, newStatus);
+      const newStatus = data.is_idle
+        ? PresenceStatus.AWAY
+        : PresenceStatus.ONLINE;
+      const presence = await this.chatService.updateUserPresenceStatus(
+        userId,
+        newStatus,
+      );
       if (presence) {
         const isActive = await this.chatService.getUserActiveStatus(userId);
-        const broadcastStatus = (presence.is_invisible || !isActive) ? PresenceStatus.OFFLINE : newStatus;
-        await this.broadcastPresenceUpdate(userId, broadcastStatus, presence.last_seen_at);
+        const broadcastStatus =
+          presence.is_invisible || !isActive
+            ? PresenceStatus.OFFLINE
+            : newStatus;
+        await this.broadcastPresenceUpdate(
+          userId,
+          broadcastStatus,
+          presence.last_seen_at,
+        );
       }
     }
   }
@@ -308,12 +394,24 @@ export class ChatGateway
   ) {
     const userId = client.data?.user?.id;
     if (userId) {
-      const presence = await this.chatService.updateUserVisibility(userId, data.is_invisible);
+      const presence = await this.chatService.updateUserVisibility(
+        userId,
+        data.is_invisible,
+      );
       if (presence) {
         const isActive = await this.chatService.getUserActiveStatus(userId);
-        const broadcastStatus = (presence.is_invisible || !isActive) ? PresenceStatus.OFFLINE : presence.status;
-        await this.broadcastPresenceUpdate(userId, broadcastStatus, presence.last_seen_at);
-        client.emit('visibilityChanged', { is_invisible: presence.is_invisible });
+        const broadcastStatus =
+          presence.is_invisible || !isActive
+            ? PresenceStatus.OFFLINE
+            : presence.status;
+        await this.broadcastPresenceUpdate(
+          userId,
+          broadcastStatus,
+          presence.last_seen_at,
+        );
+        client.emit('visibilityChanged', {
+          is_invisible: presence.is_invisible,
+        });
       }
     }
   }
@@ -324,10 +422,12 @@ export class ChatGateway
     @MessageBody() data: { conversation_id: string },
   ) {
     const userId = client.data.user.id;
-    client.to(`conversation_${data.conversation_id}`).emit('user_typing_start', {
-      conversation_id: data.conversation_id,
-      user_id: userId,
-    });
+    client
+      .to(`conversation_${data.conversation_id}`)
+      .emit('user_typing_start', {
+        conversation_id: data.conversation_id,
+        user_id: userId,
+      });
   }
 
   @SubscribeMessage('typing_stop')
@@ -348,7 +448,9 @@ export class ChatGateway
     @MessageBody() data: { storyOwnerId: string },
   ) {
     client.join(`story_user_${data.storyOwnerId}`);
-    this.logger.log(`Socket ${client.id} joined story room of user ${data.storyOwnerId}`);
+    this.logger.log(
+      `Socket ${client.id} joined story room of user ${data.storyOwnerId}`,
+    );
   }
 
   @SubscribeMessage('leaveStoryRoom')
@@ -357,17 +459,20 @@ export class ChatGateway
     @MessageBody() data: { storyOwnerId: string },
   ) {
     client.leave(`story_user_${data.storyOwnerId}`);
-    this.logger.log(`Socket ${client.id} left story room of user ${data.storyOwnerId}`);
+    this.logger.log(
+      `Socket ${client.id} left story room of user ${data.storyOwnerId}`,
+    );
   }
 
   @SubscribeMessage('sendStoryReaction')
   async handleSendStoryReaction(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { storyOwnerId: string; storyId: string; emoji: string },
+    @MessageBody()
+    data: { storyOwnerId: string; storyId: string; emoji: string },
   ) {
     const userId = client.data.user.id;
     const profile = await this.chatService.getUserProfile(userId);
-    
+
     const reactionPayload = {
       storyId: data.storyId,
       emoji: data.emoji,
@@ -377,7 +482,11 @@ export class ChatGateway
     };
 
     // Broadcast tới tất cả client đang ở trong room story của owner này
-    this.server.to(`story_user_${data.storyOwnerId}`).emit('newStoryReaction', reactionPayload);
-    this.logger.log(`User ${userId} reacted ${data.emoji} to story ${data.storyId}`);
+    this.server
+      .to(`story_user_${data.storyOwnerId}`)
+      .emit('newStoryReaction', reactionPayload);
+    this.logger.log(
+      `User ${userId} reacted ${data.emoji} to story ${data.storyId}`,
+    );
   }
 }

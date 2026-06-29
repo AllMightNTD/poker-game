@@ -75,9 +75,6 @@ const useCases = [
       useClass: TypeOrmChatRepository,
     },
   ],
-  exports: [
-    'IChatRepository',
-    ...useCases,
-  ],
+  exports: ['IChatRepository', ...useCases],
 })
 export class ChatsModule {}

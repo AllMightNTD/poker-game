@@ -9,6 +9,10 @@ export class ToggleRequestConversationUseCase {
   ) {}
 
   async execute(userId: string, conversationId: string, isRequest: boolean) {
-    return this.chatRepository.toggleRequestConversation(userId, conversationId, isRequest);
+    return this.chatRepository.toggleRequestConversation(
+      userId,
+      conversationId,
+      isRequest,
+    );
   }
 }

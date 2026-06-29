@@ -1,0 +1,131 @@
+version: '3.9'
+
+services:
+  # ==============================
+  # 1. Frontend Service (Next.js)
+  # ==============================
+  frontend:
+    container_name: knowledge-block-fe
+    build:
+      context: ./FE
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./FE:/app
+      - /app/node_modules
+      - /app/.next
+    env_file:
+      - ./FE/.env
+    environment:
+      NODE_ENV: development
+      WATCHPACK_POLLING: "true"
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # ==============================
+  # 2. Backend Service (NestJS)
+  # ==============================
+  backend:
+    container_name: nestjs-dev
+    build:
+      context: ./BE
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "${APP_PORT:-3002}:${APP_PORT:-3002}" # API Port
+    volumes:
+      - ./BE:/app
+      - /app/node_modules
+    env_file:
+      - ./BE/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # ==============================
+  # 3. MySQL Database
+  # ==============================
+  db:
+    image: mysql:8.0
+    container_name: mysql-db
+    command: --default-authentication-plugin=mysql_native_password
+    env_file:
+      - ./BE/.env
+    environment:
+      - MYSQL_DATABASE=${DB_DATABASE:-nestjsbase}
+      - MYSQL_USER=${DB_USERNAME:-nestjs_user}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-123qwe}
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-123qwe}
+      - TZ=Asia/Tokyo
+    ports:
+      - '13306:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USERNAME:-nestjs_user}", "-p${DB_PASSWORD:-123qwe}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # ==============================
+  # 4. Redis Cache
+  # ==============================
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: >
+      sh -c 'redis-server --appendonly yes --requirepass "$${REDIS_PASSWORD:-redis_secret_password_123}"'
+    env_file:
+      - ./BE/.env
+    ports:
+      - '6380:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD:-redis_secret_password_123} ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # ==============================
+  # 5. Redis Commander (GUI)
+  # ==============================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    env_file:
+      - ./BE/.env
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD:-redis_secret_password_123}
+      - HTTP_USER=${REDIS_COMMANDER_USER:-admin}
+      - HTTP_PASSWORD=${REDIS_COMMANDER_PASSWORD:-admin}
+    ports:
+      - '8081:8081'
+    depends_on:
+      - redis
+    networks:
+      - app-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:

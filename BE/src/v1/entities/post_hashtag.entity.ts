@@ -1,4 +1,10 @@
-import { BaseEntity, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import {
+  BaseEntity,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryColumn,
+} from 'typeorm';
 import { Post } from './post.entity';
 import { Hashtag } from './hashtag.entity';
 
@@ -16,7 +22,9 @@ export class PostHashtag extends BaseEntity {
   @JoinColumn({ name: 'post_id' })
   post: Post;
 
-  @ManyToOne(() => Hashtag, (hashtag) => hashtag.post_hashtags, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Hashtag, (hashtag) => hashtag.post_hashtags, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'hashtag_id' })
   hashtag: Hashtag;
 }

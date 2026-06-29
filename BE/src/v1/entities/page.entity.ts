@@ -54,6 +54,15 @@ export class Page extends BaseEntity {
   @Column({ type: 'int', default: 0 })
   follower_count: number;
 
+  @Column({ type: 'boolean', default: false })
+  auto_reply_enabled: boolean;
+
+  @Column({ type: 'text', nullable: true })
+  welcome_message: string;
+
+  @Column({ type: 'json', nullable: true })
+  faq_data: any;
+
   @Column({ type: 'varchar' })
   created_by: string;
 

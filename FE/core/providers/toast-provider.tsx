@@ -1,8 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle, AlertCircle, Info, X, AlertTriangle } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle, Info, X } from "lucide-react";
+import React, { createContext, useCallback, useContext, useState } from "react";
 
 type ToastType = "success" | "error" | "info" | "warning";
 
@@ -43,7 +43,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setTimeout(() => {
       removeToast(id);
-    }, 3500);
+    }, 1000);
   }, [removeToast]);
 
   const success = useCallback((message: string) => toast("success", message), [toast]);
@@ -92,28 +92,16 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.2 } }}
                 className={`flex items-start gap-3 p-4 rounded-2xl border ${bgColor} pointer-events-auto shadow-lg relative overflow-hidden`}
               >
-                <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${
-                  t.type === "success" ? "bg-emerald-500" :
+                <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${t.type === "success" ? "bg-emerald-500" :
                   t.type === "error" ? "bg-rose-500" :
-                  t.type === "warning" ? "bg-amber-500" : "bg-blue-500"
-                }`} />
+                    t.type === "warning" ? "bg-amber-500" : "bg-blue-500"
+                  }`} />
 
                 <div className="flex-1 flex gap-3 pl-1">
                   <div className="mt-0.5">{icon}</div>
-                  <div className="flex flex-col gap-0.5">
-                    <p className={`text-sm font-bold capitalize ${
-                      t.type === "success" ? "text-emerald-900" :
-                      t.type === "error" ? "text-rose-900" :
-                      t.type === "warning" ? "text-amber-900" : "text-blue-900"
-                    }`}>
-                      {t.type === "success" ? "Thành công" :
-                       t.type === "error" ? "Đã có lỗi" :
-                       t.type === "warning" ? "Cảnh báo" : "Thông báo"}
-                    </p>
-                    <p className={`text-xs font-semibold leading-relaxed ${textColor}`}>
-                      {t.message}
-                    </p>
-                  </div>
+                  <p className={`text-xs font-semibold leading-relaxed ${textColor}`}>
+                    {t.message}
+                  </p>
                 </div>
 
                 <button

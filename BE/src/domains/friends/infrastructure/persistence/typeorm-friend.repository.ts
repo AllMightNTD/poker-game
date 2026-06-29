@@ -1,11 +1,20 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IFriendRepository } from '../../domain/repositories/friend.repository.interface';
 import { Friend } from 'src/v1/entities/friend.entity';
 import { FriendRequest } from 'src/v1/entities/friend_request.entity';
 import { User } from 'src/v1/entities/user.entity';
-import { FriendRequestStatus, FollowingType, FollowPriority, FollowStatus } from 'src/constants/enums';
+import {
+  FriendRequestStatus,
+  FollowingType,
+  FollowPriority,
+  FollowStatus,
+} from 'src/constants/enums';
 import { Follow } from 'src/v1/entities/follow.entity';
 import { UserStats } from 'src/v1/entities/user_stats.entity';
 import { Profile } from 'src/v1/entities/profile.entity';
@@ -71,7 +80,11 @@ export class TypeOrmFriendRepository implements IFriendRepository {
 
   async acceptFriendRequest(userId: string, requestId: string) {
     const request = await this.friendRequestRepo.findOne({
-      where: { id: requestId, receiver_id: userId, status: FriendRequestStatus.PENDING },
+      where: {
+        id: requestId,
+        receiver_id: userId,
+        status: FriendRequestStatus.PENDING,
+      },
     });
 
     if (!request) {
@@ -94,7 +107,11 @@ export class TypeOrmFriendRepository implements IFriendRepository {
 
       // 3. Auto Follow (both directions)
       const followAtoB = await manager.findOne(Follow, {
-        where: { follower_id: sender_id, following_type: FollowingType.USER, following_entity_id: receiver_id }
+        where: {
+          follower_id: sender_id,
+          following_type: FollowingType.USER,
+          following_entity_id: receiver_id,
+        },
       });
       if (!followAtoB) {
         await manager.save(Follow, {
@@ -106,7 +123,11 @@ export class TypeOrmFriendRepository implements IFriendRepository {
       }
 
       const followBtoA = await manager.findOne(Follow, {
-        where: { follower_id: receiver_id, following_type: FollowingType.USER, following_entity_id: sender_id }
+        where: {
+          follower_id: receiver_id,
+          following_type: FollowingType.USER,
+          following_entity_id: sender_id,
+        },
       });
       if (!followBtoA) {
         await manager.save(Follow, {
@@ -119,7 +140,9 @@ export class TypeOrmFriendRepository implements IFriendRepository {
 
       // 4. Update Stats
       for (const id of [sender_id, receiver_id]) {
-        let stats = await manager.findOne(UserStats, { where: { user_id: id } });
+        let stats = await manager.findOne(UserStats, {
+          where: { user_id: id },
+        });
         if (!stats) {
           stats = manager.create(UserStats, { user_id: id });
         }
@@ -135,7 +158,11 @@ export class TypeOrmFriendRepository implements IFriendRepository {
 
   async declineFriendRequest(userId: string, requestId: string) {
     const request = await this.friendRequestRepo.findOne({
-      where: { id: requestId, receiver_id: userId, status: FriendRequestStatus.PENDING },
+      where: {
+        id: requestId,
+        receiver_id: userId,
+        status: FriendRequestStatus.PENDING,
+      },
     });
 
     if (!request) {
@@ -151,7 +178,11 @@ export class TypeOrmFriendRepository implements IFriendRepository {
 
   async cancelFriendRequest(userId: string, requestId: string) {
     const request = await this.friendRequestRepo.findOne({
-      where: { id: requestId, sender_id: userId, status: FriendRequestStatus.PENDING },
+      where: {
+        id: requestId,
+        sender_id: userId,
+        status: FriendRequestStatus.PENDING,
+      },
     });
 
     if (!request) {
@@ -180,12 +211,22 @@ export class TypeOrmFriendRepository implements IFriendRepository {
       await manager.delete(Friend, { user_id: friendId, friend_id: userId });
 
       // 2. Delete follows
-      await manager.delete(Follow, { follower_id: userId, following_type: FollowingType.USER, following_entity_id: friendId });
-      await manager.delete(Follow, { follower_id: friendId, following_type: FollowingType.USER, following_entity_id: userId });
+      await manager.delete(Follow, {
+        follower_id: userId,
+        following_type: FollowingType.USER,
+        following_entity_id: friendId,
+      });
+      await manager.delete(Follow, {
+        follower_id: friendId,
+        following_type: FollowingType.USER,
+        following_entity_id: userId,
+      });
 
       // 3. Decrement stats
       for (const id of [userId, friendId]) {
-        let stats = await manager.findOne(UserStats, { where: { user_id: id } });
+        const stats = await manager.findOne(UserStats, {
+          where: { user_id: id },
+        });
         if (stats) {
           stats.friend_count = Math.max(0, (stats.friend_count || 0) - 1);
           stats.follower_count = Math.max(0, (stats.follower_count || 0) - 1);
@@ -365,10 +406,10 @@ export class TypeOrmFriendRepository implements IFriendRepository {
       
       -- Left Join for Comments on same posts
       LEFT JOIN (
-        SELECT c2.user_id AS candidate_id, COUNT(DISTINCT c2.target_id) AS count
+        SELECT c2.user_id AS candidate_id, COUNT(DISTINCT c2.post_id) AS count
         FROM comments c1
-        JOIN comments c2 ON c1.target_id = c2.target_id AND c1.target_type = c2.target_type
-        WHERE c1.user_id = :userId AND c2.user_id != :userId AND c1.target_type = 'POST'
+        JOIN comments c2 ON c1.post_id = c2.post_id
+        WHERE c1.user_id = :userId AND c2.user_id != :userId
         GROUP BY c2.user_id
       ) shared_comments ON shared_comments.candidate_id = u.id
       
@@ -446,10 +487,10 @@ export class TypeOrmFriendRepository implements IFriendRepository {
           GROUP BY gm2.user_id
         ) common_groups ON common_groups.candidate_id = u.id
         LEFT JOIN (
-          SELECT c2.user_id AS candidate_id, COUNT(DISTINCT c2.target_id) AS count
+          SELECT c2.user_id AS candidate_id, COUNT(DISTINCT c2.post_id) AS count
           FROM comments c1
-          JOIN comments c2 ON c1.target_id = c2.target_id AND c1.target_type = c2.target_type
-          WHERE c1.user_id = :userId AND c2.user_id != :userId AND c1.target_type = 'POST'
+          JOIN comments c2 ON c1.post_id = c2.post_id
+          WHERE c1.user_id = :userId AND c2.user_id != :userId
           GROUP BY c2.user_id
         ) shared_comments ON shared_comments.candidate_id = u.id
         LEFT JOIN (
@@ -509,8 +550,14 @@ export class TypeOrmFriendRepository implements IFriendRepository {
     const parsedQuery = parseNamedParameters(rawQuery, queryParams);
     const parsedCount = parseNamedParameters(countQuery, queryParams);
 
-    const data = await this.friendRepo.manager.query(parsedQuery.query, parsedQuery.values);
-    const countResult = await this.friendRepo.manager.query(parsedCount.query, parsedCount.values);
+    const data = await this.friendRepo.manager.query(
+      parsedQuery.query,
+      parsedQuery.values,
+    );
+    const countResult = await this.friendRepo.manager.query(
+      parsedCount.query,
+      parsedCount.values,
+    );
     const total = countResult[0] ? parseInt(countResult[0].total, 10) : 0;
 
     return {
@@ -521,6 +568,84 @@ export class TypeOrmFriendRepository implements IFriendRepository {
         limit,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  async searchFriends(userId: string, keyword: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+
+    const query = this.friendRepo
+      .createQueryBuilder('friend')
+      .innerJoinAndSelect('friend.friend_user', 'user')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('user.presence', 'presence')
+      .where('friend.user_id = :userId', { userId })
+      .andWhere(
+        '(LOWER(profile.full_name) LIKE LOWER(:keyword) OR LOWER(user.email) LIKE LOWER(:keyword))',
+        { keyword: `%${keyword}%` },
+      )
+      .skip(skip)
+      .take(limit)
+      .orderBy('friend.created_at', 'DESC');
+
+    const [friends, total] = await query.getManyAndCount();
+
+    return {
+      data: friends,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async getMutualFriends(
+    currentUserId: string,
+    targetUserId: string,
+    page = 1,
+    limit = 20,
+  ) {
+    const skip = (page - 1) * limit;
+
+    const rawQuery = `
+      SELECT f1.friend_id 
+      FROM friends f1 
+      JOIN friends f2 ON f1.friend_id = f2.friend_id 
+      WHERE f1.user_id = ? AND f2.user_id = ?
+      LIMIT ? OFFSET ?
+    `;
+
+    const countQuery = `
+      SELECT COUNT(f1.friend_id) as total 
+      FROM friends f1 
+      JOIN friends f2 ON f1.friend_id = f2.friend_id 
+      WHERE f1.user_id = ? AND f2.user_id = ?
+    `;
+
+    const mutualIdsResult = await this.friendRepo.manager.query(rawQuery, [
+      currentUserId,
+      targetUserId,
+      limit,
+      skip,
+    ]);
+    const mutualIds = mutualIdsResult.map((r: any) => r.friend_id);
+
+    const countResult = await this.friendRepo.manager.query(countQuery, [
+      currentUserId,
+      targetUserId,
+    ]);
+    const total = countResult[0] ? parseInt(countResult[0].total, 10) : 0;
+
+    let data = [];
+    if (mutualIds.length > 0) {
+      data = await this.userRepo
+        .createQueryBuilder('user')
+        .leftJoinAndSelect('user.profile', 'profile')
+        .leftJoinAndSelect('user.presence', 'presence')
+        .where('user.id IN (:...ids)', { ids: mutualIds })
+        .getMany();
+    }
+
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
 }

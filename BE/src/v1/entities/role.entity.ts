@@ -8,7 +8,6 @@ import {
 import { RolePermission } from './role_permission.entity';
 import { UserRole } from './user_role.entity';
 
-
 @Entity('roles')
 export class Role extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')

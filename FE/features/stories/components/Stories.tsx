@@ -1,11 +1,11 @@
 "use client";
 
-import React from "react";
-import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useStories } from "../hooks/use-stories";
 import StoryCreatorModal from "./StoryCreatorModal";
 import StoryViewerModal from "./StoryViewerModal";
-import { useStories } from "../hooks/use-stories";
 
 interface StoriesProps {
   currentUser?: any;
@@ -22,13 +22,14 @@ export default function Stories({ currentUser }: StoriesProps) {
     setPreselectedMusicSong,
     fetchFeed,
   } = useStories();
+  const t = useTranslations("story");
 
   return (
     <>
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide select-none">
-        
+
         {/* Nút Tạo Tin Mới (Add Story Card) */}
-        <div 
+        <div
           onClick={() => setIsCreatorOpen(true)}
           className="flex-shrink-0 flex flex-col items-center gap-1.5 cursor-pointer group"
         >
@@ -41,14 +42,14 @@ export default function Stories({ currentUser }: StoriesProps) {
             />
             {/* Overlay phủ tối */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
-            
+
             {/* Vòng tròn dấu cộng nằm đè ranh giới */}
             <div className="relative z-10 flex flex-col items-center gap-1.5 w-full">
               <div className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 flex items-center justify-center shadow-lg border-2 border-white dark:border-slate-900 group-hover:scale-110 transition-transform">
                 <Plus size={16} className="text-white" />
               </div>
               <span className="text-[10px] font-bold text-white tracking-wide">
-                Tạo tin mới
+                {t("addStory")}
               </span>
             </div>
           </div>
@@ -58,7 +59,7 @@ export default function Stories({ currentUser }: StoriesProps) {
         {feedItems.map((item, index) => {
           const firstStory = item.stories[0];
           const hasUnviewed = item.hasUnviewed;
-          
+
           // Trích xuất background
           const getStoryBackground = () => {
             if (firstStory.type === "text") {
@@ -122,7 +123,7 @@ export default function Stories({ currentUser }: StoriesProps) {
 
                 {/* Tên hiển thị người dùng */}
                 <p className="absolute bottom-2 left-2 right-2 text-white text-[10px] font-bold leading-tight line-clamp-2">
-                  {currentUser?.id === item.user.id ? "Tin của bạn" : item.user.full_name}
+                  {currentUser?.id === item.user.id ? t("yourStory") : item.user.full_name}
                 </p>
               </div>
             </div>

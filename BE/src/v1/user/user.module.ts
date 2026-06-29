@@ -5,14 +5,15 @@ import { User } from '../entities/user.entity';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { UsersModule } from 'src/domains/users/users.module';
+import { FriendModule } from '../friend/friend.module';
+import { PostModule } from '../post/post.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      User,
-      GroupMember,
-    ]),
+    TypeOrmModule.forFeature([User, GroupMember]),
     UsersModule,
+    FriendModule,
+    PostModule,
   ],
   controllers: [UserController],
   providers: [UserService],

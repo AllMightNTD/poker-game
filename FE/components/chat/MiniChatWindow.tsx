@@ -70,11 +70,25 @@ export default function MiniChatWindow({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const limit = 20;
+
   // ---- Refs ----
   const scrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isCurrentlyTypingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }, 100);
+  };
 
   // ---- Media upload hook ----
   const { uploadingFiles, handleFileChange, handleRetry } = useMediaUpload({
@@ -89,12 +103,33 @@ export default function MiniChatWindow({
     setLoading(true);
     (async () => {
       try {
-        const convRes = await api.get(`/api/v1/chat/conversation/${contact.id}`);
-        const convId = convRes.data.conversation_id;
+        let convId = contact.conversationId;
+        
+        if (!convId && contact.type !== "group") {
+          const convRes = await api.get(`/api/v1/chat/conversation/${contact.id}`);
+          convId = convRes.data.conversation_id || convRes.data.id;
+        }
+
         if (mounted && convId) {
           setConversationId(convId);
-          const msgRes = await api.get(`/api/v1/chat/messages/${convId}`);
-          if (mounted) setMessages(msgRes.data.data || []);
+          const msgRes = await api.get(`/api/v1/chat/messages/${convId}?page=1&limit=${limit}`);
+          if (mounted) {
+            const fetchedMsgs = msgRes.data.data || [];
+            setMessages(fetchedMsgs);
+            setHasMore(fetchedMsgs?.length === limit);
+            setPage(1);
+            scrollToBottom();
+
+            if (fetchedMsgs.length > 0) {
+              const lastMsg = fetchedMsgs[fetchedMsgs.length - 1];
+              if (lastMsg.sender_id !== currentUser?.id) {
+                socket?.emit("seenMessage", {
+                  conversation_id: convId,
+                  message_id: lastMsg.id,
+                });
+              }
+            }
+          }
         }
       } catch (e) {
         console.error("[MiniChatWindow] fetch error", e);
@@ -105,12 +140,43 @@ export default function MiniChatWindow({
     return () => { mounted = false; };
   }, [contact.id]);
 
-  // ---- Auto scroll ----
-  useEffect(() => {
-    if (scrollRef.current && !isMinimized) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  const handleScroll = async (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    if (target.scrollTop === 0 && hasMore && !loadingMore && conversationId) {
+      setLoadingMore(true);
+      const prevScrollHeight = target.scrollHeight;
+      try {
+        const nextPage = page + 1;
+        const msgRes = await api.get(`/api/v1/chat/messages/${conversationId}?page=${nextPage}&limit=${limit}`);
+        const newMsgs = msgRes.data.data || [];
+        
+        if (newMsgs.length > 0) {
+          setMessages(prev => [...newMsgs, ...prev]);
+          setPage(nextPage);
+          setHasMore(newMsgs.length === limit);
+          
+          // Restore scroll position
+          requestAnimationFrame(() => {
+            if (scrollRef.current) {
+              const newScrollHeight = scrollRef.current.scrollHeight;
+              scrollRef.current.scrollTop = newScrollHeight - prevScrollHeight;
+            }
+          });
+        } else {
+          setHasMore(false);
+        }
+      } catch (e) {
+        console.error("Failed to load more messages", e);
+      } finally {
+        setLoadingMore(false);
+      }
     }
-  }, [messages, uploadingFiles, isOpponentTyping, isMinimized]);
+  };
+  useEffect(() => {
+    if (!isMinimized) {
+      scrollToBottom();
+    }
+  }, [uploadingFiles, isOpponentTyping, isMinimized]);
 
   // ---- Socket listeners ----
   useEffect(() => {
@@ -124,6 +190,7 @@ export default function MiniChatWindow({
         if (prev.find((m) => m.id === msg.id)) return prev;
         return [...prev, { ...msg, status: "sent" }];
       });
+      scrollToBottom();
       // Send seen receipt
       if (msg.sender_id !== currentUser?.id) {
         socket.emit("seenMessage", {
@@ -149,6 +216,7 @@ export default function MiniChatWindow({
         }
         return [...prev, { ...msg, status: "sent" }];
       });
+      scrollToBottom();
     };
 
     const onTypingStart = (data: { conversation_id: string; user_id: string }) => {
@@ -199,6 +267,7 @@ export default function MiniChatWindow({
       status: "sending",
     };
     setMessages((prev) => [...prev, optimistic]);
+    scrollToBottom();
     socket.emit("sendMessage", {
       conversation_id: conversationId,
       content,
@@ -365,7 +434,8 @@ export default function MiniChatWindow({
             {/* Message list */}
             <div
               ref={scrollRef}
-              className="flex flex-col gap-1.5 px-3 py-3 overflow-y-auto scroll-smooth"
+              onScroll={handleScroll}
+              className="flex flex-col gap-1.5 px-3 py-3 overflow-y-auto scroll-smooth custom-scrollbar"
               style={{ height: 280 }}
             >
               {loading ? (
@@ -379,8 +449,14 @@ export default function MiniChatWindow({
                 </p>
               ) : (
                 <>
-                  {messages.map((msg) => {
-                    const isMe = msg.sender_id === currentUser?.id;
+                  {loadingMore && (
+                    <div className="flex justify-center py-2">
+                      <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                  {messages.map((msg: any) => {
+                    const senderId = msg.sender_id || msg.sender?.id;
+                    const isMe = Boolean(currentUser?.id && senderId === currentUser.id);
                     return (
                       <div
                         key={msg.id}

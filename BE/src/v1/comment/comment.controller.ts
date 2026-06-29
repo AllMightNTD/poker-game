@@ -46,7 +46,8 @@ export class CommentController {
   async getComments(
     @Param('targetType') targetType: CommentTargetType,
     @Param('targetId') targetId: string,
-    @Query() query: { page?: number; limit?: number; sort?: 'newest' | 'oldest' },
+    @Query()
+    query: { page?: number; limit?: number; sort?: 'newest' | 'oldest' },
   ) {
     return this.commentService.getComments(targetType, targetId, query);
   }
@@ -62,7 +63,10 @@ export class CommentController {
 
   @UseGuards(AuthGuard)
   @Post('/')
-  async createComment(@Request() req, @Body() createCommentDto: CreateCommentDto) {
+  async createComment(
+    @Request() req,
+    @Body() createCommentDto: CreateCommentDto,
+  ) {
     return this.commentService.createComment(req.user.sub, createCommentDto);
   }
 
@@ -73,7 +77,11 @@ export class CommentController {
     @Param('commentId') commentId: string,
     @Body() updateCommentDto: UpdateCommentDto,
   ) {
-    return this.commentService.updateComment(req.user.sub, commentId, updateCommentDto);
+    return this.commentService.updateComment(
+      req.user.sub,
+      commentId,
+      updateCommentDto,
+    );
   }
 
   @UseGuards(AuthGuard)

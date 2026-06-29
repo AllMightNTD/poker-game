@@ -9,6 +9,10 @@ export class ToggleHideConversationUseCase {
   ) {}
 
   async execute(userId: string, conversationId: string, isHidden: boolean) {
-    return this.chatRepository.toggleHideConversation(userId, conversationId, isHidden);
+    return this.chatRepository.toggleHideConversation(
+      userId,
+      conversationId,
+      isHidden,
+    );
   }
 }

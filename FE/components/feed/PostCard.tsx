@@ -1,20 +1,21 @@
 "use client";
+import api from "@/lib/axios";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import {
+  AlertCircle,
   Bookmark,
+  Edit3,
   MessageCircle,
   MoreHorizontal,
   Share2,
   ThumbsUp,
-  Edit3,
-  Trash2,
-  AlertCircle
+  Trash2
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useTranslations } from "next-intl";
+import { useEffect, useRef, useState } from "react";
 import { cn, formatCount } from "../../lib/utils";
-import api from "@/lib/axios";
 import EditPostModal from "./EditPostModal";
-import CommentSection from "./CommentSection";
 import PostDetailModal from "./PostDetailModal";
 
 interface PostProps {
@@ -56,12 +57,21 @@ const getMediaUrl = (url: string) => {
 };
 
 export default function PostCard({ post, currentUser, onProfileClick }: PostProps) {
+  const t = useTranslations("post");
+
+  const REACTIONS_LOCAL = [
+    { id: "like", emoji: "👍", label: t("like"), color: "text-blue-500 font-bold", fillIcon: "👍" },
+    { id: "love", emoji: "❤️", label: t("love"), color: "text-red-500 font-bold", fillIcon: "❤️" },
+    { id: "sad", emoji: "😢", label: t("sad"), color: "text-yellow-500 font-bold", fillIcon: "😢" },
+    { id: "angry", emoji: "😡", label: t("angry"), color: "text-orange-500 font-bold", fillIcon: "😡" },
+  ];
+
   // Reaction states
   const [currentReaction, setCurrentReaction] = useState<string | null>(post.userReaction || null);
   const [likeCount, setLikeCount] = useState(post.likes);
   const [stats, setStats] = useState<Record<string, number>>(post.reactionStats || {});
   const [commentCount, setCommentCount] = useState(post.comments || 0);
-  
+
   const [saved, setSaved] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -96,51 +106,82 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleToggleReaction = async (type: string | null) => {
-    if (!type) return;
-    setIsPickerOpen(false);
-    
-    // Optimistic UI Update
-    const prevReaction = currentReaction;
-    const isRemoval = prevReaction === type;
-    
-    let newReaction = isRemoval ? null : type;
-    setCurrentReaction(newReaction);
-
-    // Tính toán số lượng like
-    let newLikeCount = likeCount;
-    if (prevReaction && isRemoval) {
-      newLikeCount = Math.max(0, newLikeCount - 1);
-    } else if (!prevReaction && !isRemoval) {
-      newLikeCount = newLikeCount + 1;
-    }
-    setLikeCount(newLikeCount);
-
-    // Tính toán stats cục bộ
-    const newStats = { ...stats };
-    if (prevReaction) {
-      newStats[prevReaction] = Math.max(0, (newStats[prevReaction] || 1) - 1);
-      if (newStats[prevReaction] === 0) delete newStats[prevReaction];
-    }
-    if (!isRemoval) {
-      newStats[type] = (newStats[type] || 0) + 1;
-    }
-    setStats(newStats);
-
-    try {
+  const reactionMutation = useMutation({
+    mutationFn: async (type: string) => {
       const res = await api.post(`/api/v1/post/${post.id}/reaction`, { type });
+      return res.data;
+    },
+    onMutate: async (type) => {
+      // Optimistic UI Update
+      const prevReaction = currentReaction;
+      const prevLikeCount = likeCount;
+      const prevStats = { ...stats };
+
+      const isRemoval = prevReaction === type;
+      let newReaction = isRemoval ? null : type;
+      setCurrentReaction(newReaction);
+
+      let newLikeCount = likeCount;
+      if (prevReaction && isRemoval) {
+        newLikeCount = Math.max(0, newLikeCount - 1);
+      } else if (!prevReaction && !isRemoval) {
+        newLikeCount = newLikeCount + 1;
+      }
+      setLikeCount(newLikeCount);
+
+      const newStats = { ...stats };
+      if (prevReaction) {
+        newStats[prevReaction] = Math.max(0, (newStats[prevReaction] || 1) - 1);
+        if (newStats[prevReaction] === 0) delete newStats[prevReaction];
+      }
+      if (!isRemoval) {
+        newStats[type] = (newStats[type] || 0) + 1;
+      }
+      setStats(newStats);
+
+      return { prevReaction, prevLikeCount, prevStats };
+    },
+    onSuccess: (data) => {
       // Cập nhật lại chuẩn xác từ server
-      setCurrentReaction(res.data.userReaction);
-      setLikeCount(res.data.reactionCount);
-      setStats(res.data.stats || {});
-    } catch (err) {
+      setCurrentReaction(data.userReaction);
+      setLikeCount(data.reactionCount);
+      setStats(data.stats || {});
+    },
+    onError: (err, variables, context: any) => {
       console.error("Failed to react:", err);
       // Rollback nếu có lỗi
-      setCurrentReaction(prevReaction);
-      setLikeCount(post.likes);
-      setStats(post.reactionStats || {});
+      if (context) {
+        setCurrentReaction(context.prevReaction);
+        setLikeCount(context.prevLikeCount);
+        setStats(context.prevStats);
+      }
     }
+  });
+
+  const handleToggleReaction = (type: string | null) => {
+    if (!type) return;
+    setIsPickerOpen(false);
+    reactionMutation.mutate(type);
   };
+
+  const queryClient = useQueryClient();
+
+  const deletePostMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.delete(`/api/v1/post/${post.id}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      // Invalidate queries to refresh feed and profile posts
+      queryClient.invalidateQueries({ queryKey: ["feedPosts"] });
+      queryClient.invalidateQueries({ queryKey: ["profilePosts"] });
+      alert(t("deletePostSuccess", { defaultValue: "Đã xóa bài viết thành công" }));
+    },
+    onError: (err) => {
+      console.error("Failed to delete post:", err);
+      alert(t("deletePostError", { defaultValue: "Không thể xóa bài viết, vui lòng thử lại sau" }));
+    }
+  });
 
   const handleQuickLike = () => {
     if (currentReaction) {
@@ -148,7 +189,7 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
       handleToggleReaction(currentReaction);
     } else {
       // Chưa react -> Click nhanh sẽ là Like 👍
-      handleToggleReaction("like");
+      handleToggleReaction("👍");
     }
   };
 
@@ -252,21 +293,29 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
     );
   };
 
-  // Lấy emoji đại diện cho reaction hiện tại
   const getReactionUI = () => {
-    const found = REACTIONS.find((r) => r.id === currentReaction);
-    if (found) {
+    if (currentReaction) {
+      // It can be any emoji string now. Let's find if it's one of the default
+      const found = REACTIONS_LOCAL.find((r) => r.id === currentReaction || r.emoji === currentReaction);
+      if (found) {
+        return (
+          <span className={cn("text-xs flex items-center gap-1.5", found.color)}>
+            <span className="text-sm">{found.emoji}</span>
+            <span>{found.label}</span>
+          </span>
+        );
+      }
       return (
-        <span className={cn("text-xs flex items-center gap-1.5", found.color)}>
-          <span className="text-sm">{found.emoji}</span>
-          <span>{found.label}</span>
+        <span className="text-xs flex items-center gap-1.5 font-bold text-blue-500">
+          <span className="text-sm">{currentReaction}</span>
+          <span>{t("like")}</span>
         </span>
       );
     }
     return (
       <span className="text-xs flex items-center gap-1.5 text-slate-500">
         <ThumbsUp size={15} />
-        <span>Thích</span>
+        <span>{t("like")}</span>
       </span>
     );
   };
@@ -276,18 +325,23 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
     const activeReactionIds = Object.keys(stats).filter((key) => stats[key] > 0);
     if (activeReactionIds.length === 0) return null;
 
+    // Sort by count desc
+    activeReactionIds.sort((a, b) => stats[b] - stats[a]);
+
     return (
       <div className="flex -space-x-1 shadow-xs bg-slate-50 px-1 py-0.5 rounded-full border border-slate-100">
         {activeReactionIds.slice(0, 3).map((id) => {
-          const feel = REACTIONS.find((r) => r.id === id);
-          if (!feel) return null;
+          const feel = REACTIONS_LOCAL.find((r) => r.id === id || r.emoji === id);
+          const emojiDisplay = feel ? feel.emoji : id;
+          const labelDisplay = feel ? feel.label : "";
+
           return (
-            <span 
-              key={id} 
+            <span
+              key={id}
               className="w-4 h-4 rounded-full flex items-center justify-center text-xs animate-in zoom-in duration-200"
-              title={`${feel.label}: ${stats[id]}`}
+              title={`${labelDisplay || emojiDisplay}: ${stats[id]}`}
             >
-              {feel.emoji}
+              {emojiDisplay}
             </span>
           );
         })}
@@ -311,7 +365,7 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-1">
-                <span 
+                <span
                   className="text-sm font-semibold text-slate-800 hover:text-blue-600 cursor-pointer transition-colors"
                   onClick={onProfileClick}
                 >
@@ -319,7 +373,7 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
                 </span>
                 {post.feeling && (
                   <span className="text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100/50">
-                    đang cảm thấy {post.feeling}
+                    {t("feeling", { feeling: post.feeling })}
                   </span>
                 )}
               </div>
@@ -352,17 +406,19 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
                         className="w-full px-4 py-2 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-2 transition-colors text-left"
                       >
                         <Edit3 size={14} className="text-blue-500" />
-                        Chỉnh sửa bài viết
+                        {t("editPost")}
                       </button>
                       <button
                         onClick={() => {
-                          // Hỗ trợ xóa bài viết
+                          if (window.confirm(t("deletePostConfirm", { defaultValue: "Bạn có chắc chắn muốn xóa bài viết này không?" }))) {
+                            deletePostMutation.mutate();
+                          }
                           setIsMenuOpen(false);
                         }}
                         className="w-full px-4 py-2 hover:bg-slate-50 text-rose-600 hover:text-rose-700 text-xs font-semibold flex items-center gap-2 transition-colors text-left"
                       >
                         <Trash2 size={14} />
-                        Xóa bài viết
+                        {t("deletePost")}
                       </button>
                     </>
                   ) : (
@@ -375,14 +431,14 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
                         className="w-full px-4 py-2 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-2 transition-colors text-left"
                       >
                         <Bookmark size={14} className="text-slate-400" />
-                        {saved ? "Hủy lưu bài viết" : "Lưu bài viết"}
+                        {saved ? t("unsavePost") : t("savePost")}
                       </button>
                       <button
                         onClick={() => setIsMenuOpen(false)}
                         className="w-full px-4 py-2 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-2 transition-colors text-left"
                       >
                         <AlertCircle size={14} className="text-amber-500" />
-                        Báo cáo bài đăng
+                        {t("reportPost")}
                       </button>
                     </>
                   )}
@@ -403,7 +459,7 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
               <>
                 {post.content.slice(0, 300)}...{" "}
                 <button className="text-blue-500 font-semibold hover:underline">
-                  Xem thêm
+                  {t("seeMore")}
                 </button>
               </>
             ) : (
@@ -420,7 +476,7 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
           <div className="flex items-center gap-1.5">
             {renderReactionIcons()}
             <span className="text-xs text-slate-500 font-medium">
-              {formatCount(likeCount)} Lượt tương tác
+              {t("interactions", { count: formatCount(likeCount) })}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -429,11 +485,11 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
               onClick={() => setIsDetailOpen(true)}
             >
               <MessageCircle size={13} />
-              {commentCount} Bình luận
+              {t("comments", { count: commentCount })}
             </button>
             <span className="text-xs text-slate-400 flex items-center gap-1">
               <Share2 size={13} />
-              {post.shares} Chia sẻ
+              {t("shares", { count: post.shares })}
             </span>
           </div>
         </div>
@@ -441,9 +497,9 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
 
       {/* Actions (Like Hover Reaction Picker + Comments + Share) */}
       <div className="flex items-center border-t border-slate-100 relative">
-        
+
         {/* Like Button Wrapper for Hover Event */}
-        <div 
+        <div
           className="flex-1 relative"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -466,17 +522,17 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
                 transition={{ duration: 0.2, ease: "easeOut" }}
                 className="absolute bottom-full left-4 mb-2 bg-white rounded-full border border-slate-100 shadow-2xl px-2.5 py-1.5 z-40 flex items-center gap-2 backdrop-blur-sm bg-white/95"
               >
-                {REACTIONS.map((feel, index) => (
+                {REACTIONS_LOCAL.map((feel, index) => (
                   <motion.button
                     key={feel.id}
                     type="button"
-                    onClick={() => handleToggleReaction(feel.id)}
+                    onClick={() => handleToggleReaction(feel.emoji)} // Use emoji string instead of id
                     whileHover={{ scale: 1.3, y: -4 }}
                     transition={{ type: "spring", stiffness: 400, damping: 15 }}
                     className="relative group p-1 shrink-0 active:scale-95"
                   >
                     <span className="text-2xl filter drop-shadow-md cursor-pointer">{feel.emoji}</span>
-                    
+
                     {/* Tooltip */}
                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-slate-800 text-white text-[10px] font-bold px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap shadow-md">
                       {feel.label}
@@ -493,7 +549,7 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
           onClick={() => setIsDetailOpen(true)}
         >
           <MessageCircle size={15} />
-          <span className="text-xs">Bình luận</span>
+          <span className="text-xs">{t("comment")}</span>
         </button>
         <button
           onClick={() => setSaved(!saved)}
@@ -503,11 +559,11 @@ export default function PostCard({ post, currentUser, onProfileClick }: PostProp
           )}
         >
           <Bookmark size={15} className={cn(saved && "fill-blue-500")} />
-          <span className="text-xs">Lưu lại</span>
+          <span className="text-xs">{t("save")}</span>
         </button>
         <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-slate-500 hover:bg-slate-50 hover:text-blue-500 transition-colors">
           <Share2 size={15} />
-          <span className="text-xs">Chia sẻ</span>
+          <span className="text-xs">{t("share")}</span>
         </button>
       </div>
 

@@ -38,7 +38,9 @@ export class Notification extends BaseEntity {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => User, (user) => user.acted_notifications, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (user) => user.acted_notifications, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'actor_id' })
   actor: User;
 }

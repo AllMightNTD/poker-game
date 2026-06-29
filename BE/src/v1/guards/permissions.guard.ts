@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSIONS_KEY } from '../decorators/require-permissions.decorator';
 import { DataSource } from 'typeorm';
@@ -12,10 +17,10 @@ export class PermissionsGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(
+      PERMISSIONS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (!requiredPermissions || requiredPermissions.length === 0) {
       return true; // No permissions required
@@ -31,7 +36,11 @@ export class PermissionsGuard implements CanActivate {
     // Query user roles and permissions
     const userRoles = await this.dataSource.getRepository(UserRole).find({
       where: { user_id: userPayload.sub },
-      relations: ['role', 'role.role_permissions', 'role.role_permissions.permission'],
+      relations: [
+        'role',
+        'role.role_permissions',
+        'role.role_permissions.permission',
+      ],
     });
 
     if (!userRoles || userRoles.length === 0) {
@@ -49,7 +58,9 @@ export class PermissionsGuard implements CanActivate {
       }
     }
 
-    const hasPermission = requiredPermissions.every((perm) => userPermissions.has(perm));
+    const hasPermission = requiredPermissions.every((perm) =>
+      userPermissions.has(perm),
+    );
 
     if (!hasPermission) {
       throw new ForbiddenException('Insufficient permissions');

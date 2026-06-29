@@ -110,7 +110,10 @@ function StatusDot({ online, away }: { online?: boolean; away?: boolean }) {
   );
 }
 
+import { useTranslations } from "next-intl";
+
 export default function RightSidebar({ currentUser }: { currentUser?: any }) {
+  const t = useTranslations("rightSidebar");
   const { openPopup } = useMiniChat();
   const [friends, setFriends] = useState<FriendItem[]>([]);
   const [loadingFriends, setLoadingFriends] = useState(true);
@@ -180,7 +183,7 @@ export default function RightSidebar({ currentUser }: { currentUser?: any }) {
         {/* Contacts (Friends from API) */}
         <div className="px-4 mb-4">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-            Contacts
+            {t("contacts")}
           </p>
           <div className="space-y-0.5">
             {loadingFriends ? (
@@ -193,7 +196,7 @@ export default function RightSidebar({ currentUser }: { currentUser?: any }) {
                 ))}
               </div>
             ) : friends.length === 0 ? (
-              <p className="text-xs text-slate-400 px-2">No friends yet</p>
+              <p className="text-xs text-slate-400 px-2">{t("noFriends")}</p>
             ) : (
               friends.map((f) => {
                 const profile = f.friend_user?.profile;
@@ -212,11 +215,11 @@ export default function RightSidebar({ currentUser }: { currentUser?: any }) {
                   const diffHours = Math.floor(diffMins / 60);
                   const diffDays = Math.floor(diffHours / 24);
 
-                  if (diffMins < 1) return "Vừa hoạt động";
-                  if (diffMins < 60) return `${diffMins} phút trước`;
-                  if (diffHours < 24) return `${diffHours} giờ trước`;
-                  if (diffDays === 1) return "Hôm qua";
-                  return `${diffDays} ngày trước`;
+                  if (diffMins < 1) return t("justNow");
+                  if (diffMins < 60) return t("minsAgo", { count: diffMins });
+                  if (diffHours < 24) return t("hoursAgo", { count: diffHours });
+                  if (diffDays === 1) return t("yesterday");
+                  return t("daysAgo", { count: diffDays });
                 };
 
                 return (
@@ -228,6 +231,7 @@ export default function RightSidebar({ currentUser }: { currentUser?: any }) {
                         name: displayName,
                         avatar: avatarUrl || "",
                         status: isOnline ? "online" : isAway ? "away" : "offline",
+                        type: "direct",
                       })
                     }
                     className="w-full flex items-center justify-between px-2 py-2 rounded-xl hover:bg-slate-50 transition-colors group"
@@ -252,7 +256,7 @@ export default function RightSidebar({ currentUser }: { currentUser?: any }) {
                         )}
                         {isAway && (
                           <span className="text-[10px] text-amber-500 font-medium">
-                            Tạm vắng
+                            {t("away")}
                           </span>
                         )}
                       </div>
@@ -272,7 +276,7 @@ export default function RightSidebar({ currentUser }: { currentUser?: any }) {
         {/* Groups */}
         <div className="px-4 mb-4">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-            Groups
+            {t("groups")}
           </p>
           <div className="space-y-0.5">
             {loadingGroups ? (
@@ -285,7 +289,7 @@ export default function RightSidebar({ currentUser }: { currentUser?: any }) {
                 ))}
               </div>
             ) : userGroups.length === 0 ? (
-              <p className="text-xs text-slate-400 px-2">No groups yet</p>
+              <p className="text-xs text-slate-400 px-2">{t("noGroups")}</p>
             ) : (
               userGroups.map((gm) => {
                 const g = gm.group;
@@ -329,7 +333,7 @@ export default function RightSidebar({ currentUser }: { currentUser?: any }) {
                       </div>
                     </div>
                     <span className="text-[10px] text-slate-400">
-                      {g?.member_count || 0} members
+                      {t("members", { count: g?.member_count || 0 })}
                     </span>
                   </button>
                 );
@@ -343,7 +347,7 @@ export default function RightSidebar({ currentUser }: { currentUser?: any }) {
         {/* Pages */}
         <div className="px-4">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-            Pages
+            {t("pages")}
           </p>
           <div className="space-y-0.5">
             {pages.map((p) => (

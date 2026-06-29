@@ -15,23 +15,12 @@ import databaseConfig from './config/database';
 import { SeedModule } from './database/seed/seed.module';
 import { MailModule } from './mail/mail.module';
 import { AppV1Module } from './v1/app-v1.module';
-import { JwtModule } from '@nestjs/jwt';
-
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
       load: [databaseConfig],
-    }),
-    JwtModule.registerAsync({
-      global: true,
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET') || 'hard-to-guess-secret',
-        signOptions: { expiresIn: '1h' },
-      }),
     }),
     /**Queue Config */
     BullModule.forRootAsync({

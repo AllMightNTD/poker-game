@@ -1,8 +1,10 @@
 // src/components/feed/CreatePostMini.tsx
 import { Sparkles } from "lucide-react";
 import Image from "next/image"; // Import thẻ Image chuẩn Next.js
+import { useTranslations } from "next-intl";
 
 export const CreatePostMini = () => {
+  const t = useTranslations("post");
   return (
     <section
       aria-label="Tạo bài viết nhanh"
@@ -14,7 +16,7 @@ export const CreatePostMini = () => {
           <div className="w-12 h-12 relative rounded-2xl overflow-hidden border-2 border-[#00FFD1]/20 shadow-sm">
             <Image
               src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
-              alt="Ảnh đại diện của bạn"
+              alt={t("avatarAria")}
               fill
               sizes="48px"
               className="object-cover"
@@ -30,10 +32,10 @@ export const CreatePostMini = () => {
 
         {/* Nút mở Modal - Chuyển thành button với thông tin rõ ràng */}
         <button
-          aria-label="Nhấn để bắt đầu chia sẻ kiến thức mới"
+          aria-label={t("sharePromptAria")}
           className="flex-1 text-left bg-[#F4FDFF] hover:bg-[#00C2FF]/10 px-6 py-3.5 rounded-[1.8rem] text-[#00AEEF] font-black text-sm transition-all border border-transparent hover:border-[#00C2FF]/20 group flex items-center justify-between outline-none focus-visible:ring-2 focus-visible:ring-[#00C2FF]"
         >
-          <span>Chia sẻ kiến thức hôm nay nào...</span>
+          <span>{t("sharePrompt")}</span>
           <span
             className="group-hover:inline-block animate-bounce hidden text-lg"
             aria-hidden="true"
@@ -44,7 +46,7 @@ export const CreatePostMini = () => {
 
         {/* Nút Sparkles Action */}
         <button
-          aria-label="Tạo bài viết rực rỡ"
+          aria-label={t("sparklesAria")}
           className="bg-[#00C2FF] p-3.5 rounded-2xl text-white shadow-lg shadow-[#00C2FF]/40 hover:scale-110 hover:rotate-3 active:scale-95 transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#00FFD1]"
         >
           <Sparkles size={20} fill="white" />

@@ -36,9 +36,6 @@ const useCases = [
       useClass: TypeOrmAuthRepository,
     },
   ],
-  exports: [
-    'IAuthRepository',
-    ...useCases,
-  ],
+  exports: ['IAuthRepository', ...useCases],
 })
 export class AuthModule {}

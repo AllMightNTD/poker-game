@@ -9,6 +9,10 @@ export class TogglePinConversationUseCase {
   ) {}
 
   async execute(userId: string, conversationId: string, isPinned: boolean) {
-    return this.chatRepository.togglePinConversation(userId, conversationId, isPinned);
+    return this.chatRepository.togglePinConversation(
+      userId,
+      conversationId,
+      isPinned,
+    );
   }
 }

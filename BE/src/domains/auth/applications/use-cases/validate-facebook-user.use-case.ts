@@ -28,8 +28,17 @@ export class ValidateFacebookUserUseCase {
     if (!user) {
       const randomPassword = Math.random().toString(36).slice(-10);
       user = await this.authRepository.createRegisterTransaction(
-        { facebook_id, email, status: UserStatus.ACTIVE, password: randomPassword },
-        { full_name: `${firstName} ${lastName}`, username: `fb_${facebook_id}`, avatar_url: picture }
+        {
+          facebook_id,
+          email,
+          status: UserStatus.ACTIVE,
+          password: randomPassword,
+        },
+        {
+          full_name: `${firstName} ${lastName}`,
+          username: `fb_${facebook_id}`,
+          avatar_url: picture,
+        },
       );
     }
 

@@ -31,9 +31,7 @@ const useCases = [
 ];
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Story, StoryView, Friend, Reaction]),
-  ],
+  imports: [TypeOrmModule.forFeature([Story, StoryView, Friend, Reaction])],
   providers: [
     ...useCases,
     {
@@ -41,9 +39,6 @@ const useCases = [
       useClass: TypeOrmStoryRepository,
     },
   ],
-  exports: [
-    'IStoryRepository',
-    ...useCases,
-  ],
+  exports: ['IStoryRepository', ...useCases],
 })
 export class StoriesModule {}

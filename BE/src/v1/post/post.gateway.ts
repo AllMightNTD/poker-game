@@ -48,7 +48,12 @@ export class PostGateway {
    * @param recipientUserIds Danh sách user_id được xem (đối với Friends, Only Me)
    * @param audience Quyền riêng tư (public, friends, only_me)
    */
-  broadcastPostReaction(postId: string, reactionData: any, recipientUserIds?: string[], audience?: string) {
+  broadcastPostReaction(
+    postId: string,
+    reactionData: any,
+    recipientUserIds?: string[],
+    audience?: string,
+  ) {
     if (!this.server) {
       return;
     }
@@ -57,7 +62,9 @@ export class PostGateway {
 
     if (audience === 'public') {
       this.server.emit('postReaction', payload);
-      console.log(`[PostGateway] Broadcasted reaction for post ${postId} globally.`);
+      console.log(
+        `[PostGateway] Broadcasted reaction for post ${postId} globally.`,
+      );
     } else if (recipientUserIds && recipientUserIds.length > 0) {
       recipientUserIds.forEach((userId) => {
         this.server.to(`user_${userId}`).emit('postReaction', payload);
@@ -74,14 +81,20 @@ export class PostGateway {
    * @param recipientUserIds Danh sách user_id được xem (đối với Friends, Only Me)
    * @param audience Quyền riêng tư (public, friends, only_me)
    */
-  broadcastPostUpdate(post: any, recipientUserIds?: string[], audience?: string) {
+  broadcastPostUpdate(
+    post: any,
+    recipientUserIds?: string[],
+    audience?: string,
+  ) {
     if (!this.server) {
       return;
     }
 
     if (audience === 'public') {
       this.server.emit('postUpdated', post);
-      console.log(`[PostGateway] Broadcasted updated public post ${post.id} globally.`);
+      console.log(
+        `[PostGateway] Broadcasted updated public post ${post.id} globally.`,
+      );
     } else if (recipientUserIds && recipientUserIds.length > 0) {
       recipientUserIds.forEach((userId) => {
         this.server.to(`user_${userId}`).emit('postUpdated', post);

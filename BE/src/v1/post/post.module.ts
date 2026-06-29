@@ -6,11 +6,13 @@ import { Reaction } from '../entities/reaction.entity';
 import { PostController } from './post.controller';
 import { PostService } from './post.service';
 import { PostsModule } from 'src/domains/posts/posts.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Post, PostMedia, Reaction]),
     PostsModule,
+    NotificationModule,
   ],
   controllers: [PostController],
   providers: [PostService],

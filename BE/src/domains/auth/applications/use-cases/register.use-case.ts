@@ -13,12 +13,15 @@ export class RegisterUseCase {
   async execute(registerDto: any) {
     const { email, password, full_name, username, phone } = registerDto;
 
-    const existingUser = await this.authRepository.findUserByEmailOrPhone(email || phone);
+    const existingUser = await this.authRepository.findUserByEmailOrPhone(
+      email || phone,
+    );
     if (existingUser) {
       throw new BadRequestException('Email or phone already exists');
     }
 
-    const existingProfile = await this.authRepository.findProfileByUsername(username);
+    const existingProfile =
+      await this.authRepository.findProfileByUsername(username);
     if (existingProfile) {
       throw new BadRequestException('Username is already taken');
     }
@@ -27,7 +30,7 @@ export class RegisterUseCase {
 
     const user = await this.authRepository.createRegisterTransaction(
       { email, phone, password: hashedPassword, status: UserStatus.ACTIVE },
-      { full_name, username }
+      { full_name, username },
     );
 
     return user;

@@ -14,6 +14,13 @@ import { UpdateMessagePermissionUseCase } from './applications/use-cases/update-
 import { BlockUserUseCase } from './applications/use-cases/block-user.use-case';
 import { UnblockUserUseCase } from './applications/use-cases/unblock-user.use-case';
 import { GetBlockedUsersUseCase } from './applications/use-cases/get-blocked-users.use-case';
+import { GetUserProfileUseCase } from './applications/use-cases/get-user-profile.use-case';
+import { GetUserRelationshipUseCase } from './applications/use-cases/get-user-relationship.use-case';
+import { GetUserAboutUseCase } from './applications/use-cases/get-user-about.use-case';
+import { GetUserSummaryUseCase } from './applications/use-cases/get-user-summary.use-case';
+import { FollowUserUseCase } from './applications/use-cases/follow-user.use-case';
+import { UnfollowUserUseCase } from './applications/use-cases/unfollow-user.use-case';
+import { GetUserGroupsUseCase } from './applications/use-cases/get-user-groups.use-case';
 
 const useCases = [
   GetMeUseCase,
@@ -25,12 +32,17 @@ const useCases = [
   BlockUserUseCase,
   UnblockUserUseCase,
   GetBlockedUsersUseCase,
+  GetUserProfileUseCase,
+  GetUserRelationshipUseCase,
+  GetUserAboutUseCase,
+  GetUserSummaryUseCase,
+  FollowUserUseCase,
+  UnfollowUserUseCase,
+  GetUserGroupsUseCase,
 ];
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([User, GroupMember]),
-  ],
+  imports: [TypeOrmModule.forFeature([User, GroupMember])],
   controllers: [UserController],
   providers: [
     ...useCases,
@@ -39,9 +51,6 @@ const useCases = [
       useClass: TypeOrmUserRepository,
     },
   ],
-  exports: [
-    'IUserRepository',
-    ...useCases,
-  ],
+  exports: ['IUserRepository', ...useCases],
 })
 export class UsersModule {}

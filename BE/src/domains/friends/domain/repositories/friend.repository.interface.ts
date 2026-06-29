@@ -8,6 +8,21 @@ export interface IFriendRepository {
   getPendingRequests(userId: string, page: number, limit: number): Promise<any>;
   getSentRequests(userId: string, page: number, limit: number): Promise<any>;
   countPendingRequests(userId: string): Promise<number>;
-  getFriendSuggestions(userId: string, page: number, limit: number): Promise<any>;
+  getFriendSuggestions(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<any>;
+  searchFriends(
+    userId: string,
+    keyword: string,
+    page: number,
+    limit: number,
+  ): Promise<any>;
+  getMutualFriends(
+    currentUserId: string,
+    targetUserId: string,
+    page: number,
+    limit: number,
+  ): Promise<any>;
 }
-
