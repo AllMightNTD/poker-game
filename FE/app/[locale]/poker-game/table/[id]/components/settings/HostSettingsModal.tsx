@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, UserMinus, LogOut, Coins, Settings } from "lucide-react";
+import { X, UserMinus, LogOut, Coins, Settings, Play } from "lucide-react";
 import { usePokerGame } from "../hooks/usePokerGame";
 
 interface HostSettingsModalProps {
@@ -18,6 +18,10 @@ export const HostSettingsModal: React.FC<HostSettingsModalProps> = ({ isOpen, on
     kickPlayer,
     forceSitOut,
     modifyPlayerStack,
+    sitRequests,
+    respondSitRequest,
+    startGame,
+    gameStage,
   } = usePokerGame();
 
   const [newSb, setNewSb] = useState(parseInt(smallBlind) || 50);
@@ -89,6 +93,84 @@ export const HostSettingsModal: React.FC<HostSettingsModalProps> = ({ isOpen, on
 
         {/* Content */}
         <div className="p-6 overflow-y-auto space-y-6 max-h-[70vh]">
+          {/* Start Game Action */}
+          {gameStage === "ended" && (
+            <div className="p-4 bg-emerald-950/20 border border-emerald-500/20 rounded-2xl flex flex-col gap-3">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="text-xs font-black text-emerald-400 uppercase tracking-wide">Bắt đầu ván đấu mới</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Yêu cầu tối thiểu 2 người chơi đã ngồi vào ghế và có stack phỉnh.
+                  </p>
+                </div>
+                <button
+                  onClick={startGame}
+                  disabled={players.length < 2}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-colors
+                    ${
+                      players.length >= 2
+                        ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 cursor-pointer"
+                        : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                    }`}
+                >
+                  <Play size={12} fill="currentColor" />
+                  Bắt đầu
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Pending Sit Requests */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span>Yêu cầu xin ngồi vào ghế</span>
+              {sitRequests && sitRequests.length > 0 && (
+                <span className="bg-amber-500 text-slate-950 text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse">
+                  {sitRequests.length}
+                </span>
+              )}
+            </h4>
+            <div className="space-y-2 border border-slate-800/60 rounded-2xl p-2 bg-slate-950/40">
+              {!sitRequests || sitRequests.length === 0 ? (
+                <div className="text-center py-4 text-xs text-slate-600">Không có yêu cầu nào đang chờ</div>
+              ) : (
+                sitRequests.map((req) => (
+                  <div
+                    key={req.request_id}
+                    className="flex items-center justify-between p-2 rounded-xl bg-slate-950/50 hover:bg-slate-950 border border-slate-800/40 transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center border border-slate-800 text-slate-300 font-bold text-xs">
+                        {req.username ? req.username.slice(0, 2).toUpperCase() : "U"}
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-slate-200 uppercase">{req.username}</p>
+                        <p className="text-[10px] text-slate-400">
+                          Ghế #{req.seat_number} • Buy-in:{" "}
+                          <span className="text-emerald-400 font-black">{parseInt(req.amount).toLocaleString()} chips</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => respondSitRequest(req.request_id, true)}
+                        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors"
+                      >
+                        Duyệt
+                      </button>
+                      <button
+                        onClick={() => respondSitRequest(req.request_id, false)}
+                        className="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors"
+                      >
+                        Từ chối
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
           {/* Change Blinds */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
@@ -133,7 +215,7 @@ export const HostSettingsModal: React.FC<HostSettingsModalProps> = ({ isOpen, on
                         <img src={p.avatar} alt={p.name} className="w-8 h-8 rounded-lg" />
                         <div>
                           <p className="text-xs font-black text-slate-200 uppercase">{p.name}</p>
-                          <p className="text-[10px] text-amber-500 font-bold">Ghế #{p.seatIndex + 1} • Stack: {parseInt(p.chips).toLocaleString()} chips</p>
+                          <p className="text-[10px] text-amber-500 font-bold">Ghế #{p.seatIndex} • Stack: {parseInt(p.chips).toLocaleString()} chips</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -170,7 +252,7 @@ export const HostSettingsModal: React.FC<HostSettingsModalProps> = ({ isOpen, on
           {selectedSeat !== null && (
             <div className="space-y-3 p-4 bg-slate-950/80 rounded-2xl border border-slate-800">
               <h4 className="text-xs font-black text-slate-300 uppercase tracking-wider">
-                Điều chỉnh phỉnh - Ghế #{selectedSeat + 1}
+                Điều chỉnh phỉnh - Ghế #{selectedSeat}
               </h4>
               <div className="flex gap-2">
                 <input

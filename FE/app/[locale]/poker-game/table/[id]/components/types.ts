@@ -20,6 +20,7 @@ export interface Player {
   hasAllIn?: boolean;
   current_bet?: string;
   has_used_extra_time?: boolean;
+  isBot?: boolean;
 }
 
 export interface ChatMessage {

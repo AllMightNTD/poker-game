@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
-import { Minus, Plus, ChevronRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useCurrentUser } from "@/core/providers/user-provider";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronRight, Minus, Plus } from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
 import { usePokerGame } from "../hooks/usePokerGame";
 import { useResponsive } from "../hooks/useResponsive";
 import { LinearTimer } from "../ui/Timer";
@@ -16,6 +17,7 @@ function fmt(val: number): string {
 
 export const ActionBar: React.FC = () => {
   const { isMobile } = useResponsive();
+  const { currentUser } = useCurrentUser();
   const {
     players,
     pot,
@@ -27,6 +29,9 @@ export const ActionBar: React.FC = () => {
     timerVal,
     maxTimerVal,
     currentHighestBet,
+    ownerId,
+    startGame,
+    gameStage,
   } = usePokerGame();
 
   const [isRaiseMode, setIsRaiseMode] = useState(false);
@@ -93,6 +98,35 @@ export const ActionBar: React.FC = () => {
     { label: "ALL-IN", val: maxRaise },
   ];
 
+  const isHost = currentUser?.id === ownerId;
+  const showStartButton = isHost && gameStage === "ended";
+
+  if (showStartButton) {
+    const canStart = players.length >= 2;
+    return (
+      <footer className="bg-slate-950/98 border-t border-slate-800/60 shrink-0 z-20">
+        <div className="flex items-center justify-center p-4">
+          <button
+            onClick={startGame}
+            disabled={!canStart}
+            className={`w-full max-w-md py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 border shadow-lg
+              ${canStart
+                ? "bg-emerald-500 hover:bg-emerald-400 border-emerald-400 text-slate-950 shadow-emerald-900/20"
+                : "bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-50 shadow-none"
+              }`}
+          >
+            Bắt đầu ván đấu
+          </button>
+        </div>
+      </footer>
+    );
+  }
+
+  /* ---- SPECTATOR state ---- */
+  if (!hero) {
+    return null;
+  }
+
   /* ---- FOLDED state ---- */
   if (isHeroFolded) {
     return (
@@ -101,6 +135,32 @@ export const ActionBar: React.FC = () => {
           <span className="text-[11px] font-bold uppercase tracking-wider">
             Đã bỏ bài — Đang chờ ván tiếp theo...
           </span>
+        </div>
+      </footer>
+    );
+  }
+
+  /* ---- NOT ACTIVE state (Someone else's turn or waiting) ---- */
+  if (!isHeroActive) {
+    const activePlayer = players.find((p) => p.isActive);
+    return (
+      <footer className="bg-slate-950/98 border-t border-slate-900 shrink-0 z-20">
+        <div className="flex items-center justify-center py-4 text-slate-500 gap-2">
+          {activePlayer ? (
+            <>
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-[11px] font-bold uppercase tracking-wider">
+                Đang chờ lượt chơi của {activePlayer.name}...
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[11px] font-bold uppercase tracking-wider">
+                Đang chờ ván đấu bắt đầu...
+              </span>
+            </>
+          )}
         </div>
       </footer>
     );

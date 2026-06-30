@@ -13,10 +13,10 @@ interface PlayerStats {
   user_id: string;
   username: string;
   seat_number: number;
-  total_buyin: number;
-  current_stack: number;
-  total_cashout: number;
-  pnl: number;
+  purchase_count: number;
+  current_chips: number;
+  cashout_chips: number;
+  net_pnl: number;
 }
 
 export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
@@ -31,8 +31,8 @@ export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
       try {
         setLoading(true);
         const data = await fetchStats();
-        if (Array.isArray(data)) {
-          setStats(data);
+        if (data && Array.isArray(data.players)) {
+          setStats(data.players);
         }
       } catch (e) {
         console.error(e);
@@ -109,19 +109,19 @@ export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                     </tr>
                   ) : (
                     stats.map((s) => {
-                      const isProfit = s.pnl >= 0;
+                      const isProfit = s.net_pnl >= 0;
                       return (
                         <tr key={s.user_id} className="hover:bg-slate-900/30 transition-colors">
-                          <td className="p-3 font-mono text-slate-500">#{s.seat_number + 1}</td>
+                          <td className="p-3 font-mono text-slate-500">#{s.seat_number}</td>
                           <td className="p-3 font-black text-slate-300 uppercase">{s.username}</td>
                           <td className="p-3 text-right font-bold text-slate-400">
-                            {s.total_buyin.toLocaleString()}
+                            {s.purchase_count.toLocaleString()}
                           </td>
                           <td className="p-3 text-right font-bold text-amber-500">
-                            {s.current_stack.toLocaleString()}
+                            {s.current_chips.toLocaleString()}
                           </td>
                           <td className="p-3 text-right font-bold text-slate-400">
-                            {s.total_cashout.toLocaleString()}
+                            {s.cashout_chips.toLocaleString()}
                           </td>
                           <td
                             className={`p-3 text-right font-black flex items-center justify-end gap-1 ${
@@ -129,12 +129,12 @@ export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                             }`}
                           >
                             {isProfit ? (
-                              <TrendingUp size={12} className="inline" />
+                              <TrendingUp size={12} className="inline animate-pulse" />
                             ) : (
-                              <TrendingDown size={12} className="inline" />
+                              <TrendingDown size={12} className="inline animate-pulse" />
                             )}
                             {isProfit ? "+" : ""}
-                            {s.pnl.toLocaleString()}
+                            {s.net_pnl.toLocaleString()}
                           </td>
                         </tr>
                       );

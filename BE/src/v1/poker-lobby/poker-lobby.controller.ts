@@ -14,7 +14,9 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '../guards/auth.guard';
 import { PokerLobbyService } from './poker-lobby.service';
+import { PokerLobbyGateway } from './poker-lobby.gateway';
 import { Response } from 'express';
+import { PokerTable } from '../entities/poker_table.entity';
 
 /**
  * Controller: Sảnh (Lobby stats)
@@ -74,7 +76,48 @@ export class UserController {
 @Controller('v1/rooms')
 @UseGuards(AuthGuard)
 export class RoomsController {
-  constructor(private readonly lobbyService: PokerLobbyService) {}
+  constructor(
+    private readonly lobbyService: PokerLobbyService,
+    private readonly lobbyGateway: PokerLobbyGateway,
+  ) {}
+
+  @Post(':roomId/seats/join')
+  @HttpCode(HttpStatus.OK)
+  async joinSeat(
+    @Request() req,
+    @Param('roomId') roomId: string,
+    @Body() body: { seat_number: number; display_name: string; buy_in_chips: number },
+  ) {
+    const userId = req.user.sub;
+    const result = await this.lobbyService.joinSeat(userId, roomId, body);
+
+    if (result.auto_approved) {
+      // Broadcast Socket: user_joined_seat
+      this.lobbyGateway.server.to(`table_${roomId}`).emit('user_joined_seat', {
+        room_id: Number(roomId),
+        seat_number: body.seat_number,
+        user_id: Number(userId),
+        display_name: body.display_name,
+        chips: body.buy_in_chips,
+      });
+
+      // Broadcast full table state
+      await this.lobbyGateway.broadcastTableState(roomId);
+    } else {
+      // Send Socket: join_request_created (guests filter on client-side or received by host)
+      this.lobbyGateway.server.to(`table_${roomId}`).emit('join_request_created', {
+        request_id: result.request_id,
+        seat_number: body.seat_number,
+        display_name: body.display_name,
+        buy_in_chips: body.buy_in_chips,
+      });
+
+      // Broadcast updated sit requests list to the room
+      await this.lobbyGateway.broadcastSitRequests(roomId);
+    }
+
+    return result;
+  }
 
   @Get()
   async getRooms(
@@ -116,7 +159,7 @@ export class RoomsController {
   @HttpCode(HttpStatus.OK)
   async buyIn(
     @Request() req,
-    @Body() body: { room_id: string; amount: number; seat_number: number },
+    @Body() body: { room_id: string; amount: number; seat_number: number; custom_name?: string },
   ) {
     const userId = req.user.sub;
     return this.lobbyService.buyIn(userId, body);
@@ -197,6 +240,48 @@ export class RoomsController {
   ) {
     const userId = req.user.sub;
     return this.lobbyService.exportTableStats(userId, id, res);
+  }
+
+  @Post(':roomId/bots/add')
+  @HttpCode(HttpStatus.OK)
+  async addBot(
+    @Request() req,
+    @Param('roomId') roomId: string,
+    @Body() body: { seat_number: number; display_name?: string; buy_in_chips?: number },
+  ) {
+    const userId = req.user.sub;
+    const table = await PokerTable.findOne({ where: { id: roomId, is_active: true } });
+    if (!table) {
+      throw new Error('Bàn chơi không tồn tại.');
+    }
+    if (table.owner_id !== userId) {
+      throw new Error('Chỉ chủ phòng mới có quyền thêm bot.');
+    }
+
+    const result = await this.lobbyService.addBotToSeat(roomId, body);
+    await this.lobbyGateway.broadcastTableState(roomId);
+    return result;
+  }
+
+  @Post(':roomId/bots/remove')
+  @HttpCode(HttpStatus.OK)
+  async removeBot(
+    @Request() req,
+    @Param('roomId') roomId: string,
+    @Body() body: { seat_number: number },
+  ) {
+    const userId = req.user.sub;
+    const table = await PokerTable.findOne({ where: { id: roomId, is_active: true } });
+    if (!table) {
+      throw new Error('Bàn chơi không tồn tại.');
+    }
+    if (table.owner_id !== userId) {
+      throw new Error('Chỉ chủ phòng mới có quyền xóa bot.');
+    }
+
+    const result = await this.lobbyService.removeBotFromSeat(roomId, body.seat_number);
+    await this.lobbyGateway.broadcastTableState(roomId);
+    return result;
   }
 }
 

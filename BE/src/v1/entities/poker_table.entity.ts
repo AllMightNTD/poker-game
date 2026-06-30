@@ -57,6 +57,9 @@ export class PokerTable extends BaseEntity {
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  auto_approve: boolean;
+
   @CreateDateColumn()
   created_at: Date;
 }

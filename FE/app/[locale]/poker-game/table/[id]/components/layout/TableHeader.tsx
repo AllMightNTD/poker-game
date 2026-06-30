@@ -51,6 +51,7 @@ export const TableHeader = () => {
     setShowHistory,
     players,
     ownerId,
+    sitRequests,
   } = usePokerGame();
 
   const [hostSettingsOpen, setHostSettingsOpen] = useState(false);
@@ -148,10 +149,15 @@ export const TableHeader = () => {
         {isHost && (
           <button
             onClick={() => setHostSettingsOpen(true)}
-            className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+            className="relative w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
             title="Quản trị phòng (Chủ phòng)"
           >
             <Sliders size={14} className="text-amber-500" />
+            {sitRequests && sitRequests.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-500 rounded-full flex items-center justify-center text-[7px] font-black text-slate-950 border border-slate-950 animate-pulse">
+                {sitRequests.length}
+              </span>
+            )}
           </button>
         )}
 

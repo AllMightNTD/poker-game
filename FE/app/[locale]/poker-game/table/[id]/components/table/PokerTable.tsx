@@ -53,10 +53,12 @@ export const PokerTable = memo(function PokerTable() {
           <BoardStage />
         </div>
 
-        {/* Player seats */}
-        {players.map((player) => (
-          <Seat key={player.id} player={player} />
-        ))}
+        {/* Player seats (indices 1 to 6) */}
+        {Array.from({ length: 6 }, (_, i) => {
+          const seatNumber = i + 1;
+          const player = players.find((p) => p.seatIndex === seatNumber);
+          return <Seat key={`seat-${seatNumber}`} seatNumber={seatNumber} player={player} />;
+        })}
       </div>
     </div>
   );

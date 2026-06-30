@@ -52,41 +52,59 @@ export class PokerGameEngine {
    * Chuẩn Poker quốc tế
    */
   static splitPot(players: PokerPlayerState[]): SidePot[] {
-    // Chỉ xét các player đóng góp > 0
-    const activeContributors = players.filter(p => p.bet > 0);
-    if (activeContributors.length === 0) return [];
 
-    // Lấy danh sách các mức cược duy nhất tăng dần
-    const uniqueBets = Array.from(new Set(activeContributors.map(p => p.bet))).sort((a, b) => a - b);
+    const remaining = players
+      .filter(p => p.bet > 0)
+      .map(p => ({
+        ...p,
+        remaining: p.bet,
+      }));
 
     const pots: SidePot[] = [];
-    let lastBetLevel = 0;
 
-    for (const betLevel of uniqueBets) {
-      const potAmount = activeContributors.reduce((acc, p) => {
-        // Mỗi player đóng góp tối đa bằng mức betLevel hiện tại trừ đi mức cược trước đó
-        const contribution = Math.min(p.bet, betLevel) - lastBetLevel;
-        return acc + Math.max(0, contribution);
-      }, 0);
+    while (true) {
 
-      if (potAmount > 0) {
-        // Người đủ điều kiện nhận pot này phải cược ít nhất bằng mức betLevel và chưa fold
-        const eligibleSeats = activeContributors
-          .filter(p => p.bet >= betLevel && !p.folded)
-          .map(p => p.seat);
+      const contributors = remaining.filter(p => p.remaining > 0);
 
-        if (eligibleSeats.length > 0) {
-          pots.push({
-            amount: potAmount,
-            eligibleSeats,
-          });
-        }
+      if (contributors.length === 0) {
+        break;
       }
 
-      lastBetLevel = betLevel;
+      const minContribution = Math.min(
+        ...contributors.map(p => p.remaining),
+      );
+
+      const amount =
+        contributors.length *
+        minContribution;
+
+      const eligibleSeats =
+        contributors
+          .filter(p => !p.folded)
+          .map(p => p.seat);
+
+      if (
+        amount > 0 &&
+        eligibleSeats.length > 0
+      ) {
+
+        pots.push({
+          amount,
+          eligibleSeats,
+        });
+
+      }
+
+      for (const p of contributors) {
+
+        p.remaining -= minContribution;
+
+      }
+
     }
 
     return pots;
+
   }
 
   /**
@@ -228,9 +246,9 @@ export class PokerGameEngine {
     } else if (freq[0].count === 2) {
       category = 1;
       tieBreaker = freq[0].rank * Math.pow(15, 3) +
-                   freq[1].rank * Math.pow(15, 2) +
-                   freq[2].rank * 15 +
-                   freq[3].rank;
+        freq[1].rank * Math.pow(15, 2) +
+        freq[2].rank * 15 +
+        freq[3].rank;
       name = 'One Pair';
     } else {
       category = 0;

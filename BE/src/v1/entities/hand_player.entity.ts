@@ -6,8 +6,8 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { User } from './user.entity';
 import { GameHand } from './game_hand.entity';
+import { User } from './user.entity';
 
 @Entity('hand_players')
 export class HandPlayer extends BaseEntity {
@@ -44,6 +44,11 @@ export class HandPlayer extends BaseEntity {
   @Column({ type: 'boolean', default: false })
   pfr: boolean;
 
+  @Column({ type: 'int', nullable: true })
+  seat_number: number;
+
+  @Column({ type: 'bigint', default: '0' })
+  initial_stack: string;
   // ---- Relations ----
 
   @ManyToOne(() => GameHand, { onDelete: 'CASCADE' })

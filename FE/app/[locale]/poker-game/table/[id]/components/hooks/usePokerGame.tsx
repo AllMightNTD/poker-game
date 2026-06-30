@@ -1,11 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import { httpClient } from "@/core/api/http-client";
+import { useSocket } from "@/core/providers/SocketProvider";
 import { useCurrentUser } from "@/core/providers/user-provider";
 import { useParams } from "next/navigation";
-import { Card, Player, ChatMessage, TableBackgroundTheme, CardDeckStyleTheme } from "../types";
-import { useSocket } from "@/core/providers/SocketProvider";
-import { httpClient } from "@/core/api/http-client";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import { Card, CardDeckStyleTheme, ChatMessage, Player, TableBackgroundTheme } from "../types";
 
 interface ProvablyFairData {
   server_seed_hash: string;
@@ -91,6 +91,8 @@ interface PokerGameContextProps {
   prevProvablyFair: ProvablyFairData | null;
   isConnecting: boolean;
   currentHighestBet: number;
+  minBuyin: number;
+  maxBuyin: number;
 
   // Host Mod Actions
   modifyBlinds: (sb: number) => Promise<void>;
@@ -98,6 +100,12 @@ interface PokerGameContextProps {
   forceSitOut: (seatIndex: number) => Promise<void>;
   modifyPlayerStack: (seatIndex: number, amount: number, action: "add" | "subtract") => Promise<void>;
   fetchStats: () => Promise<any>;
+
+  // Sit Down Requests & Start game
+  sitRequests: any[];
+  submitSitRequest: (seatNumber: number, amount: number, customName?: string) => void;
+  respondSitRequest: (requestId: string, approve: boolean) => void;
+  startGame: () => void;
 }
 
 const PokerGameContext = createContext<PokerGameContextProps | undefined>(undefined);
@@ -169,6 +177,50 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Toast State
   const [toastMsg, setToastMsg] = useState<{ text: string; type: "success" | "error" | "info" | "warning" } | null>(null);
 
+  // Sit Down Requests State
+  const [sitRequests, setSitRequests] = useState<any[]>([]);
+  const [minBuyin, setMinBuyin] = useState(0);
+  const [maxBuyin, setMaxBuyin] = useState(0);
+
+  // Refs to prevent infinite resubscription loop in socket useEffect
+  const currentUserRef = useRef(currentUser);
+  const playersRef = useRef(players);
+  const ownerIdRef = useRef(ownerId);
+  const potRef = useRef(pot);
+  const currentTurnSeatRef = useRef(currentTurnSeat);
+
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+    if (currentUser) {
+      setPlayers((prev) =>
+        prev.map((p) => {
+          const isHero = p.id === currentUser.id;
+          return {
+            ...p,
+            isHero,
+            cards: isHero ? (p.cards || []) : undefined,
+          };
+        })
+      );
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
+
+  useEffect(() => {
+    ownerIdRef.current = ownerId;
+  }, [ownerId]);
+
+  useEffect(() => {
+    potRef.current = pot;
+  }, [pot]);
+
+  useEffect(() => {
+    currentTurnSeatRef.current = currentTurnSeat;
+  }, [currentTurnSeat]);
+
   const showToast = (text: string, type: "success" | "error" | "info" | "warning" = "success") => {
     setToastMsg({ text, type });
     setTimeout(() => setToastMsg(null), 3000);
@@ -224,7 +276,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       const audio = new Audio(soundPath);
       audio.volume = soundEffectsVol / 100;
-      audio.play().catch(() => {});
+      audio.play().catch(() => { });
     } catch (e) {
       console.warn("Sound play failed", e);
     }
@@ -255,7 +307,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Listen to WebSocket Events
   useEffect(() => {
-    if (!socket || !tableId) return;
+    if (!socket || !tableId || !isConnected) return;
 
     // Join room
     socket.emit("table:subscribe", { room_id: tableId });
@@ -271,31 +323,53 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setCurrentTurnSeat(data.current_turn_seat);
       setTimerVal(data.remaining_time || 0);
       setOwnerId(data.owner_id || "");
+      setMinBuyin(data.min_buyin || 0);
+      setMaxBuyin(data.max_buyin || 0);
+      setSmallBlind(data.small_blind ? data.small_blind.toString() : "50");
+      setBigBlind(data.big_blind ? data.big_blind.toString() : "100");
 
       // Sync players list
       if (data.seats) {
-        const syncedPlayers = data.seats.map((s: any) => {
-          const isHero = s.id === currentUser?.id;
-          return {
-            seatIndex: s.seatIndex,
-            id: s.id,
-            name: s.name,
-            avatar: s.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${s.name}`,
-            chips: s.chips,
-            current_bet: s.current_bet || "0",
-            has_used_extra_time: s.has_used_extra_time,
-            isDealer: s.seatIndex === data.dealer_seat,
-            isSmallBlind: s.seatIndex === data.small_blind_seat,
-            isBigBlind: s.seatIndex === data.big_blind_seat,
-            isActive: s.seatIndex === data.current_turn_seat,
-            lastAction: s.status === "folded" ? "Fold" : s.status === "sitting_out" ? "Sit Out" : s.status === "disconnected" ? "Mất mạng" : "",
-            isFolded: s.status === "folded",
-            hasAllIn: s.chips === "0" && s.status === "active",
-            isHero,
-            cards: isHero ? [] : undefined, // Pocket cards filled by private event
-          };
+        console.log("DEBUG [table:state] data.seats:", data.seats);
+        setPlayers((prev) => {
+          return data.seats.map((s: any) => {
+            const isHero = s.id === currentUserRef.current?.id;
+            const existingPlayer = prev.find((p) => p.seatIndex === s.seatIndex);
+            return {
+              seatIndex: s.seatIndex,
+              id: s.id,
+              name: s.name,
+              avatar: s.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${s.name}`,
+              chips: s.chips,
+              current_bet: s.current_bet || "0",
+              has_used_extra_time: s.has_used_extra_time,
+              isDealer: s.seatIndex === data.dealer_seat,
+              isSmallBlind: s.seatIndex === data.small_blind_seat,
+              isBigBlind: s.seatIndex === data.big_blind_seat,
+              isActive: s.seatIndex === data.current_turn_seat,
+              lastAction: s.status === "folded" ? "Fold" : s.status === "sitting_out" ? "Sit Out" : s.status === "disconnected" ? "Mất mạng" : "",
+              isFolded: s.status === "folded",
+              hasAllIn: s.chips === "0" && s.status === "active",
+              isHero,
+              isBot: s.isBot,
+              cards: existingPlayer ? existingPlayer.cards : (isHero ? [] : undefined),
+            };
+          });
         });
-        setPlayers(syncedPlayers);
+
+        // Dynamic minRaise/maxRaise limits for Hero
+        const heroSeat = data.seats.find((s: any) => s.id === currentUserRef.current?.id);
+        if (heroSeat) {
+          const heroStack = parseInt(heroSeat.chips || heroSeat.stack || "0");
+          setMaxRaise(heroStack);
+
+          const highestBet = data.current_highest_bet ? parseInt(data.current_highest_bet) : 0;
+          const bigBlind = data.big_blind ? parseInt(data.big_blind) : 100;
+          const minRequired = highestBet > 0 ? highestBet * 2 : bigBlind;
+
+          setMinRaise(Math.min(heroStack, minRequired));
+          setRaiseAmount((prev) => Math.min(heroStack, Math.max(minRequired, prev)));
+        }
       }
     });
 
@@ -328,7 +402,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         })
       );
 
-      const actor = players.find(p => p.seatIndex === data.seat_number);
+      const actor = playersRef.current.find(p => p.seatIndex === data.seat_number);
       if (actor) {
         setHandHistory((prev) => [...prev, `${actor.name}: ${data.action_type.toUpperCase()} (${data.amount})`]);
       }
@@ -337,10 +411,6 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     socket.on("table:turn-change", (data: any) => {
       setCurrentTurnSeat(data.seat_number);
       setTimerVal(data.time_limit || 30);
-      
-      // Update min/max raise values dynamically based on current game turn limits
-      const highestBet = parseInt(pot); // Approximation
-      setMinRaise(data.seat_number === currentTurnSeat ? highestBet * 2 : 200);
     });
 
     socket.on("table:player-disconnected", (data: any) => {
@@ -380,15 +450,35 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         server_seed_hash: data.server_seed_hash,
         client_seed: data.client_seed,
       });
-      // Clear action flags
+      // Clear action flags & reset cards
       setPlayers((prev) =>
         prev.map((p) => ({
           ...p,
           lastAction: "",
           isFolded: false,
           hasAllIn: false,
+          cards: p.isHero ? [] : undefined,
         }))
       );
+    });
+
+    socket.on("table:street-advanced", (data: any) => {
+      // Đồng bộ key trả về từ BE: BE trả về data.game_stage thay vì data.stage
+      const stage = data.game_stage || data.stage || "preflop";
+      setGameStage(stage);
+
+      // Xử lý chuỗi community_cards an toàn: tách dấu phẩy thành mảng trước khi map()
+      if (data.community_cards && typeof data.community_cards === "string") {
+        const cardsArray = data.community_cards.split(",").filter((c: string) => c.trim() !== "");
+        setCommunityCards(cardsArray.map(parseCard));
+      } else if (Array.isArray(data.community_cards)) {
+        setCommunityCards(data.community_cards.map(parseCard));
+      } else {
+        setCommunityCards([]);
+      }
+
+      showToast(`Vòng chơi mới: ${stage.toUpperCase()}`, "info");
+      setHandHistory((prev) => [...prev, `Bắt đầu vòng cược: ${stage.toUpperCase()}`]);
     });
 
     socket.on("table:hand-ended", (data: any) => {
@@ -407,23 +497,37 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             `Thắng cuộc: ${w.username} nhận ${w.win_amount} chips (${w.hand_name})`
           ]);
         });
+
+        // Show winner pocket cards
+        setPlayers((prev) =>
+          prev.map((p) => {
+            const winner = data.winners.find((w: any) => w.seat_number === p.seatIndex);
+            if (winner && winner.pocket_cards) {
+              return {
+                ...p,
+                cards: winner.pocket_cards.map(parseCard),
+              };
+            }
+            return p;
+          })
+        );
       }
     });
 
     socket.on("table:rebuy-countdown", (data: any) => {
-      if (data.user_id === currentUser?.id) {
+      if (data.user_id === currentUserRef.current?.id) {
         showToast(`Bạn có ${data.time_limit} giây để nạp thêm chip (Re-buy) hoặc sẽ bị kick khỏi bàn!`, "warning");
       } else {
-        const actor = players.find(p => p.seatIndex === data.seat_number);
+        const actor = playersRef.current.find(p => p.seatIndex === data.seat_number);
         showToast(`Người chơi ${actor ? actor.name : `ở ghế ${data.seat_number}`} đang có ${data.time_limit} giây để Re-buy.`, "info");
       }
     });
 
     socket.on("table:player-sat-out", (data: any) => {
-      if (data.user_id === currentUser?.id) {
+      if (data.user_id === currentUserRef.current?.id) {
         showToast(`Bạn đã bị tự động chuyển sang trạng thái đi vắng do timeout!`, "warning");
       } else {
-        const actor = players.find(p => p.seatIndex === data.seat_number);
+        const actor = playersRef.current.find(p => p.seatIndex === data.seat_number);
         showToast(`Người chơi ${actor ? actor.name : `ở ghế ${data.seat_number}`} đã chuyển sang trạng thái đi vắng.`, "info");
       }
       setPlayers((prev) =>
@@ -433,6 +537,35 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             : p
         )
       );
+    });
+
+    socket.emit("table:get-sit-requests", { room_id: tableId });
+
+    socket.on("table:sit-requests-list", (data: { requests: any[] }) => {
+      setSitRequests(data.requests || []);
+    });
+
+    socket.on("table:sit-request-submitted", () => {
+      showToast("Yêu cầu xin ngồi của bạn đã được gửi và đang chờ chủ phòng duyệt.", "success");
+    });
+
+    socket.on("table:sit-approved", (data: any) => {
+      showToast(`Chúc mừng! Bạn đã được chủ phòng phê duyệt ngồi vào ghế #${data.seat_number}.`, "success");
+    });
+
+    socket.on("table:sit-declined", (data: any) => {
+      showToast(data.reason || "Yêu cầu xin ngồi của bạn đã bị từ chối.", "error");
+    });
+
+    socket.on("user_joined_seat", (data: any) => {
+      showToast(`${data.display_name} đã ngồi vào ghế #${data.seat_number} với ${data.chips.toLocaleString()} phỉnh.`, "success");
+    });
+
+    socket.on("join_request_created", (data: any) => {
+      const isOwner = currentUserRef.current?.id === ownerIdRef.current;
+      if (isOwner) {
+        showToast(`Yêu cầu tham gia mới: Ghế #${data.seat_number} từ ${data.display_name} (${data.buy_in_chips.toLocaleString()} chips).`, "info");
+      }
     });
 
     return () => {
@@ -447,8 +580,14 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       socket.off("table:hand-ended");
       socket.off("table:rebuy-countdown");
       socket.off("table:player-sat-out");
+      socket.off("table:sit-requests-list");
+      socket.off("table:sit-request-submitted");
+      socket.off("table:sit-approved");
+      socket.off("table:sit-declined");
+      socket.off("user_joined_seat");
+      socket.off("join_request_created");
     };
-  }, [socket, tableId, currentUser, players]);
+  }, [socket, tableId, isConnected]);
 
   // Execute betting actions
   const handleUserAction = (action: string, amount: number = 0) => {
@@ -464,6 +603,32 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const requestExtraTime = () => {
     if (!socket || !isConnected) return;
     socket.emit("table:extra-time:request", {
+      room_id: tableId,
+    });
+  };
+
+  const submitSitRequest = (seatNumber: number, amount: number, customName?: string) => {
+    if (!socket || !isConnected) return;
+    socket.emit("table:request-sit", {
+      room_id: tableId,
+      seat_number: seatNumber,
+      amount,
+      custom_name: customName,
+    });
+  };
+
+  const respondSitRequest = (requestId: string, approve: boolean) => {
+    if (!socket || !isConnected) return;
+    socket.emit("table:respond-sit", {
+      room_id: tableId,
+      request_id: requestId,
+      approve,
+    });
+  };
+
+  const startGame = () => {
+    if (!socket || !isConnected) return;
+    socket.emit("table:start-game", {
       room_id: tableId,
     });
   };
@@ -617,6 +782,12 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         forceSitOut,
         modifyPlayerStack,
         fetchStats,
+        sitRequests,
+        submitSitRequest,
+        respondSitRequest,
+        startGame,
+        minBuyin,
+        maxBuyin,
       }}
     >
       {children}

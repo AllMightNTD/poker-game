@@ -1,13 +1,13 @@
-import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Response } from 'express';
+import * as crypto from 'crypto';
 import { PokerTable } from '../entities/poker_table.entity';
+import { RoomAdminLog } from '../entities/room_admin_log.entity';
+import { SystemRevenue } from '../entities/system_revenue.entity';
 import { TableSession } from '../entities/table_session.entity';
 import { Wallet } from '../entities/wallet.entity';
-import { SystemRevenue } from '../entities/system_revenue.entity';
-import { RoomAdminLog } from '../entities/room_admin_log.entity';
-import { GameHand } from '../entities/game_hand.entity';
+import { Profile } from '../entities/profile.entity';
 import { PokerStateService } from './poker-state.service';
-import { Like, LessThanOrEqual, MoreThan, Between } from 'typeorm';
-import { Response } from 'express';
 
 @Injectable()
 export class PokerLobbyService {
@@ -16,7 +16,7 @@ export class PokerLobbyService {
 
   constructor(
     private readonly stateService: PokerStateService,
-  ) {}
+  ) { }
 
   // Tracks active socket connections at lobby level
   addLobbySubscriber(clientId: string) {
@@ -51,7 +51,7 @@ export class PokerLobbyService {
     const revenueSum = await SystemRevenue.createQueryBuilder('sr')
       .select('SUM(CAST(sr.revenue_amount AS DECIMAL))', 'total')
       .getRawOne();
-    
+
     const baseJackpot = 1200000000; // 1.2B
     const actualRevenue = parseFloat(revenueSum?.total || '0');
     const totalJackpot = baseJackpot + actualRevenue;
@@ -321,7 +321,7 @@ export class PokerLobbyService {
   /**
    * Buy-in vào bàn chơi (Trừ ví chính, lưu Stack lên Redis và DB)
    */
-  async buyIn(userId: string, body: { room_id: string; amount: number; seat_number: number }) {
+  async buyIn(userId: string, body: { room_id: string; amount: number; seat_number: number; custom_name?: string }) {
     const table = await PokerTable.findOne({ where: { id: body.room_id, is_active: true } });
     if (!table) {
       throw new NotFoundException('Bàn chơi không tồn tại.');
@@ -402,11 +402,15 @@ export class PokerLobbyService {
         where: { id: userId },
       }) as any;
 
+      const profile = await queryRunner.manager.findOne(Profile, {
+        where: { user_id: userId },
+      });
+
       // Lưu Seat lên Redis và cập nhật purchase_count thống kê
       await this.stateService.setSeat(body.room_id, body.seat_number, {
         user_id: userId,
-        username: user?.username || 'Guest',
-        avatar: user?.avatar || '',
+        username: body.custom_name || profile?.username || user?.email?.split('@')[0] || 'Guest',
+        avatar: profile?.avatar_url || '',
         stack: amt.toString(),
         current_bet: '0',
         status: 'waiting_for_next_hand',
@@ -808,7 +812,10 @@ export class PokerLobbyService {
         const user = await PokerTable.getRepository().manager.findOne('User', {
           where: { id: sess.user_id },
         }) as any;
-        const username = user?.username || 'Guest';
+        const profile = await PokerTable.getRepository().manager.findOne(Profile, {
+          where: { user_id: sess.user_id },
+        });
+        const username = profile?.username || user?.email?.split('@')[0] || 'Guest';
 
         const currentSeat = seats.find(s => s.user_id === sess.user_id);
         const seat_number = currentSeat ? currentSeat.seat_number : sess.seat_number;
@@ -861,5 +868,166 @@ export class PokerLobbyService {
 
     res.write(csvContent);
     res.end();
+  }
+
+  /**
+   * Tham gia vào ghế chơi (REST API /api/v1/rooms/:roomId/seats/join)
+   */
+  async joinSeat(
+    userId: string,
+    roomId: string,
+    body: { seat_number: number; display_name: string; buy_in_chips: number },
+  ) {
+    const table = await PokerTable.findOne({ where: { id: roomId, is_active: true } });
+    if (!table) {
+      throw new NotFoundException('Bàn chơi không tồn tại.');
+    }
+
+    if (body.seat_number < 1 || body.seat_number > table.max_players) {
+      throw new BadRequestException('Vị trí ghế không hợp lệ.');
+    }
+
+    if (!body.display_name || body.display_name.trim().length === 0) {
+      throw new BadRequestException('Tên hiển thị không hợp lệ.');
+    }
+
+    const min = BigInt(table.min_buyin);
+    const max = BigInt(table.max_buyin);
+    const amt = BigInt(body.buy_in_chips);
+
+    // if (amt < min || amt > max) {
+    //   throw new BadRequestException('Buy-in amount is invalid.');
+    // }
+
+    // Check user balance
+    const wallet = await Wallet.findOne({ where: { user_id: userId } });
+    if (!wallet || BigInt(wallet.chips_balance) < amt) {
+      throw new BadRequestException('Insufficient chips.');
+    }
+
+    // Check ghế trống trên Redis
+    const existingSeat = await this.stateService.getSeat(roomId, body.seat_number);
+    if (existingSeat) {
+      throw new BadRequestException('Seat already occupied.');
+    }
+
+    // Check ghế trống trên MySQL
+    const occupiedDb = await TableSession.findOne({
+      where: {
+        table_id: roomId,
+        seat_number: body.seat_number,
+        member_status: 'active',
+      },
+    });
+    if (occupiedDb) {
+      throw new BadRequestException('Seat already occupied.');
+    }
+
+    // Check user đang ngồi ở ghế khác
+    const activeSession = await TableSession.findOne({
+      where: {
+        table_id: roomId,
+        user_id: userId,
+        member_status: 'active',
+      },
+    });
+    if (activeSession) {
+      throw new BadRequestException('User already occupies a seat.');
+    }
+
+    const isOwner = table.owner_id === userId;
+    const isAutoApprove = table.auto_approve;
+
+    if (isOwner || isAutoApprove) {
+      // Case A & Option 1: Sit Directly / Auto Approve
+      await this.buyIn(userId, {
+        room_id: roomId,
+        amount: body.buy_in_chips,
+        seat_number: body.seat_number,
+        custom_name: body.display_name,
+      });
+
+      return {
+        auto_approved: true,
+        status: 'sitting',
+        message: 'Joined successfully.',
+      };
+    } else {
+      // Case B - Option 2: Require Host Approval
+      const requestId = `req_${Date.now()}_${userId}`;
+      const user = await PokerTable.getRepository().manager.findOne('User', {
+        where: { id: userId },
+      }) as any;
+
+      const profile = await PokerTable.getRepository().manager.findOne(Profile, {
+        where: { user_id: userId },
+      });
+
+      const requestData = {
+        request_id: requestId,
+        user_id: userId,
+        username: body.display_name || profile?.username || user?.email?.split('@')[0] || 'Guest',
+        avatar: profile?.avatar_url || '',
+        seat_number: body.seat_number,
+        amount: body.buy_in_chips,
+        timestamp: Date.now(),
+      };
+
+      const redis = this.stateService.getRedisClient();
+      await redis.hset(`table:${roomId}:sit-requests`, requestId, JSON.stringify(requestData));
+
+      return {
+        auto_approved: false,
+        status: 'pending',
+        request_id: requestId,
+        owner_id: table.owner_id,
+        message: 'Join request has been sent.',
+      };
+    }
+  }
+
+  async addBotToSeat(roomId: string, body: { seat_number: number; display_name?: string; buy_in_chips?: number }) {
+    const seatIndex = body.seat_number;
+    const existingSeat = await this.stateService.getSeat(roomId, seatIndex);
+    if (existingSeat) {
+      throw new BadRequestException('Ghế ngồi đã có người hoặc bot.');
+    }
+
+    const botId = `bot_${crypto.randomUUID()}`;
+    const name = body.display_name || `Bot_${Math.floor(1000 + Math.random() * 9000)}`;
+    const amt = body.buy_in_chips || 5000;
+
+    await this.stateService.setSeat(roomId, seatIndex, {
+      user_id: botId,
+      username: name,
+      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`,
+      stack: amt.toString(),
+      current_bet: '0',
+      status: 'waiting_for_next_hand',
+      disconnected_at: '0',
+      has_used_extra_time: '0',
+      is_bot: '1',
+    });
+
+    return {
+      success: true,
+      bot_id: botId,
+      username: name,
+      seat_number: seatIndex,
+      stack: amt,
+    };
+  }
+
+  async removeBotFromSeat(roomId: string, seatIndex: number) {
+    const seat = await this.stateService.getSeat(roomId, seatIndex);
+    if (!seat) {
+      throw new BadRequestException('Ghế ngồi trống.');
+    }
+    if (seat.is_bot !== '1') {
+      throw new BadRequestException('Chỉ có thể xóa Bot bằng chức năng này.');
+    }
+
+    await this.stateService.deleteSeat(roomId, seatIndex);
+    return { success: true };
   }
 }
