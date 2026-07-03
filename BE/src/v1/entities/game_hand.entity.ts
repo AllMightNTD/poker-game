@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { PokerTable } from './poker_table.entity';
 
@@ -56,6 +57,15 @@ export class GameHand extends BaseEntity {
   @Column({ type: 'varchar', length: 12, default: 'preflop' })
   hand_stage: HandStage;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  server_seed: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  client_seed: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  shuffled_deck: string | null;
+
   /** User đang đến lượt hành động — để phục hồi trạng thái khi reconnect */
   @Column({ type: 'varchar', nullable: true })
   current_turn_user_id: string | null;
@@ -68,6 +78,19 @@ export class GameHand extends BaseEntity {
 
   @Column({ type: 'datetime', nullable: true })
   ended_at: Date | null;
+
+  @CreateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)'
+  })
+  created_at: Date;
+
+  @UpdateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+    onUpdate: 'CURRENT_TIMESTAMP(6)'
+  })
+  updated_at: Date;
 
   // ---- Relations ----
 

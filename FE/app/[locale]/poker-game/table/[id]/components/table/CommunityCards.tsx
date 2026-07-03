@@ -53,9 +53,8 @@ export const CommunityCards = memo(function CommunityCards() {
         {Array.from({ length: emptyCount }).map((_, i) => (
           <div
             key={`empty-${i}`}
-            className="w-[56px] h-[80px] sm:w-[64px] sm:h-[90px] md:w-[84px] md:h-[120px] rounded-lg border-2 border-dashed border-emerald-500/10 bg-emerald-950/10 shadow-[inset_0_2px_8px_rgba(0,0,0,0.3)] flex items-center justify-center"
+            className="w-[56px] h-[80px] sm:w-[64px] sm:h-[90px] md:w-[84px] md:h-[120px] rounded-lg border-2 border-[#FDF1BA]/20 bg-black/20 shadow-[inset_0_2px_8px_rgba(0,0,0,0.5),_0_0_10px_rgba(253,241,186,0.1)] flex items-center justify-center backdrop-blur-sm transition-all"
           >
-            <span className="text-emerald-500/20 text-[9px] font-black uppercase tracking-wider">?</span>
           </div>
         ))}
       </AnimatePresence>

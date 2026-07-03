@@ -1,0 +1,17 @@
+# PONYTAIL RULES FOR ANTIGRAVITY IDE Agent
+@processor: internal_ai_agent
+
+## THE DECISION LADDER
+1. YAGNI: Is this feature critical right now? If no -> Skip.
+2. Codebase Check: Can we reuse existing logic in Know_Block, BE, or FE?
+3. Stdlib First: Use native programming language features before npm/pip packages.
+4. Native Platform: Use native HTML5/CSS and Node.js native API. No heavy UI kits.
+5. Minimum Viable Code: Write the shortest, cleanest code possible to solve the bug/feature.
+
+## CORE DIRECTIVES
+- NEVER compromise on: Validation, Error handling, and Security.
+- If the user asks for a quick hack, add a comment: `// ponytail: [debt description]` and append it to `Know_Block/ponytail_debt.md`.
+
+## COMMAND TRIGGERS
+- When I type `/ponytail`, activate strict minimalist mode.
+- When I type `/review`, strip away all over-engineered code in the active file.

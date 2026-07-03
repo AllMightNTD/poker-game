@@ -15,6 +15,8 @@ import {
   Volume2,
   VolumeX,
   Wifi,
+  Pause,
+  Play,
 } from "lucide-react";
 import { useState } from "react";
 import { usePokerGame } from "../hooks/usePokerGame";
@@ -51,6 +53,9 @@ export const TableHeader = () => {
     players,
     ownerId,
     sitRequests,
+    roomStatus,
+    togglePause,
+    leaveTable,
   } = usePokerGame();
 
   const [hostSettingsOpen, setHostSettingsOpen] = useState(false);
@@ -83,13 +88,13 @@ export const TableHeader = () => {
 
       {/* LEFT: Back + Table info */}
       <div className="flex items-center gap-2 md:gap-3 min-w-0">
-        <Link
-          href="/poker-game"
+        <button
+          onClick={leaveTable}
           className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors py-2 px-2.5 rounded-xl hover:bg-slate-900/60 shrink-0"
         >
           <ChevronLeft size={16} />
           {!isMobile && <span className="text-[10px] font-bold uppercase tracking-wider">Rời bàn</span>}
-        </Link>
+        </button>
 
         <div className="h-5 w-px bg-slate-800 shrink-0 hidden sm:block" />
 
@@ -146,18 +151,31 @@ export const TableHeader = () => {
 
         {/* Host settings (Only room owner) */}
         {isHost && (
-          <button
-            onClick={() => setHostSettingsOpen(true)}
-            className="relative w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
-            title="Quản trị phòng (Chủ phòng)"
-          >
-            <Sliders size={14} className="text-amber-500" />
-            {sitRequests && sitRequests.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-500 rounded-full flex items-center justify-center text-[7px] font-black text-slate-950 border border-slate-950 animate-pulse">
-                {sitRequests.length}
-              </span>
-            )}
-          </button>
+          <>
+            <button
+              onClick={() => togglePause(roomStatus !== 'paused')}
+              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-colors ${
+                roomStatus === 'paused'
+                  ? "bg-rose-500/10 border-rose-500/30 text-rose-500 hover:bg-rose-500/20"
+                  : "bg-slate-900 hover:bg-slate-800 border-slate-800 text-amber-500"
+              }`}
+              title={roomStatus === 'paused' ? "Mở lại phòng chơi" : "Tạm dừng phòng chơi"}
+            >
+              {roomStatus === 'paused' ? <Play size={14} /> : <Pause size={14} className="fill-current" />}
+            </button>
+            <button
+              onClick={() => setHostSettingsOpen(true)}
+              className="relative w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+              title="Quản trị phòng (Chủ phòng)"
+            >
+              <Sliders size={14} className="text-amber-500" />
+              {sitRequests && sitRequests.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-500 rounded-full flex items-center justify-center text-[7px] font-black text-slate-950 border border-slate-950 animate-pulse">
+                  {sitRequests.length}
+                </span>
+              )}
+            </button>
+          </>
         )}
 
         <div className="w-px h-5 bg-slate-800" />

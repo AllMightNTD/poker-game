@@ -258,6 +258,10 @@ export const Seat = memo(function Seat({ seatNumber, player }: SeatProps) {
   const positions = getSeatPositions(6);
   const pos = positions[seatNumber - 1] || positions[0];
   const isOwner = currentUser?.id === ownerId;
+  const isUserSeated = players.some((p) => p.isHero);
+  const displayName = !player ? '' : (!isUserSeated && !player.isBot && !player.isHero)
+    ? `Player ${seatNumber}`
+    : player.name;
 
   if (!player) {
     const isSeated = players.some((p) => p.id === currentUser?.id);
@@ -518,7 +522,7 @@ export const Seat = memo(function Seat({ seatNumber, player }: SeatProps) {
         <div className="min-w-0 flex-1">
           {!isMobile && (
             <p className="text-[9px] md:text-[10px] font-black text-slate-200 truncate leading-tight uppercase tracking-wide flex items-center gap-1">
-              {player.name}
+              {displayName}
               {player.isBot && (
                 <span className="bg-amber-500/20 text-amber-400 text-[6px] px-1 py-0.2 rounded font-black border border-amber-500/30">BOT</span>
               )}

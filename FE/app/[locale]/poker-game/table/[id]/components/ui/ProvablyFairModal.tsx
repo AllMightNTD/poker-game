@@ -10,9 +10,10 @@ interface ProvablyFairModalProps {
 }
 
 export const ProvablyFairModal: React.FC<ProvablyFairModalProps> = ({ isOpen, onClose }) => {
-  const { provablyFair, prevProvablyFair } = usePokerGame();
+  const { provablyFair, prevProvablyFair, updateClientSeed } = usePokerGame();
   const [activeTab, setActiveTab] = useState<"current" | "previous">("current");
   const [copied, setCopied] = useState(false);
+  const [customClientSeed, setCustomClientSeed] = useState("");
 
   if (!isOpen) return null;
 
@@ -115,6 +116,34 @@ def get_shuffled_deck(server_seed, client_seed):
                   <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-slate-300 break-all">
                     {provablyFair?.client_seed || "Chưa thiết lập"}
                   </div>
+                </div>
+
+                <div className="space-y-2 border-t border-slate-800/60 pt-4">
+                  <label className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                    Đặt Hạt Giống Tiếp Theo (Next Client Seed)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customClientSeed}
+                      onChange={(e) => setCustomClientSeed(e.target.value)}
+                      placeholder="Nhập hạt giống tuỳ ý (Ví dụ: myseed123)"
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-500 transition-colors font-mono"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!customClientSeed.trim()) return;
+                        updateClientSeed(customClientSeed.trim());
+                        setCustomClientSeed("");
+                      }}
+                      className="px-4 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-black rounded-xl transition-all uppercase tracking-wider text-[10px]"
+                    >
+                      Cập Nhật
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-normal">
+                    * Hạt giống này sẽ được kết hợp với hạt giống của Server để tạo ra bộ bài xáo trộn hoàn toàn ngẫu nhiên và minh bạch cho ván đấu tiếp theo.
+                  </p>
                 </div>
               </div>
             </div>

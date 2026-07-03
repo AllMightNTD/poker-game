@@ -6,6 +6,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { User } from './user.entity';
 import { PokerTable } from './poker_table.entity';
@@ -52,6 +53,19 @@ export class TableSession extends BaseEntity {
 
   @Column({ type: 'datetime', nullable: true })
   left_at: Date | null;
+
+  @CreateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)'
+  })
+  created_at: Date;
+
+  @UpdateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+    onUpdate: 'CURRENT_TIMESTAMP(6)'
+  })
+  updated_at: Date;
 
   // ---- Relations ----
 

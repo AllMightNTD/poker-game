@@ -49,7 +49,10 @@ export class PokerStateService implements OnModuleInit {
 
   async setTableState(tableId: string, fields: Record<string, string | number>): Promise<void> {
     const key = `table:${tableId}:state`;
-    await this.redis.hset(key, fields);
+    await this.redis.hset(key, {
+      ...fields,
+      last_activity: Date.now().toString(),
+    });
   }
 
   async deleteTableState(tableId: string): Promise<void> {
@@ -163,5 +166,30 @@ export class PokerStateService implements OnModuleInit {
   async getSpectatorsCount(tableId: string): Promise<number> {
     const key = `table:${tableId}:spectators`;
     return this.redis.scard(key);
+  }
+
+  /**
+   * Xoá toàn bộ Key liên quan tới Table (Dùng khi Destroy Room)
+   */
+  async deleteAllTableKeys(tableId: string): Promise<void> {
+    // Xoá tất cả table keys
+    let cursor = '0';
+    do {
+      const [nextCursor, keys] = await this.redis.scan(cursor, 'MATCH', `table:${tableId}:*`, 'COUNT', 100);
+      cursor = nextCursor;
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+      }
+    } while (cursor !== '0');
+
+    // Xoá tất cả lock keys của table
+    cursor = '0';
+    do {
+      const [nextCursor, keys] = await this.redis.scan(cursor, 'MATCH', `lock:table:${tableId}*`, 'COUNT', 100);
+      cursor = nextCursor;
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+      }
+    } while (cursor !== '0');
   }
 }

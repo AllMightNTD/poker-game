@@ -2,6 +2,7 @@ import {
   BaseEntity,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -47,8 +48,18 @@ export class SystemRevenue extends BaseEntity {
   @Column({ type: 'bigint', default: '0' })
   pot_total: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)'
+  })
   created_at: Date;
+
+  @UpdateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+    onUpdate: 'CURRENT_TIMESTAMP(6)'
+  })
+  updated_at: Date;
 
   // ---- Relations ----
 

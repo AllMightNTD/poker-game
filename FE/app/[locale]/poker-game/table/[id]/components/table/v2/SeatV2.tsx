@@ -150,10 +150,19 @@ const SeatV2: React.FC<SeatV2Props> = ({
   const [isBuyInOpen, setIsBuyInOpen] = useState(false);
 
   const isOwner = currentUser?.id === ownerId;
-  const positions = useMemo(() => getSeatPositions(maxPlayers || 6), [maxPlayers]);
+  const heroSeatNumber = useMemo(() => players.find(p => p.isHero)?.seatIndex, [players]);
+  const positions = useMemo(() => getSeatPositions(maxPlayers || 6, heroSeatNumber), [maxPlayers, heroSeatNumber]);
   const pos = positions[seatNumber - 1] || positions[0];
   const positionStyle = { top: `${pos.top}%`, left: `${pos.left}%` };
   const actionEndTime = null;
+
+  const isUserSeated = useMemo(() => players.some((p) => p.isHero), [players]);
+  const displayName = useMemo(() => {
+    if (!player) return '';
+    if (player.isHero || player.isBot) return player.name || '';
+    if (!isUserSeated) return `Player ${seatNumber}`;
+    return player.name || '';
+  }, [player, isUserSeated, seatNumber]);
 
   // Compute bet throw vector
   const betVector = useMemo(() => {
@@ -195,7 +204,7 @@ const SeatV2: React.FC<SeatV2Props> = ({
 
     return (
       <>
-        <div style={positionStyle} className="absolute z-10 w-[95px] sm:w-[150px] md:w-[220px]">
+        <div style={positionStyle} className="absolute z-10 -translate-x-1/2 -translate-y-1/2 w-[95px] sm:w-[150px] md:w-[220px]">
           {isPending ? (
             <div className="animate-pulse flex flex-col items-center gap-2">
               <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-slate-800 border-2 border-dashed border-amber-500/50 flex items-center justify-center overflow-hidden">
@@ -211,9 +220,10 @@ const SeatV2: React.FC<SeatV2Props> = ({
                 if (isPendingOrSeated) return;
                 setIsBuyInOpen(true);
               }}
-              className={`w-10 h-10 md:w-14 md:h-14 mx-auto rounded-full border-2 border-dashed border-slate-600 bg-slate-800/30 flex items-center justify-center transition-all shadow-lg ${isPendingOrSeated ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-amber-400 hover:bg-slate-800 hover:scale-110'}`}
+              className={`w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full border border-white/20 bg-black/40 flex flex-col items-center justify-center transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-md ${isPendingOrSeated ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-[#F4B942]/60 hover:bg-black/60 hover:shadow-[0_0_20px_rgba(244,185,66,0.3)] hover:scale-105 group'}`}
             >
-              <span className="text-[10px] md:text-xs font-black text-slate-500 uppercase">+ Ngồi</span>
+              <span className="text-white/60 group-hover:text-[#F4B942] text-[18px] font-light leading-none mb-0.5">+</span>
+              <span className="text-[8px] md:text-[9px] font-black text-white/60 group-hover:text-[#F4B942] uppercase tracking-widest">Ngồi</span>
             </div>
           )}
         </div>
@@ -235,7 +245,7 @@ const SeatV2: React.FC<SeatV2Props> = ({
   return (
     <div 
       style={positionStyle} 
-      className={`absolute z-10 flex flex-col items-center
+      className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center
         w-[110px] sm:w-[160px] md:w-[220px]
         ${player.isActive ? 'z-40' : 'z-20'}`}
     >
@@ -264,7 +274,7 @@ const SeatV2: React.FC<SeatV2Props> = ({
 
         {/* Info Box */}
         <SeatInfo 
-          name={player.name || ''} 
+          name={displayName} 
           chips={parseInt(player.chips || '0')} 
           isHero={player.isHero} 
           isMobile={isMobile} 

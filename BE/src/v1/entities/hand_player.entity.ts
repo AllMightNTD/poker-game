@@ -5,6 +5,8 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { GameHand } from './game_hand.entity';
 import { User } from './user.entity';
@@ -49,6 +51,20 @@ export class HandPlayer extends BaseEntity {
 
   @Column({ type: 'bigint', default: '0' })
   initial_stack: string;
+
+  @CreateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)'
+  })
+  created_at: Date;
+
+  @UpdateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+    onUpdate: 'CURRENT_TIMESTAMP(6)'
+  })
+  updated_at: Date;
+
   // ---- Relations ----
 
   @ManyToOne(() => GameHand, { onDelete: 'CASCADE' })

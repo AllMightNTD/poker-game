@@ -1,18 +1,16 @@
 "use client";
 
-import React from "react";
 import { UserProvider } from "@/core/providers/user-provider";
-import { TableHeader } from "./components/layout/TableHeader";
-import { TableBackground } from "./components/layout/TableBackground";
-import { PokerTable } from "./components/table/PokerTable";
-import { HeroPanel } from "./components/hero/HeroPanel";
-import { ActionBar } from "./components/hero/ActionBar";
 import { ChatDrawer } from "./components/chat/ChatDrawer";
 import { HistoryDrawer } from "./components/chat/HistoryDrawer";
-import { SettingsModal } from "./components/settings/SettingsModal";
-import { Toast } from "./components/ui/Toast";
+import { HeroPanel } from "./components/hero/HeroPanel";
 import { PokerGameProvider } from "./components/hooks/usePokerGame";
+import { TableBackground } from "./components/layout/TableBackground";
+import { TableHeader } from "./components/layout/TableHeader";
+import { SettingsModal } from "./components/settings/SettingsModal";
 import { SitRequestModal } from "./components/settings/SitRequestModal";
+import { PokerTable } from "./components/table/PokerTable";
+import { Toast } from "./components/ui/Toast";
 
 function PokerTableRoom() {
   return (
@@ -46,9 +44,6 @@ function PokerTableRoom() {
         {/* RIGHT — History sidebar (xl+) or bottom sheet (mobile/tablet) */}
         <HistoryDrawer />
       </div>
-
-      {/* 🎮 Action Bar — sticky bottom */}
-      <ActionBar />
 
       {/* ⚙️ Settings Modal */}
       <SettingsModal />

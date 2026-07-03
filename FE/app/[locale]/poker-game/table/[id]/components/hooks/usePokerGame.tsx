@@ -3,7 +3,7 @@
 import { httpClient } from "@/core/api/http-client";
 import { useSocket } from "@/core/providers/SocketProvider";
 import { useCurrentUser } from "@/core/providers/user-provider";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Card, CardDeckStyleTheme, ChatMessage, Player, TableBackgroundTheme } from "../types";
 
@@ -97,6 +97,9 @@ interface PokerGameContextProps {
   maxPlayers: number;
 
   // Host Mod Actions
+  roomStatus: string;
+  setRoomStatus: (val: string) => void;
+  togglePause: (paused: boolean) => Promise<void>;
   modifyBlinds: (sb: number) => Promise<void>;
   kickPlayer: (seatIndex: number) => Promise<void>;
   forceSitOut: (seatIndex: number) => Promise<void>;
@@ -108,6 +111,8 @@ interface PokerGameContextProps {
   submitSitRequest: (seatNumber: number, amount: number, customName?: string) => void;
   respondSitRequest: (requestId: string, approve: boolean) => void;
   startGame: () => void;
+  updateClientSeed: (clientSeed: string) => void;
+  leaveTable: () => Promise<void>;
 }
 
 const PokerGameContext = createContext<PokerGameContextProps | undefined>(undefined);
@@ -117,6 +122,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const { currentUser } = useCurrentUser();
   const { socket, isConnected } = useSocket();
   const tableId = params?.id as string;
+  const router = useRouter();
 
   // Sound and HUD settings
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -161,6 +167,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [dealerSeat, setDealerSeat] = useState(1);
   const [smallBlindSeat, setSmallBlindSeat] = useState(0);
   const [bigBlindSeat, setBigBlindSeat] = useState(0);
+  const [roomStatus, setRoomStatus] = useState("waiting");
 
   // Provably Fair States
   const [provablyFair, setProvablyFair] = useState<ProvablyFairData | null>(null);
@@ -196,13 +203,16 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     currentUserRef.current = currentUser;
     if (currentUser) {
+      // FIX: re-evaluate isHero khi currentUser load xong
+      // Không xóa cards của opponent (giữ nguyên), chỉ cập nhật isHero flag
       setPlayers((prev) =>
         prev.map((p) => {
-          const isHero = p.id === currentUser.id;
+          const isHero = String(p.id) === String(currentUser.id);
           return {
             ...p,
             isHero,
-            cards: isHero ? (p.cards || []) : undefined,
+            // Hero: giữ bài hiện có (hoặc [] nếu chưa có); Opponent: giữ nguyên bài
+            cards: isHero ? (p.cards?.length ? p.cards : []) : p.cards,
           };
         })
       );
@@ -328,6 +338,10 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // Join room
     socket.emit("table:subscribe", { room_id: tableId });
 
+    socket.on("error", (data: any) => {
+      showToast(data.message || "Đã xảy ra lỗi không xác định.", "error");
+    });
+
     socket.on("table:state", (data: any) => {
       setTableName(data.room_name || "Bàn Poker");
       setMaxPlayers(data.max_players || 6);
@@ -343,6 +357,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setCurrentTurnSeat(data.current_turn_seat);
       setTimerVal(data.remaining_time || 0);
       setOwnerId(data.owner_id || "");
+      setRoomStatus(data.status || "waiting");
       setMinBuyin(data.min_buyin || 0);
       setMaxBuyin(data.max_buyin || 0);
       setSmallBlind(data.small_blind ? data.small_blind.toString() : "50");
@@ -350,15 +365,27 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       // Sync players list
       if (data.seats) {
-        console.log("DEBUG [table:state] data.seats:", data.seats);
+        const heroId = currentUserRef.current?.id;
         setPlayers((prev) => {
           return data.seats.map((s: any) => {
-            const isHero = s.id === currentUserRef.current?.id;
+            // FIX: so sánh trực tiếp bằng seat id, không phụ thuộc ref timing
+            const isHero = !!heroId && String(s.id) === String(heroId);
             const existingPlayer = prev.find((p) => p.seatIndex === s.seatIndex);
-            
+
+            // FIX: Hero luôn giữ lại bài hiện tại nếu có (không reset khi state sync lại)
+            // Opponent nhận 2 bài úp mặt khi đang trong ván
             let defaultCards: any[] | undefined = undefined;
             if (data.game_stage !== "waiting" && data.game_stage !== "ended" && s.status !== "folded") {
-              defaultCards = isHero ? [] : [{ suit: "S", rank: "A" }, { suit: "S", rank: "A" }];
+              if (isHero) {
+                // Hero: giữ nguyên bài đang có, nếu chưa có thì [] (chờ table:private-cards)
+                defaultCards = existingPlayer?.cards?.length ? existingPlayer.cards : [];
+              } else {
+                // FIX: dùng sentinel "back" thay vì A♠ A♠ làm placeholder
+                // để không bị flip face-up khi showdown
+                defaultCards = existingPlayer?.cards?.length
+                  ? existingPlayer.cards
+                  : [{ suit: "back", rank: "back" }, { suit: "back", rank: "back" }];
+              }
             }
 
             return {
@@ -378,34 +405,58 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               hasAllIn: s.chips === "0" && s.status === "active",
               isHero,
               isBot: s.isBot,
-              cards: existingPlayer?.cards?.length ? existingPlayer.cards : defaultCards,
+              cards: defaultCards,
             };
           });
         });
 
         // Dynamic minRaise/maxRaise limits for Hero
-        const heroSeat = data.seats.find((s: any) => s.id === currentUserRef.current?.id);
+        const heroSeat = data.seats.find((s: any) => heroId && String(s.id) === String(heroId));
         if (heroSeat) {
           const heroStack = parseInt(heroSeat.chips || heroSeat.stack || "0");
-          setMaxRaise(heroStack);
+          const heroCurrentBet = parseInt(heroSeat.current_bet || "0");
+
+          // Calculate Maximum Effective Stack
+          let maxOpponentTotal = 0;
+          data.seats.forEach((s: any) => {
+            if (s.status === 'active' && String(s.id) !== String(heroId)) {
+              const oppTotal = parseInt(s.chips || s.stack || "0") + parseInt(s.current_bet || "0");
+              if (oppTotal > maxOpponentTotal) {
+                maxOpponentTotal = oppTotal;
+              }
+            }
+          });
+
+          // Cap maxRaise to the effective stack size (Hero can't bet more than what opponents can cover)
+          let effectiveMaxRaise = heroStack;
+          if (maxOpponentTotal > 0) {
+            effectiveMaxRaise = Math.min(heroStack, Math.max(0, maxOpponentTotal - heroCurrentBet));
+          }
+          setMaxRaise(effectiveMaxRaise);
 
           const highestBet = data.current_highest_bet ? parseInt(data.current_highest_bet) : 0;
           const bigBlind = data.big_blind ? parseInt(data.big_blind) : 100;
-          const minRequired = highestBet > 0 ? highestBet * 2 : bigBlind;
+          const lastFullRaise = data.last_full_raise_size ? parseInt(data.last_full_raise_size) : bigBlind;
+          
+          const minRequired = highestBet > 0 ? highestBet + lastFullRaise : bigBlind;
 
-          setMinRaise(Math.min(heroStack, minRequired));
-          setRaiseAmount((prev) => Math.min(heroStack, Math.max(minRequired, prev)));
+          setMinRaise(Math.min(effectiveMaxRaise, minRequired));
+          setRaiseAmount((prev) => Math.min(effectiveMaxRaise, Math.max(Math.min(effectiveMaxRaise, minRequired), prev)));
         }
       }
     });
 
     socket.on("table:private-cards", (data: { pocket_cards: string[] }) => {
+      const heroId = currentUserRef.current?.id;
       setPlayers((prev) =>
-        prev.map((p) =>
-          p.isHero
-            ? { ...p, cards: data.pocket_cards.map(parseCard) }
-            : p
-        )
+        prev.map((p) => {
+          // FIX: dùng id so sánh trực tiếp thay vì phụ thuộc vào isHero flag
+          const isMyCard = p.isHero || (!!heroId && String(p.id) === String(heroId));
+          if (isMyCard) {
+            return { ...p, isHero: true, cards: data.pocket_cards.map(parseCard) };
+          }
+          return p;
+        })
       );
     });
 
@@ -437,6 +488,13 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     socket.on("table:turn-change", (data: any) => {
       setCurrentTurnSeat(data.seat_number);
       setTimerVal(data.time_limit || 30);
+      // FIX: sync isActive trên players array để ActionBar và SeatV2 hiển thị đúng
+      setPlayers((prev) =>
+        prev.map((p) => ({
+          ...p,
+          isActive: p.seatIndex === data.seat_number,
+        }))
+      );
     });
 
     socket.on("table:player-disconnected", (data: any) => {
@@ -476,15 +534,22 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         server_seed_hash: data.server_seed_hash,
         client_seed: data.client_seed,
       });
-      // Clear action flags & reset cards
+      const heroId = currentUserRef.current?.id;
+      // FIX: reset cards dựa trên id trực tiếp, không phụ thuộc isHero flag
       setPlayers((prev) =>
-        prev.map((p) => ({
-          ...p,
-          lastAction: "",
-          isFolded: false,
-          hasAllIn: false,
-          cards: p.isHero ? [] : [{ suit: "S", rank: "A" }, { suit: "S", rank: "A" }],
-        }))
+        prev.map((p) => {
+          const isThisHero = p.isHero || (!!heroId && String(p.id) === String(heroId));
+          return {
+            ...p,
+            isHero: isThisHero,
+            lastAction: "",
+            isFolded: false,
+            hasAllIn: false,
+            // Hero: [] để chờ table:private-cards
+            // Opponent: 2 bài placeholder "back" (không phải A♠ A♠)
+            cards: isThisHero ? [] : [{ suit: "back", rank: "back" }, { suit: "back", rank: "back" }],
+          };
+        })
       );
     });
 
@@ -529,21 +594,38 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             `Thắng cuộc: ${w.username} nhận ${w.win_amount} chips (${w.hand_name})`
           ]);
         });
-
-        // Show winner pocket cards
-        setPlayers((prev) =>
-          prev.map((p) => {
-            const winner = data.winners.find((w: any) => w.seat_number === p.seatIndex);
-            if (winner && winner.pocket_cards) {
-              return {
-                ...p,
-                cards: winner.pocket_cards.map(parseCard),
-              };
-            }
-            return p;
-          })
-        );
       }
+
+      // FIX: Reveal ALL players' real cards từ all_hands (ưu tiên hơn winners)
+      // Đây là toàn bộ bài của mọi player đã vào showdown, không chỉ winners
+      setPlayers((prev) =>
+        prev.map((p) => {
+          // Ưu tiên all_hands (có đầy đủ bài cho tất cả non-folded players)
+          if (data.all_hands) {
+            const hand = data.all_hands.find((h: any) => h.seat_number === p.seatIndex);
+            if (hand && hand.pocket_cards && hand.pocket_cards.length > 0) {
+              return { ...p, cards: hand.pocket_cards.map(parseCard) };
+            }
+          }
+          // Fallback: winner cards nếu không có all_hands
+          if (data.winners) {
+            const winner = data.winners.find((w: any) => w.seat_number === p.seatIndex);
+            if (winner && winner.pocket_cards && winner.pocket_cards.length > 0) {
+              return { ...p, cards: winner.pocket_cards.map(parseCard) };
+            }
+          }
+          return p;
+        })
+      );
+    });
+
+    socket.on("table:client-seed-updated", (data: any) => {
+      setProvablyFair((prev) =>
+        prev
+          ? { ...prev, client_seed: data.client_seed }
+          : { server_seed_hash: "", client_seed: data.client_seed }
+      );
+      showToast(`Hạt giống của bạn đã được cập nhật thành: ${data.client_seed}`, "success");
     });
 
     socket.on("table:player-busted", (data: any) => {
@@ -608,10 +690,15 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     });
 
-    socket.on("table:waiting-for-players", (data: { required: number, current: number, starting: boolean, can_start?: boolean }) => {
-      if (data.can_start) {
+    socket.on("table:waiting-for-players", (data: { required: number, current: number, starting: boolean, can_start?: boolean, paused?: boolean }) => {
+      if (data.paused) {
         setWaitingMessage({
-          text: `Bàn đã đủ người! Chờ chủ phòng bắt đầu.`,
+          text: `Chủ phòng đã tạm dừng ván mới.`,
+          starting: false
+        });
+      } else if (data.can_start) {
+        setWaitingMessage({
+          text: `Đã đủ người. Tự động chia bài trong giây lát...`,
           starting: true
         });
       } else {
@@ -619,6 +706,21 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           text: `Đang chờ người chơi... (${data.current}/${data.required})`,
           starting: false
         });
+      }
+    });
+
+    socket.on("table:status-changed", (data: { status: string }) => {
+      setRoomStatus(data.status);
+      if (data.status === 'paused') {
+        showToast("Chủ phòng đã tạm dừng trò chơi (sẽ không chia ván tiếp theo).", "warning");
+        if (gameStage === "waiting" || gameStage === "ended") {
+          setWaitingMessage({
+            text: `Chủ phòng đã tạm dừng ván mới.`,
+            starting: false
+          });
+        }
+      } else if (data.status === 'waiting') {
+        showToast("Phòng chơi đã được mở lại.", "success");
       }
     });
 
@@ -646,6 +748,13 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       showToast(data.message || "Bàn đã được reset do không đủ người chơi.", "info");
     });
 
+    socket.on("table:destroyed", (data: any) => {
+      showToast("Bàn chơi đã bị giải tán do không có người tham gia trong thời gian dài.", "warning");
+      setTimeout(() => {
+        router.push("/en/poker-game");
+      }, 2000);
+    });
+
     return () => {
       socket.off("table:state");
       socket.off("table:private-cards");
@@ -666,9 +775,13 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       socket.off("user_joined_seat");
       socket.off("join_request_created");
       socket.off("table:waiting-for-players");
+      socket.off("table:status-changed");
       socket.off("table:board-reset-state");
+      socket.off("table:destroyed");
+      socket.off("table:client-seed-updated");
+      socket.off("error");
     };
-  }, [socket, tableId, isConnected]);
+  }, [socket, tableId, isConnected, router]);
 
   // Execute betting actions
   const handleUserAction = (action: string, amount: number = 0) => {
@@ -711,6 +824,14 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!socket || !isConnected) return;
     socket.emit("table:start-game", {
       room_id: tableId,
+    });
+  };
+
+  const updateClientSeed = (clientSeed: string) => {
+    if (!socket || !isConnected) return;
+    socket.emit("table:set-client-seed", {
+      room_id: tableId,
+      client_seed: clientSeed,
     });
   };
 
@@ -771,6 +892,28 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const fetchStats = async () => {
     const res = await httpClient.get(`/api/v1/rooms/${tableId}/stats`);
     return res.data;
+  };
+
+  const togglePause = async (paused: boolean) => {
+    try {
+      await httpClient.post(`/v1/rooms/pause`, { room_id: tableId, paused });
+      setRoomStatus(paused ? 'paused' : 'waiting');
+      showToast(paused ? "Đã tạm dừng phòng chơi." : "Đã mở lại phòng chơi.", "success");
+    } catch (error) {
+      console.error("Toggle pause error:", error);
+      showToast("Không thể thay đổi trạng thái bàn lúc này", "error");
+    }
+  };
+
+  const leaveTable = async () => {
+    try {
+      await httpClient.post('/v1/rooms/leave', { room_id: tableId });
+      socket?.disconnect();
+      router.push('/poker-lobby');
+    } catch (error) {
+      console.error("Leave table error:", error);
+      showToast("Không thể rời bàn lúc này. Vui lòng thử lại.", "error");
+    }
   };
 
   const currentHighestBet = Math.max(
@@ -864,13 +1007,18 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         forceSitOut,
         modifyPlayerStack,
         fetchStats,
+        roomStatus,
+        setRoomStatus,
+        togglePause,
         sitRequests,
         submitSitRequest,
         respondSitRequest,
         startGame,
+        updateClientSeed,
         minBuyin,
         maxBuyin,
         maxPlayers,
+        leaveTable,
       }}
     >
       {children}

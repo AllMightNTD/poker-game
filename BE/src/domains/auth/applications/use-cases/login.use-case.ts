@@ -16,7 +16,7 @@ export class LoginUseCase {
     @Inject('IAuthRepository')
     private readonly authRepository: IAuthRepository,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   async execute(loginDto: any) {
     const { emailOrPhone, password, rememberMe = false } = loginDto;
@@ -36,6 +36,8 @@ export class LoginUseCase {
         HttpStatus.UNPROCESSABLE_ENTITY,
       );
     }
+    console.log('user', user);
+
 
     if (user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException('User account is not active');

@@ -10,31 +10,37 @@ export const PotDisplay = memo(function PotDisplay() {
 
   return (
     <motion.div
-      className="flex flex-col items-center gap-1"
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
+      className="absolute top-[-160px] md:top-[-200px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-30"
+      initial={{ y: -50, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 200, damping: 18 }}
     >
-      {/* Blinds info */}
-      <div className="text-[8px] md:text-[10px] font-bold text-slate-500 tracking-wider uppercase">
-        Blinds: {formatChipsVal(smallBlind)} / {formatChipsVal(bigBlind)}
-      </div>
-
-      {/* Pot chip */}
-      <div className="bg-slate-950/90 border border-amber-500/30 backdrop-blur-md px-4 py-1.5 md:px-6 md:py-2.5 rounded-full flex items-center gap-2 md:gap-3 shadow-[0_0_24px_rgba(245,158,11,0.12)]">
-        <Coins size={13} className="w-3.5 h-3.5 md:w-5 md:h-5 text-amber-400 shrink-0" style={{ animation: "spin 3s linear infinite" }} />
-        <div className="flex flex-col items-start leading-tight">
-          <span className="text-[7px] md:text-[9px] font-black uppercase text-slate-500 tracking-[0.2em]">Tổng Pot</span>
-          <motion.span
-            key={pot}
-            initial={{ scale: 1.15 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.15 }}
-            className="text-sm md:text-lg font-black text-amber-300 tracking-wide tabular-nums"
-          >
-            {formatChipsVal(pot)}
-          </motion.span>
+      {/* Golden Plaque */}
+      <div className="relative w-[180px] md:w-[220px] bg-gradient-to-b from-[#E7C678] via-[#C99C3D] to-[#996D1D] rounded-lg border border-[#FDF1BA] p-[2px] shadow-[0_15px_30px_rgba(0,0,0,0.8),_inset_0_2px_4px_rgba(255,255,255,0.6)]">
+        <div className="bg-gradient-to-b from-[#302010] to-[#1a1005] rounded-md border border-[#996D1D] flex flex-col items-center py-2 md:py-3 px-4 shadow-[inset_0_5px_15px_rgba(0,0,0,0.8)]">
+          <span className="text-[10px] md:text-xs font-black text-[#E7C678] uppercase tracking-[0.2em] mb-1 drop-shadow-md">
+            Total Pot
+          </span>
+          <div className="flex items-center gap-2">
+            <Coins size={14} className="text-[#FDF1BA]" />
+            <motion.span
+              key={pot}
+              initial={{ scale: 1.15 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.15 }}
+              className="text-lg md:text-2xl font-black text-[#FDF1BA] tracking-wider tabular-nums drop-shadow-[0_2px_4px_rgba(0,0,0,1)]"
+            >
+              {formatChipsVal(pot)}
+            </motion.span>
+          </div>
         </div>
+      </div>
+      
+      {/* Blinds info below plaque */}
+      <div className="mt-1 bg-black/60 rounded-full px-4 py-1 border border-white/5 backdrop-blur-sm">
+        <span className="text-[8px] md:text-[10px] font-bold text-[#A8B2A9] tracking-widest uppercase">
+          Blinds: {formatChipsVal(smallBlind)} / {formatChipsVal(bigBlind)}
+        </span>
       </div>
     </motion.div>
   );

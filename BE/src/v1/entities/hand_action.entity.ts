@@ -2,6 +2,7 @@ import {
   BaseEntity,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -60,8 +61,18 @@ export class HandAction extends BaseEntity {
   @Column({ type: 'boolean', default: false })
   is_all_in: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)'
+  })
   created_at: Date;
+
+  @UpdateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+    onUpdate: 'CURRENT_TIMESTAMP(6)'
+  })
+  updated_at: Date;
 
   // ---- Relations ----
 

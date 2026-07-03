@@ -1,43 +1,22 @@
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
-import { User } from './user.entity';
+import { BaseEntity, Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('audit_logs')
 export class AuditLog extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'varchar', length: 50 })
+  event_type: string;
+
+  @Column({ type: 'varchar', length: 50 })
   user_id: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  action: string;
-
-  @Column({ type: 'varchar', length: 255 })
-  entity: string;
-
-  @Column({ type: 'varchar' })
-  entity_id: string;
+  @Column({ type: 'text' })
+  description: string;
 
   @Column({ type: 'json', nullable: true })
-  old_value: Record<string, any>;
-
-  @Column({ type: 'json', nullable: true })
-  new_value: Record<string, any>;
+  metadata: any;
 
   @CreateDateColumn()
   created_at: Date;
-
-  // ---- Relations ----
-
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
-  user: User;
 }

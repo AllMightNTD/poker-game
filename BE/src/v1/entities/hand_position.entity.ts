@@ -2,6 +2,7 @@ import {
   BaseEntity,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -51,8 +52,18 @@ export class HandPosition extends BaseEntity {
   @Column({ type: 'bigint', default: '0' })
   stack_at_start: string;  // stack chip lúc bắt đầu ván
 
-  @CreateDateColumn()
+  @CreateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)'
+  })
   created_at: Date;
+
+  @UpdateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+    onUpdate: 'CURRENT_TIMESTAMP(6)'
+  })
+  updated_at: Date;
 
   // ---- Relations ----
 

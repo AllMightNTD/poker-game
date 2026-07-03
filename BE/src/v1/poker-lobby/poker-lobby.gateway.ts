@@ -91,12 +91,20 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
     const userId = client.data?.user?.id;
     if (!userId) return;
 
-    // Tìm tất cả các bàn chơi người này đang ngồi
-    const activeRooms = client.rooms;
-    for (const room of activeRooms) {
-      if (room.startsWith('table_')) {
-        const roomId = room.replace('table_', '');
-        await this.gameService.handlePlayerConnectionLost(roomId, userId);
+    // Kiểm tra xem người dùng còn socket nào khác (ví dụ mở nhiều tab) không
+    const remainingSockets = await this.server.in(`user_${userId}`).fetchSockets();
+    const isFullyDisconnected = remainingSockets.length === 0;
+
+    // Sử dụng subscribedRooms tự quản lý thay vì client.rooms đã bị xoá
+    const subscribedRooms: Set<string> = client.data?.subscribedRooms;
+    if (subscribedRooms) {
+      for (const roomId of subscribedRooms) {
+        if (isFullyDisconnected) {
+          await this.gameService.handlePlayerConnectionLost(roomId, userId);
+        }
+
+        // Kiểm tra xem phòng còn ai kết nối không
+        this.gameService.checkAndStartEmptyRoomTimer(roomId);
       }
     }
   }
@@ -133,20 +141,30 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
     }
 
     client.join(`table_${roomId}`);
+    
+    // Theo dõi room để xử lý khi disconnect
+    if (!client.data.subscribedRooms) {
+      client.data.subscribedRooms = new Set<string>();
+    }
+    client.data.subscribedRooms.add(roomId);
+
     this.logger.log(`Socket ${client.id} subscribed to table_${roomId}`);
 
     if (userId) {
       await client.join(`user_${userId}`);
+      this.gameService.cancelEmptyRoomTimer(roomId); // Có người reconnect -> hủy Empty Room Timer
       this.gameService.cancelDisconnectTimeout(roomId, userId);
 
       // Khôi phục trạng thái active nếu đang disconnected trên Redis
       const seats = await this.stateService.getAllSeats(roomId);
       const mySeat = seats.find(s => s.user_id === userId);
-      if (mySeat && mySeat.status === 'disconnected') {
-        await this.stateService.setSeat(roomId, mySeat.seat_number, {
-          status: 'active',
-          disconnected_at: '0',
-        });
+      if (mySeat && mySeat.disconnected_at && mySeat.disconnected_at !== '0') {
+        const updateData: any = { disconnected_at: '0' };
+        if (mySeat.status === 'disconnected') {
+          updateData.status = 'active';
+        }
+        await this.stateService.setSeat(roomId, mySeat.seat_number, updateData);
+        
         this.server.to(`table_${roomId}`).emit('table:player-reconnected', {
           user_id: userId,
           seat_number: mySeat.seat_number,
@@ -208,6 +226,7 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       await this.gameService.processPlayerAction(roomId, currentTurnSeat, data.action_type, data.amount || 0);
     } catch (err) {
       client.emit('error', { message: err.message });
+      await this.gameService.broadcastTableState(roomId);
     } finally {
       await this.stateService.releaseLock(roomId);
     }
@@ -255,6 +274,24 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
     } catch (err) {
       client.emit('error', { message: err.message });
     }
+  }
+
+  private getClientIp(socket: Socket): string {
+    const forwarded = socket.handshake.headers['x-forwarded-for'];
+    if (forwarded) {
+      const ip = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0];
+      return ip.trim();
+    }
+    return socket.handshake.address;
+  }
+
+  private getClassCSubnet(ip: string): string {
+    if (ip === '::1' || ip === '127.0.0.1') return '127.0.0.1';
+    const parts = ip.split('.');
+    if (parts.length >= 3) {
+      return `${parts[0]}.${parts[1]}.${parts[2]}`;
+    }
+    return ip;
   }
 
   /**
@@ -323,6 +360,23 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
         throw new Error('Số dư chips không đủ.');
       }
 
+      const userIp = this.getClientIp(client);
+      const userSubnet = this.getClassCSubnet(userIp);
+
+      if (userIp !== '127.0.0.1' && userIp !== '::1') {
+        const seats = await this.stateService.getAllSeats(roomId);
+        for (const seat of seats) {
+          if (seat.is_bot === '1') continue;
+          const seatIp = seat.ip || '127.0.0.1';
+          if (seatIp !== '127.0.0.1' && seatIp !== '::1') {
+            const seatSubnet = this.getClassCSubnet(seatIp);
+            if (seatSubnet === userSubnet) {
+              throw new Error('Địa chỉ IP hoặc đường truyền của bạn bị trùng lặp với người chơi khác tại bàn này (Chống thông đồng).');
+            }
+          }
+        }
+      }
+
       // Lấy username & avatar của user
       const user = await PokerTable.getRepository().manager.findOne('User', {
         where: { id: userId },
@@ -341,6 +395,7 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
         seat_number: data.seat_number,
         amount: data.amount,
         timestamp: Date.now(),
+        ip: userIp,
       };
 
       const redis = this.stateService.getRedisClient();
@@ -391,6 +446,7 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
           room_id: roomId,
           amount: request.amount,
           seat_number: request.seat_number,
+          ip: request.ip,
         });
 
         // Gửi sự kiện thành công riêng cho người xin
@@ -466,6 +522,10 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
 
       if (table.owner_id !== userId) {
         throw new Error('Chỉ chủ phòng mới có quyền bắt đầu ván đấu.');
+      }
+
+      if (table.status === 'paused') {
+        throw new Error('Phòng đang được tạm dừng, không thể bắt đầu ván mới.');
       }
 
       const tableState = await this.stateService.getTableState(roomId);

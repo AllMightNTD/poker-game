@@ -56,7 +56,7 @@ const SeatCards: React.FC<SeatCardsProps> = React.memo(({ cards, isFolded, isHer
             <PokerCard
               suit={card.suit as any}
               rank={card.rank}
-              isFaceUp={isHero || gameStage === "showdown" || (!isFolded && card.suit !== 'back' && card.rank !== 'back' && card.suit !== '?' && card.suit !== 'S' && card.suit !== 'H' && card.suit !== 'D' && card.suit !== 'C')}
+              isFaceUp={isHero || card.suit !== "back"}
               size={cardSize}
             />
           </motion.div>

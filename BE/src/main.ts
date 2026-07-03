@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule } from '@nestjs/swagger';
 import { ValidationError } from 'class-validator';
-import helmet from 'helmet';
 import * as express from 'express';
+import helmet from 'helmet';
 import * as path from 'path';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/exceptions/http.exception.filter';
@@ -22,7 +22,11 @@ async function bootstrap() {
   const url = `${protocol}://${host}:${port}/${prefix}`;
 
   app.enableCors({
-    origin: true,
+    origin: [
+      "http://10.10.0.224:3000",
+      "http://localhost:3000",
+      "*"
+    ],
     credentials: true,
   });
 
