@@ -3,13 +3,12 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import path from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import databaseConfig from './config/database';
 import { SeedModule } from './database/seed/seed.module';
 import { MailModule } from './mail/mail.module';
-import { AppV1Module } from './v1/app-v1.module';
+import { AppV1Module } from './v1/modules/app-v1.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -52,4 +51,4 @@ import { AppV1Module } from './v1/app-v1.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

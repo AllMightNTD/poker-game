@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { RouterModule, Routes } from '@nestjs/core';
-import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { BlogsModule } from './blogs/blogs.module';
+import { AdminModule } from './modules/admin.module';
 import { PokerLobbyModule } from './modules/poker-lobby.module';
 import { UserModule } from './user/user.module';
 

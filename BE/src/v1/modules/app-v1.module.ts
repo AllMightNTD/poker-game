@@ -1,13 +1,13 @@
 import { Global, Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AppV1Route } from './app-v1.route';
-import { AuthModule } from './auth/auth.module';
-import { JwtRefreshStrategy } from './strategy/jwt-refresh.strategy';
-import { UserModule } from './user/user.module';
-import { PokerLobbyModule } from './modules/poker-lobby.module';
-import { BlogsModule } from './blogs/blogs.module';
-import { AdminModule } from './admin/admin.module';
+import { JwtModule } from '@nestjs/jwt';
+import { AppV1Route } from '../app-v1.route';
+import { AuthModule } from '../auth/auth.module';
+import { BlogsModule } from '../blogs/blogs.module';
+import { JwtRefreshStrategy } from '../strategy/jwt-refresh.strategy';
+import { UserModule } from '../user/user.module';
+import { AdminModule } from './admin.module';
+import { PokerLobbyModule } from './poker-lobby.module';
 
 @Global()
 @Module({

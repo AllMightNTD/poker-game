@@ -1,7 +1,7 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AdminService } from './admin.service';
-import { AdminLoginDto } from './dto/admin-login.dto';
+import { AdminLoginDto } from '../dto/admin-login.dto';
+import { AdminService } from '../services/admin.service';
 
 @ApiTags('Admin System')
 @Controller('admin')

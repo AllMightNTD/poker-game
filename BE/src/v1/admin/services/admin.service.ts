@@ -2,8 +2,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { AdminRole } from 'src/constants/enums';
-import { Admin } from '../entities/admin.entity';
-import { AdminLoginDto } from './dto/admin-login.dto';
+import { Admin } from '../../entities/admin.entity';
+import { AdminLoginDto } from '../dto/admin-login.dto';
 
 @Injectable()
 export class AdminService {
