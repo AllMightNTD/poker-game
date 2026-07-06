@@ -1,0 +1,228 @@
+services:
+  # ==============================
+  # 1. Frontend Service (Next.js)
+  # ==============================
+  frontend:
+    container_name: knowledge-block-fe
+    build:
+      context: ./FE
+      dockerfile: Dockerfile
+      target: production          # build stage "production" trong Dockerfile (multi-stage)
+    image: knowledge-block-fe:${IMAGE_TAG:-latest}
+    # KHÔNG mount source code / node_modules trong production
+    # KHÔNG expose port ra ngoài host, chỉ nginx mới cần vào được -> đi qua network nội bộ
+    expose:
+      - "3000"
+    env_file:
+      - ./FE/.env.production
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - app-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          memory: 256M
+    restart: unless-stopped
+
+  # ==============================
+  # 2. Backend Service (NestJS)
+  # ==============================
+  backend:
+    container_name: nestjs-prod
+    build:
+      context: ./BE
+      dockerfile: Dockerfile
+      target: production
+    image: knowledge-block-be:${IMAGE_TAG:-latest}
+    # Không cần map port ra host, nginx proxy sẽ forward vào network nội bộ
+    expose:
+      - "${APP_PORT:-3002}"
+    env_file:
+      - ./BE/.env.production
+    environment:
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:${APP_PORT:-3002}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - app-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+        reservations:
+          memory: 512M
+    restart: unless-stopped
+
+  # ==============================
+  # 3. MySQL Database
+  # ==============================
+  db:
+    image: mysql:8.0.39
+    container_name: mysql-db
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      - MYSQL_DATABASE=${DB_DATABASE}
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - TZ=Asia/Tokyo
+    # KHÔNG expose port 3306 ra ngoài internet trong production.
+    # Nếu thực sự cần truy cập từ xa để debug, bind về localhost của server:
+    # ports:
+    #   - "127.0.0.1:13306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/conf.d:/etc/mysql/conf.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USERNAME}", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+    restart: unless-stopped
+
+  # ==============================
+  # 4. Redis Cache
+  # ==============================
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: >
+      sh -c 'redis-server --appendonly yes --requirepass "$${REDIS_PASSWORD}"'
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    # KHÔNG expose port 6379 ra ngoài internet trong production
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD} ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+    restart: unless-stopped
+
+  # ==============================
+  # 5. Redis Commander (GUI)
+  # Chỉ bật khi cần debug, KHÔNG chạy mặc định ở production
+  # Chạy bằng: docker compose --profile debug up -d
+  # ==============================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    profiles: ["debug"]
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD}
+      - HTTP_USER=${REDIS_COMMANDER_USER}
+      - HTTP_PASSWORD=${REDIS_COMMANDER_PASSWORD}
+    ports:
+      - "127.0.0.1:8081:8081"   # chỉ bind localhost, truy cập qua SSH tunnel
+    depends_on:
+      - redis
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # ==============================
+  # 6. Nginx Reverse Proxy (SSL termination)
+  # ==============================
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro     # chứng chỉ SSL (Let's Encrypt / khác)
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - app-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
+  nginx_cache:
