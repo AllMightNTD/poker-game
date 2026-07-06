@@ -1,4 +1,5 @@
 import { AuthLocaleRedirect } from "@/components/auth/AuthLocaleRedirect";
+import { PokerAuthBackground } from "@/components/auth/PokerAuthBackground";
 
 export default async function AuthLayout({
   children,
@@ -9,5 +10,9 @@ export default async function AuthLayout({
 }>) {
   const { locale } = await params;
 
-  return <AuthLocaleRedirect currentLocale={locale}>{children}</AuthLocaleRedirect>;
+  return (
+    <AuthLocaleRedirect currentLocale={locale}>
+      <PokerAuthBackground>{children}</PokerAuthBackground>
+    </AuthLocaleRedirect>
+  );
 }

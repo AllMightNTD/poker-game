@@ -12,6 +12,7 @@ import { logEnvironmentVariables } from './config/env.config';
 import { flattenValidationErrors } from './global-enum';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { config } from './v1/swagger/config';
+import { corsOriginFn } from './config/cors.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -22,11 +23,7 @@ async function bootstrap() {
   const url = `${protocol}://${host}:${port}/${prefix}`;
 
   app.enableCors({
-    origin: [
-      "http://10.10.0.224:3000",
-      "http://localhost:3000",
-      "*"
-    ],
+    origin: corsOriginFn,
     credentials: true,
   });
 

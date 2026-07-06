@@ -17,20 +17,32 @@ const SeatInfo: React.FC<SeatInfoProps> = React.memo(({ name, chips, isHero, isM
     return num.toString();
   };
 
+  const isSittingOut = status === 'Sit Out';
+  const isDisconnected = status === 'Mất mạng';
+  const isWaiting = status === 'Waiting';
+
   return (
-    <div className="relative z-10 -mt-2 bg-[#1a1a1a]/90 border border-[#4FC3F7] rounded-full px-3 py-1 flex flex-col items-center justify-center min-w-[80px] shadow-lg backdrop-blur-md">
-      <span className={`font-bold truncate leading-none uppercase
+    <div className="relative z-10 -mt-2 bg-[#1a1a1a]/90 border border-[#4FC3F7] rounded-md px-3 py-1 flex flex-col items-center justify-center min-w-[80px] shadow-lg backdrop-blur-md">
+      <span className={`font-bold truncate leading-none uppercase max-w-[80px] md:max-w-[100px]
         ${isHero ? "text-amber-400" : "text-white"}
         ${isMobile ? "text-[8px]" : "text-[10px]"}`}
       >
         {name}
         {isBot && <span className="ml-1 px-1 py-0.5 rounded text-[7px] bg-slate-700 text-slate-300">BOT</span>}
       </span>
-      <span className={`font-black text-[#4FC3F7] truncate leading-none mt-0.5
+      <span className={`font-black text-[#4FC3F7] truncate leading-none mt-1
         ${isMobile ? "text-[9px]" : "text-[11px]"}`}
       >
-        {status === 'sitting_out' ? 'Sit Out' : status === 'disconnected' ? 'Mất mạng' : formatChipsVal(chips)}
+        ${formatChipsVal(chips)}
       </span>
+
+      {(isSittingOut || isDisconnected || isWaiting) && (
+        <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[7px] font-black uppercase whitespace-nowrap shadow-md
+          ${isSittingOut ? 'bg-slate-700 text-slate-300' : isDisconnected ? 'bg-rose-700 text-rose-200' : 'bg-amber-600 text-amber-100'}
+        `}>
+          {isSittingOut ? 'SIT OUT' : isDisconnected ? 'DISCONNECTED' : 'WAITING'}
+        </div>
+      )}
     </div>
   );
 });

@@ -1,11 +1,6 @@
 import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
+  BaseEntity, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn,
+  UpdateDateColumn
 } from 'typeorm';
 import { User } from './user.entity';
 
@@ -37,7 +32,10 @@ export class RefreshToken extends BaseEntity {
 
   // ---- Relations ----
 
-  @ManyToOne(() => User, (user) => user.refresh_tokens, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
+
+  @UpdateDateColumn()
+  updated_at: Date;
 }

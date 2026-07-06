@@ -1,9 +1,9 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, Lock, Mail, Zap } from "lucide-react";
-import { useTranslations, useLocale } from "next-intl";
 import { useRouter as useI18nRouter, usePathname } from "@/i18n/routing";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, Lock, Mail } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useLogin } from "../hooks/use-login";
 
@@ -24,222 +24,232 @@ export function LoginForm() {
     clearFieldError,
   } = useLogin(t);
 
-  const changeLanguage = (newLocale: string) => {
-    localStorage.setItem("know_block_locale", newLocale);
-    i18nRouter.replace(pathname, { locale: newLocale });
-  };
-
   const handleFacebookLogin = () => {
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
     window.location.href = `${backendUrl}/api/v1/auth/facebook`;
   };
 
-  const emailHasError = !!(errors.emailOrPhone || fieldErrors.email);
+  const emailHasError = !!(errors.email || fieldErrors.email);
   const passwordHasError = !!(errors.password || fieldErrors.password);
 
   const inputBase =
-    "w-full pl-12 pr-4 py-4 rounded-2xl border outline-none transition-all duration-300 text-slate-700 placeholder:text-slate-400 focus:ring-4 focus:ring-blue-500/10 bg-white/60";
-  const inputNormal = "border-slate-200/80 focus:border-blue-500";
-  const inputError = "border-red-400 ring-2 ring-red-100 bg-red-50/30 focus:ring-red-400/20";
+    "h-12 sm:h-14 w-full rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl pl-10 sm:pl-14 pr-4 text-sm sm:text-base text-white placeholder:text-slate-500 transition-all focus:border-yellow-400 focus:bg-white/10 focus:shadow-[0_0_30px_rgba(255,215,0,0.2)] focus:ring-0 outline-none";
+  const inputError =
+    "border-rose-500 bg-rose-500/10 focus:border-rose-400 focus:shadow-[0_0_30px_rgba(244,63,94,0.2)]";
 
   return (
-    // NỀN THUẦN SOCIALA: Trắng và Xanh dương nhạt đan xen mềm mại bằng CSS Gradient, không dùng ảnh ngoài
-    <div className="relative min-h-screen w-full flex flex-col justify-between font-sans bg-slate-50 overflow-hidden">
+    <motion.div
+      initial={{ opacity: 0, y: 30, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className="relative w-full max-w-md mx-auto"
+    >
+      {/* Background Glow */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[30px] z-0">
+        <div className="absolute -top-20 -right-20 w-72 h-72 sm:w-96 sm:h-96 bg-blue-500/15 rounded-full blur-[100px] sm:blur-[140px]" />
+        <div className="absolute -bottom-20 -left-20 w-64 h-64 sm:w-80 sm:h-80 bg-yellow-500/10 rounded-full blur-[80px] sm:blur-[120px]" />
+      </div>
 
-      {/* CÁC KHỐI NỀN SINH ĐỘNG (ABSTRACT BLOBS) - Tạo hiệu ứng chiều sâu tự nhiên, đồng nhất */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-gradient-to-tr from-blue-200/40 to-sky-100/30 rounded-full blur-[80px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-5%] w-[45vw] h-[45vw] bg-gradient-to-br from-blue-300/20 to-teal-100/30 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute top-[30%] right-[15%] w-[30vw] h-[30vw] bg-blue-50/60 rounded-full blur-[60px] pointer-events-none" />
+      {/* Form Card */}
+      <div className="relative z-10 overflow-hidden rounded-[20px] sm:rounded-[30px] bg-gradient-to-b from-[#112A56]/90 via-[#081326]/95 to-[#050B16] backdrop-blur-2xl shadow-[0_15px_50px_rgba(0,40,255,.2)] sm:shadow-[0_25px_80px_rgba(0,40,255,.25)] p-5 sm:p-8 mx-auto">
+        {/* Inner Top Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 sm:w-72 sm:h-72 bg-yellow-400/20 blur-[80px] sm:blur-[120px] rounded-full pointer-events-none" />
 
-      {/* HEADER */}
-      <header className="w-full px-6 lg:px-16 py-8 flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-3 text-blue-600 group">
-          <div className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl shadow-md shadow-blue-500/20 transform transition-transform group-hover:scale-105 duration-300">
-            <Zap size={24} fill="currentColor" />
-          </div>
-          <span className="text-2xl font-black tracking-tight text-slate-800">
-            Sociala<span className="text-blue-500">.</span>
-          </span>
+        {/* Header */}
+        <div className="relative text-center mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-wide uppercase drop-shadow-md">
+            {t("welcomeBackDescription") || "WELCOME BACK"}
+          </h2>
+          <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-400 font-medium">{t("discoverMore") || "Continue your poker journey"}</p>
         </div>
 
-        {/* Bộ chuyển ngôn ngữ tối giản */}
-        <div className="flex items-center gap-3 text-xs font-bold text-slate-400 bg-white/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-slate-200/50 shadow-sm">
-          <span 
-            onClick={() => changeLanguage("en")}
-            className={`cursor-pointer transition-colors ${locale === "en" ? "text-blue-600" : "hover:text-blue-500"}`}
-          >EN</span>
-          <span className="text-slate-200">|</span>
-          <span 
-            onClick={() => changeLanguage("ja")}
-            className={`cursor-pointer transition-colors ${locale === "ja" ? "text-blue-600" : "hover:text-blue-500"}`}
-          >JA</span>
-          <span className="text-slate-200">|</span>
-          <span 
-            onClick={() => changeLanguage("vi")}
-            className={`cursor-pointer transition-colors ${locale === "vi" ? "text-blue-600" : "hover:text-blue-500"}`}
-          >VI</span>
-        </div>
-      </header>
+        <form className="relative space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
+          {/* Email Input */}
+          <div className="space-y-1">
+            <div className="relative group">
+              <Mail
+                className={`absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-300 ${emailHasError ? "text-rose-400" : "text-blue-300 group-focus-within:text-yellow-400"}`}
+              />
+              <input
+                id="email"
+                type="email"
+                placeholder={t("yourEmailAddress")}
+                {...register("email", {
+                  onChange: () => clearFieldError("email"),
+                })}
+                className={`${inputBase} ${emailHasError ? inputError : ""}`}
+              />
+            </div>
 
-      {/* TRUNG TÂM: FORM ĐĂNG NHẬP NỔI BẬT TRÊN NỀN TRẮNG XANH */}
-      <main className="flex-1 flex items-center justify-center px-4 py-10 relative z-10">
-        <div className="w-full max-w-[460px] bg-white/80 backdrop-blur-2xl rounded-[32px] shadow-xl shadow-blue-900/5 border border-white p-8 lg:p-12 flex flex-col">
-
-          <div className="mb-8">
-            <h1 className="text-3xl font-black text-slate-800 tracking-tight leading-tight">
-              {t("welcomeBackDescription")}
-            </h1>
-            <p className="text-slate-400 text-sm mt-2 font-medium">
-              {t("discoverMore")}
-            </p>
+            <AnimatePresence mode="wait">
+              {emailHasError && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="text-rose-400 text-[10px] sm:text-xs ml-2 flex items-center gap-1 mt-1 font-medium"
+                >
+                  <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {errors.email?.message || fieldErrors.email}
+                </motion.p>
+              )}
+            </AnimatePresence>
           </div>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            {/* Email Input */}
-            <div className="space-y-1">
-              <div className="relative group">
-                <Mail
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${emailHasError ? "text-red-400" : "text-slate-400 group-focus-within:text-blue-500"}`}
-                  size={18}
-                />
-                <input
-                  id="emailOrPhone"
-                  type="email"
-                  placeholder={t("yourEmailAddress")}
-                  {...register("emailOrPhone", {
-                    onChange: () => clearFieldError("email"),
-                  })}
-                  className={`${inputBase} ${emailHasError ? inputError : inputNormal}`}
-                />
-              </div>
-
-              <AnimatePresence mode="wait">
-                {errors.emailOrPhone && !fieldErrors.email && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    className="text-red-500 text-xs ml-1 flex items-center gap-1 mt-1 font-medium"
-                  >
-                    <AlertCircle size={12} />
-                    {errors.emailOrPhone.message}
-                  </motion.p>
-                )}
-              </AnimatePresence>
+          {/* Password Input */}
+          <div className="space-y-1">
+            <div className="relative group">
+              <Lock
+                className={`absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-300 ${passwordHasError ? "text-rose-400" : "text-blue-300 group-focus-within:text-yellow-400"}`}
+              />
+              <input
+                id="password"
+                type="password"
+                placeholder={t("password")}
+                {...register("password", {
+                  onChange: () => clearFieldError("password"),
+                })}
+                className={`${inputBase} ${passwordHasError ? inputError : ""}`}
+              />
             </div>
 
-            {/* Password Input */}
-            <div className="space-y-1">
-              <div className="relative group">
-                <Lock
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-300 ${passwordHasError ? "text-red-400" : "text-slate-400 group-focus-within:text-blue-500"}`}
-                  size={18}
-                />
-                <input
-                  id="password"
-                  type="password"
-                  placeholder={t("password")}
-                  {...register("password", {
-                    onChange: () => clearFieldError("password"),
-                  })}
-                  className={`${inputBase} ${passwordHasError ? inputError : inputNormal}`}
-                />
-              </div>
+            <AnimatePresence mode="wait">
+              {passwordHasError && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="text-rose-400 text-[10px] sm:text-xs ml-2 flex items-center gap-1 mt-1 font-medium"
+                >
+                  <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {errors.password?.message || fieldErrors.password}
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
 
-              <AnimatePresence mode="wait">
-                {errors.password && !fieldErrors.password && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    className="text-red-500 text-xs ml-1 flex items-center gap-1 mt-1 font-medium"
-                  >
-                    <AlertCircle size={12} />
-                    {errors.password.message}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Remember Me + Forgot Password */}
-            <div className="flex items-center justify-between py-1">
-              <button
-                type="button"
-                onClick={() => setRememberMe((v) => !v)}
-                className="flex items-center gap-2.5 group"
-              >
-                <div className={`relative w-9 h-5 rounded-full transition-colors duration-300 ${rememberMe ? "bg-blue-500" : "bg-slate-200"}`}>
-                  <motion.div
-                    animate={{ x: rememberMe ? 18 : 2 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 28 }}
-                    className="absolute top-[2px] w-4 h-4 bg-white rounded-full shadow-sm"
-                  />
-                </div>
-                <span className={`text-xs font-bold transition-colors duration-200 ${rememberMe ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"}`}>
-                  {t("rememberMe")}
-                </span>
-              </button>
-
-              <Link href="/forgot-password" className="text-xs font-bold text-slate-400 hover:text-blue-500 transition-colors">
-                {t("forgotPassword")}
-              </Link>
-            </div>
-
-            {/* Nút Đăng Nhập Đậm Chất Sinh Động */}
+          {/* Remember Me + Forgot Password */}
+          <div className="flex items-center justify-between py-1 sm:py-2">
             <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold text-base shadow-lg shadow-blue-500/20 hover:opacity-95 hover:shadow-xl hover:shadow-blue-500/30 active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
+              type="button"
+              onClick={() => setRememberMe((v) => !v)}
+              className="flex items-center gap-1.5 sm:gap-2 group outline-none"
             >
-              {isSubmitting ? "Processing..." : t("loginButton")}
+              <div
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-[3px] sm:rounded-[4px] border flex items-center justify-center transition-all duration-300 ${rememberMe ? "border-yellow-400 bg-yellow-400/20 text-yellow-400" : "border-slate-500 bg-transparent text-transparent group-hover:border-slate-400"}`}
+              >
+                <svg
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  className={`w-2.5 h-2.5 sm:w-3 sm:h-3 transition-opacity duration-300 ${rememberMe ? "opacity-100" : "opacity-0"}`}
+                >
+                  <path
+                    d="M3 7.5L5.5 10L11 4"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              <span
+                className={`text-[11px] sm:text-sm transition-colors duration-300 ${rememberMe ? "text-yellow-300 font-semibold" : "text-slate-400 group-hover:text-slate-300"}`}
+              >
+                {t("rememberMe")}
+              </span>
             </button>
 
-            <p className="text-center text-xs font-bold text-slate-400 pt-2">
-              {t("dontHaveAccount")}{" "}
-              <Link href="/register" className="text-blue-500 font-extrabold ml-1 hover:underline">
-                {t("registerNow")}
-              </Link>
-            </p>
+            <Link
+              href="/forgot-password"
+              className="text-[11px] sm:text-sm font-semibold text-slate-400 hover:text-yellow-400 transition-colors"
+            >
+              {t("forgotPassword")}
+            </Link>
+          </div>
 
-            {/* Đường chia cách */}
-            <div className="relative flex items-center justify-center py-3">
-              <div className="w-full border-t border-slate-100"></div>
-              <span className="absolute px-4 text-[10px] font-bold text-slate-400 bg-white/90 rounded-full tracking-widest uppercase">
-                {t("orContinueWith")}
-              </span>
-            </div>
+          {/* Inject style for shine animation directly */}
+          <style dangerouslySetInnerHTML={{
+            __html: `
+            @keyframes shine {
+              0% { transform: translateX(-250%); }
+              100% { transform: translateX(700%); }
+            }
+          `}} />
 
-            {/* Nút Mạng Xã Hội */}
-            <div className="grid grid-cols-2 gap-3">
-              <button type="button" className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-slate-100 bg-white text-slate-600 hover:bg-slate-50 hover:border-slate-200 transition-all text-xs font-bold shadow-sm">
-                <svg width="16" height="16" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-1 .67-2.28 1.07-3.71 1.07-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                  <path d="M5.84 14.11c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.09H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.91l3.66-2.8z" fill="#FBBC05" />
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.09l3.66 2.8c.87-2.6 3.3-4.51 6.16-4.51z" fill="#EA4335" />
-                </svg>
-                Google
-              </button>
+          {/* 3D Gold Metallic Button */}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="relative overflow-hidden h-12 sm:h-14 w-full rounded-xl sm:rounded-2xl bg-gradient-to-b from-[#FFF6B3] via-[#FFD84D] to-[#C79500] font-black tracking-[.2em] sm:tracking-[.25em] text-[#091321] text-xs sm:text-sm shadow-lg shadow-yellow-500/30 transition-all hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(255,215,0,.45)] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed uppercase"
+          >
+            {/* Shine effect */}
+            <div className="absolute left-[-50%] top-0 h-full w-8 sm:w-10 rotate-12 bg-white/40 blur-[2px] animate-[shine_3s_linear_infinite]" />
+            <span className="relative z-10 drop-shadow-sm">{isSubmitting ? "PROCESSING..." : t("loginButton")}</span>
+          </button>
 
-              <button
-                type="button"
-                onClick={handleFacebookLogin}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#1877f2] text-white hover:bg-[#166fe5] transition-all text-xs font-bold shadow-sm shadow-blue-600/10"
+          <p className="text-center text-[10px] sm:text-xs font-bold text-slate-400 pt-1 sm:pt-2">
+            {t("dontHaveAccount")}{" "}
+            <Link
+              href="/register"
+              className="text-yellow-400 font-extrabold ml-1 hover:underline uppercase tracking-wider transition-colors"
+            >
+              {t("registerNow")}
+            </Link>
+          </p>
+
+          {/* Divider */}
+          <div className="flex items-center gap-2 sm:gap-3 py-1 sm:py-2">
+            <div className="flex-1 h-px bg-blue-700/30" />
+            <span className="text-yellow-300 text-[9px] sm:text-xs font-bold tracking-[.2em] sm:tracking-[.3em] uppercase whitespace-nowrap">
+              ✦ {t("orContinueWith") || "OR CONTINUE"} ✦
+            </span>
+            <div className="flex-1 h-px bg-blue-700/30" />
+          </div>
+
+          {/* Social Login Cards */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <button
+              type="button"
+              className="flex items-center justify-center gap-1.5 sm:gap-2 h-10 sm:h-12 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 hover:border-yellow-400 hover:bg-white/10 transition-all text-xs sm:text-sm font-bold text-white uppercase tracking-wider"
+            >
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24">
+                <path
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-1 .67-2.28 1.07-3.71 1.07-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M5.84 14.11c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.09H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.91l3.66-2.8z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.47 3.47 2.18 7.09l3.66 2.8c.87-2.6 3.3-4.51 6.16-4.51z"
+                  fill="#EA4335"
+                />
+              </svg>
+              Google
+            </button>
+
+            <button
+              type="button"
+              onClick={handleFacebookLogin}
+              className="flex items-center justify-center gap-1.5 sm:gap-2 h-10 sm:h-12 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 hover:border-yellow-400 hover:bg-white/10 transition-all text-xs sm:text-sm font-bold text-white uppercase tracking-wider"
+            >
+              <svg
+                className="w-4 h-4 sm:w-5 sm:h-5"
+                viewBox="0 0 24 24"
+                fill="#1877f2"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                </svg>
-                Facebook
-              </button>
-            </div>
-          </form>
-        </div>
-      </main>
-
-      {/* FOOTER */}
-      <footer className="w-full py-6 text-center text-[11px] font-bold text-slate-400 tracking-wider relative z-10">
-        SOCIALA NETWORK &copy; {new Date().getFullYear()}
-      </footer>
-    </div>
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+              </svg>
+              Facebook
+            </button>
+          </div>
+        </form>
+      </div>
+    </motion.div>
   );
 }

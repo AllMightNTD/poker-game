@@ -23,14 +23,36 @@ const WinnerHighlight: React.FC<{ winners: WinnerData[]; maxPlayers: number; her
         const pos = positions[winner.seatNumber - 1];
         if (!pos) return null;
         return (
-          <motion.div
-            key={winner.userId}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.06, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="absolute w-[110px] sm:w-[150px] md:w-[200px] h-[110px] sm:h-[150px] md:h-[200px] -ml-[55px] sm:-ml-[75px] md:-ml-[100px] -mt-[55px] sm:-mt-[75px] md:-mt-[100px] rounded-full border-4 border-[#F4B942] shadow-[0_0_30px_rgba(244,185,66,0.6)]"
-            style={{ top: `${pos.top}%`, left: `${pos.left}%` }}
-          />
+            <motion.div
+              key={winner.userId}
+              className="absolute pointer-events-none flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2"
+              style={{ top: `${pos.top}%`, left: `${pos.left}%` }}
+            >
+              {/* Highlight Ring */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.06, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="absolute w-[110px] sm:w-[150px] md:w-[200px] h-[110px] sm:h-[150px] md:h-[200px] rounded-full border-4 border-[#F4B942] shadow-[0_0_30px_rgba(244,185,66,0.6)]"
+              />
+
+              {/* Net Gain Text Popup */}
+              {winner.netGainLoss !== undefined && winner.netGainLoss > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 0, scale: 0.5 }}
+                  animate={{ opacity: [0, 1, 1, 0], y: -80, scale: 1.2 }}
+                  transition={{ duration: 2.5, ease: "easeOut", delay: 0.5 }}
+                  className="absolute z-50 text-2xl md:text-4xl font-black tracking-wider"
+                  style={{
+                    color: "#4ade80",
+                    textShadow: "0px 4px 10px rgba(74, 222, 128, 0.8), 0px 0px 20px rgba(0,0,0,0.8)",
+                    WebkitTextStroke: "1px #14532d",
+                  }}
+                >
+                  +${winner.netGainLoss.toLocaleString()}
+                </motion.div>
+              )}
+            </motion.div>
         );
       })}
     </div>
@@ -75,7 +97,9 @@ const FlyingChips: React.FC<{ winners: WinnerData[]; maxPlayers: number }> = ({
     <div className="absolute inset-0 pointer-events-none z-40">
       {winners.map((winner) => {
         const targetPos = positions[winner.seatNumber - 1] || { top: 50, left: 50 };
-        return Array.from({ length: 8 }).map((_, i) => (
+        // Scale number of chips visually (min 5, max 25) based on win amount
+        const chipCount = Math.min(25, Math.max(5, Math.floor(winner.amountWon / 500)));
+        return Array.from({ length: chipCount }).map((_, i) => (
           <motion.div
             key={`${winner.userId}-${i}`}
             initial={{ top: "38%", left: "50%", scale: 0.5, opacity: 0 }}
@@ -86,8 +110,8 @@ const FlyingChips: React.FC<{ winners: WinnerData[]; maxPlayers: number }> = ({
               opacity: [0, 1, 1, 0],
             }}
             transition={{
-              duration: 1.2,
-              delay: i * 0.08,
+              duration: 1.0 + (Math.random() * 0.4), // slightly randomize duration
+              delay: i * 0.05,
               ease: "easeOut",
             }}
             className="absolute w-6 h-6 -ml-3 -mt-3 bg-gradient-to-br from-[#F4B942] to-[#C9861C] rounded-full border border-white/20 shadow-md flex items-center justify-center text-[10px] font-black text-slate-900"
@@ -176,6 +200,7 @@ export const AnimationManager: React.FC<AnimationManagerProps> = ({ socket }) =>
               userId,
               seatNumber: w.seat_number,
               amountWon: p.amount,
+              netGainLoss: w.net_gain_loss,
               handName,
               potLabel: p.label,
               isBigWin,
@@ -186,6 +211,7 @@ export const AnimationManager: React.FC<AnimationManagerProps> = ({ socket }) =>
             userId,
             seatNumber: w.seat_number,
             amountWon: w.win_amount || 0,
+            netGainLoss: w.net_gain_loss,
             handName,
             isBigWin,
           });

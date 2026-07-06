@@ -2,7 +2,7 @@ import { Controller, Get, Post, Req, Body, UseGuards } from '@nestjs/common';
 import { FacebookAuthGuard } from '../guards/facebook-auth.guard';
 import { AuthService } from '../services/auth/auth.service';
 import { AuthGuard } from '../../guards/auth.guard';
-import { RegisterDto, LoginDto } from '../dto/auth.dto';
+import { RegisterDto, LoginDto, RefreshTokenDto } from '../dto/auth.dto';
 import { RequestPasswordResetDto } from '../dto/request-reset-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 
@@ -42,6 +42,11 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @Post('refresh-token')
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refreshToken(refreshTokenDto);
   }
 
   @UseGuards(AuthGuard)

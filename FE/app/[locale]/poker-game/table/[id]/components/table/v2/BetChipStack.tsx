@@ -86,9 +86,10 @@ const BetChipStack: React.FC<BetChipStackProps> = React.memo(({ amount, throwVec
              ))}
            </div>
            
-           <div className="bg-slate-950/80 rounded px-1.5 py-0.5 mt-4 border border-slate-700/50 backdrop-blur shadow-sm z-20">
+           <div className="bg-slate-950/90 rounded-md px-2 py-0.5 mt-4 border border-amber-500/30 backdrop-blur shadow-md z-20 flex items-center gap-1">
+             <span className="text-[7px] md:text-[8px] font-bold text-slate-400 uppercase tracking-widest">Bet</span>
              <span className="text-[9px] md:text-[11px] font-black text-amber-400 tracking-wider">
-               {formatVal(amount)}
+               ${formatVal(amount)}
              </span>
            </div>
         </motion.div>

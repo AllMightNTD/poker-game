@@ -220,10 +220,10 @@ const SeatV2: React.FC<SeatV2Props> = ({
                 if (isPendingOrSeated) return;
                 setIsBuyInOpen(true);
               }}
-              className={`w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full border border-white/20 bg-black/40 flex flex-col items-center justify-center transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-md ${isPendingOrSeated ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-[#F4B942]/60 hover:bg-black/60 hover:shadow-[0_0_20px_rgba(244,185,66,0.3)] hover:scale-105 group'}`}
+              className={`w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full border-2 border-dashed border-slate-600 bg-black/40 flex flex-col items-center justify-center transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-md animate-pulse ${isPendingOrSeated ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-[#F4B942] hover:bg-black/60 hover:shadow-[0_0_20px_rgba(244,185,66,0.6)] hover:scale-105 group hover:animate-none'}`}
             >
-              <span className="text-white/60 group-hover:text-[#F4B942] text-[18px] font-light leading-none mb-0.5">+</span>
-              <span className="text-[8px] md:text-[9px] font-black text-white/60 group-hover:text-[#F4B942] uppercase tracking-widest">Ngồi</span>
+              <span className="text-slate-400 group-hover:text-[#F4B942] text-[18px] font-light leading-none mb-0.5">+</span>
+              <span className="text-[7px] md:text-[8px] font-black text-slate-400 group-hover:text-[#F4B942] uppercase tracking-widest text-center leading-none">SIT<br/>HERE</span>
             </div>
           )}
         </div>
@@ -256,7 +256,12 @@ const SeatV2: React.FC<SeatV2Props> = ({
       <ActionBubble action={player.lastAction || ''} />
 
       {/* Main Seat Container */}
-      <SeatPanel isActive={player.isActive} isHero={player.isHero} isFolded={player.isFolded}>
+      <SeatPanel 
+        isActive={player.isActive} 
+        isHero={player.isHero} 
+        isFolded={player.isFolded}
+        isSittingOut={player.lastAction === 'Sit Out' || player.lastAction === 'Mất mạng'}
+      >
         
         {/* Avatar + Timer Ring */}
         <div className="relative shrink-0">

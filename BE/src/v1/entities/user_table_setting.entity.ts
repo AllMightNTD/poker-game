@@ -37,17 +37,10 @@ export class UserTableSetting extends BaseEntity {
   @Column({ type: 'boolean', default: false })
   mute_all_voice: boolean;
 
-  @CreateDateColumn({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP(6)'
-  })
+  @CreateDateColumn()
   created_at: Date;
 
-  @UpdateDateColumn({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP(6)',
-    onUpdate: 'CURRENT_TIMESTAMP(6)'
-  })
+  @UpdateDateColumn()
   updated_at: Date;
 
   // ---- Relations ----

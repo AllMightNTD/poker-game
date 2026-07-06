@@ -37,9 +37,14 @@ const SeatCards: React.FC<SeatCardsProps> = React.memo(({ cards, isFolded, isHer
   const cardSize = isHero ? (isMobile ? "md" : "lg") : (isMobile ? "sm" : "md");
 
   return (
-    <div className={`absolute -top-[22px] md:-top-[40px] left-1/2 -translate-x-1/2 flex -space-x-2.5 md:-space-x-6 z-30 pointer-events-none transition-all duration-300 ${isFolded ? 'opacity-40 grayscale translate-y-2' : ''}`}>
+    <motion.div 
+      initial={false}
+      animate={isFolded ? { y: -60, scale: 0.3, opacity: 0 } : { y: 0, scale: 1, opacity: 1 }}
+      transition={{ duration: 0.5, ease: "anticipate" }}
+      className={`absolute -top-[22px] md:-top-[40px] left-1/2 -translate-x-1/2 flex -space-x-2.5 md:-space-x-6 z-30 pointer-events-none`}
+    >
       <AnimatePresence>
-        {cards.map((card, cIdx) => (
+        {!isFolded && cards.map((card, cIdx) => (
           <motion.div
             key={`hole-${cIdx}-${card.suit}-${card.rank}`}
             initial={{ opacity: 0, x: flyVector.x, y: flyVector.y, scale: 0.2, rotate: 180 }}
@@ -51,18 +56,24 @@ const SeatCards: React.FC<SeatCardsProps> = React.memo(({ cards, isFolded, isHer
               ease: "easeOut" 
             }}
             style={{ y: cIdx === 0 ? 2 : 0 }} // The translate-y from original CSS
-            className="shadow-[0_5px_15px_rgba(0,0,0,0.5)] rounded-lg"
+            className="shadow-[0_5px_15px_rgba(0,0,0,0.5)] rounded-lg relative"
           >
-            <PokerCard
-              suit={card.suit as any}
-              rank={card.rank}
-              isFaceUp={isHero || card.suit !== "back"}
-              size={cardSize}
-            />
+            {/* Glow effect for Hero cards */}
+            {isHero && (
+              <div className="absolute inset-0 bg-amber-400/20 blur-md rounded-lg z-0 pointer-events-none animate-pulse" />
+            )}
+            <div className="relative z-10">
+              <PokerCard
+                suit={card.suit as any}
+                rank={card.rank}
+                isFaceUp={isHero || card.suit !== "back"}
+                size={cardSize}
+              />
+            </div>
           </motion.div>
         ))}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 });
 SeatCards.displayName = 'SeatCards';

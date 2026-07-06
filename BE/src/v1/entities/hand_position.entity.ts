@@ -52,17 +52,10 @@ export class HandPosition extends BaseEntity {
   @Column({ type: 'bigint', default: '0' })
   stack_at_start: string;  // stack chip lúc bắt đầu ván
 
-  @CreateDateColumn({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP(6)'
-  })
+  @CreateDateColumn()
   created_at: Date;
 
-  @UpdateDateColumn({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP(6)',
-    onUpdate: 'CURRENT_TIMESTAMP(6)'
-  })
+  @UpdateDateColumn()
   updated_at: Date;
 
   // ---- Relations ----

@@ -101,6 +101,7 @@ export interface WinnerData {
   userId: string;
   seatNumber: number;
   amountWon: number;
+  netGainLoss?: number;
   handName?: string;
   isBigWin: boolean;
   potLabel?: string;

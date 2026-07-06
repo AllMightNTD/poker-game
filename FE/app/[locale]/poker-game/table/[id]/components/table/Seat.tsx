@@ -1,3 +1,6 @@
+/**
+ * @deprecated Please use v2/SeatV2.tsx instead. This file is kept for backwards compatibility.
+ */
 "use client";
 
 import { useCurrentUser } from "@/core/providers/user-provider";

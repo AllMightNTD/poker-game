@@ -49,23 +49,37 @@ export const SocketProvider = ({
         },
         withCredentials: true,
         reconnection: true,
-        reconnectionAttempts: 5,
+        reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
+        reconnectionDelayMax: 10000,
+        randomizationFactor: 0.5,
       }
     );
 
     socketInstance.on("connect", () => {
-      console.log("Socket connected:", socketInstance.id);
+      console.log(`[${new Date().toISOString()}] Socket connected:`, socketInstance.id);
       setIsConnected(true);
     });
 
     socketInstance.on("disconnect", (reason) => {
-      console.log("Socket disconnected:", reason);
+      console.error(`[${new Date().toISOString()}] Socket disconnected. Reason: ${reason}`);
+      if (reason === "io server disconnect") {
+        // the disconnection was initiated by the server, you need to reconnect manually
+        socketInstance.connect();
+      }
       setIsConnected(false);
     });
 
+    socketInstance.io.on("reconnect_attempt", (attempt) => {
+      console.warn(`[${new Date().toISOString()}] Socket reconnecting... Attempt: ${attempt}`);
+    });
+
+    socketInstance.io.on("reconnect", (attempt) => {
+      console.log(`[${new Date().toISOString()}] Socket successfully reconnected after ${attempt} attempts`);
+    });
+
     socketInstance.on("connect_error", (error) => {
-      console.error("Socket connect error:", error.message);
+      console.error(`[${new Date().toISOString()}] Socket connect error:`, error.message);
     });
 
     socketInstance.on("connected", (data) => {

@@ -19,21 +19,13 @@ export class RegisterDto {
 
   @IsString()
   @IsNotEmpty()
-  full_name: string;
-
-  @IsString()
-  @IsNotEmpty()
-  username: string;
-
-  @IsString()
-  @IsOptional()
-  phone?: string;
+  user_name: string;
 }
 
 export class LoginDto {
   @IsString()
   @IsNotEmpty()
-  emailOrPhone: string;
+  email: string;
 
   @IsString()
   @IsNotEmpty()
@@ -43,3 +35,10 @@ export class LoginDto {
   @IsOptional()
   rememberMe?: boolean;
 }
+
+export class RefreshTokenDto {
+  @IsString()
+  @IsNotEmpty()
+  refreshToken: string;
+}
+

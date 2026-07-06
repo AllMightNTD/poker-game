@@ -1,3 +1,6 @@
+/**
+ * @deprecated Removed in favor of unifying everything under SeatV2.tsx
+ */
 import React from 'react';
 import { Player } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';

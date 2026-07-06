@@ -79,17 +79,10 @@ export class GameHand extends BaseEntity {
   @Column({ type: 'datetime', nullable: true })
   ended_at: Date | null;
 
-  @CreateDateColumn({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP(6)'
-  })
+  @CreateDateColumn()
   created_at: Date;
 
-  @UpdateDateColumn({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP(6)',
-    onUpdate: 'CURRENT_TIMESTAMP(6)'
-  })
+  @UpdateDateColumn()
   updated_at: Date;
 
   // ---- Relations ----

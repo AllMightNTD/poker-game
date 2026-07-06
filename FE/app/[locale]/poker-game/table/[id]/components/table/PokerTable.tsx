@@ -8,7 +8,6 @@ import { CommunityCards } from "./CommunityCards";
 import { PotDisplay } from "./PotDisplay";
 import DealerDeck from "./v2/DealerDeck";
 import SeatV2 from "./v2/SeatV2";
-import HeroSeat from "./v2/HeroSeat";
 
 export const PokerTable = memo(function PokerTable() {
   const {
@@ -64,7 +63,6 @@ export const PokerTable = memo(function PokerTable() {
         {Array.from({ length: maxPlayers || 6 }, (_, i) => {
           const seatNumber = i + 1;
           const player = players.find((p) => p.seatIndex === seatNumber);
-          if (player?.isHero) return <HeroSeat key={`seat-${seatNumber}`} seatNumber={seatNumber} player={player} />;
           return <SeatV2 key={`seat-${seatNumber}`} seatNumber={seatNumber} player={player} />;
         })}
       </div>

@@ -39,29 +39,39 @@ const SeatTimerRing: React.FC<SeatTimerRingProps> = React.memo(({ endTime, maxTi
   const circumference = radius * 2 * Math.PI;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
+  const isCritical = timeLeft <= 5000;
+
   return (
-    <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none -rotate-90 z-10" width={size} height={size}>
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke="rgba(0,0,0,0.4)"
-        strokeWidth={strokeWidth}
-      />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        className={`${color} transition-colors duration-300`}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={strokeDashoffset}
-        style={{ transition: 'stroke-dashoffset 0.1s linear' }}
-      />
-    </svg>
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 flex items-center justify-center">
+      {isCritical && (
+        <div 
+          className="absolute rounded-full border-2 border-rose-500 animate-ping opacity-75"
+          style={{ width: size, height: size }}
+        />
+      )}
+      <svg className="-rotate-90" width={size} height={size}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="rgba(0,0,0,0.4)"
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          className={`${color} transition-colors duration-300`}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          style={{ transition: 'stroke-dashoffset 0.1s linear, stroke 0.3s ease' }}
+        />
+      </svg>
+    </div>
   );
 });
 SeatTimerRing.displayName = 'SeatTimerRing';

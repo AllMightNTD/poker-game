@@ -1,10 +1,4 @@
-import {
-  BaseEntity,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryColumn,
-} from 'typeorm';
+import {BaseEntity, Entity, JoinColumn, ManyToOne, PrimaryColumn, CreateDateColumn, UpdateDateColumn} from 'typeorm';
 import { Role } from './role.entity';
 import { Permission } from './permission.entity';
 
@@ -29,4 +23,10 @@ export class RolePermission extends BaseEntity {
   })
   @JoinColumn({ name: 'permission_id' })
   permission: Permission;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
 }

@@ -12,8 +12,10 @@ const SeatAvatar: React.FC<SeatAvatarProps> = React.memo(({ avatarUrl, isFolded,
   return (
     <div className={`relative rounded-full p-[3px] z-20 transition-all duration-300
       ${isActive 
-        ? 'bg-gradient-to-b from-[#F4B942] to-[#E0942A] shadow-[0_0_20px_rgba(244,185,66,0.8),_inset_0_0_10px_rgba(0,0,0,0.5)] scale-110' 
-        : 'bg-gradient-to-b from-[#4FC3F7] to-[#0288D1] shadow-[0_0_15px_rgba(79,195,247,0.6)]'
+        ? 'bg-gradient-to-b from-[#4ade80] to-[#16a34a] shadow-[0_0_20px_rgba(74,222,128,0.8),_inset_0_0_10px_rgba(0,0,0,0.5)] scale-110' 
+        : isHero 
+          ? 'bg-gradient-to-b from-[#F4B942] to-[#E0942A] shadow-[0_0_15px_rgba(244,185,66,0.6)]'
+          : 'bg-gradient-to-b from-[#4FC3F7] to-[#0288D1] shadow-[0_0_15px_rgba(79,195,247,0.6)]'
       }
     `}>
       <div className={`${sizeClass} rounded-full overflow-hidden bg-[#111] flex items-center justify-center border-[2px] border-black`}>

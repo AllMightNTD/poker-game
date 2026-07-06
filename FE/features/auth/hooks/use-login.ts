@@ -10,7 +10,7 @@ import { AuthService } from "../services/auth.service";
 const REMEMBER_EMAIL_KEY = "sociala_remembered_email";
 
 export const getLoginSchema = (t: any) => z.object({
-  emailOrPhone: z.string().min(1, t("validation.emptyEmail")).email(t("validation.invalidEmail")),
+  email: z.string().min(1, t("validation.emptyEmail")).email(t("validation.invalidEmail")),
   password: z.string().min(6, t("validation.passwordMin")),
 });
 
@@ -39,7 +39,7 @@ export function useLogin(t: any) {
   useEffect(() => {
     const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY);
     if (savedEmail) {
-      setValue("emailOrPhone", savedEmail);
+      setValue("email", savedEmail);
       setRememberMe(true);
     }
   }, [setValue]);
@@ -56,19 +56,23 @@ export function useLogin(t: any) {
         rememberMe,
       });
 
-      const token = result?.metadata?.accessToken || result?.accessToken;
-      const cookieExpireDays = result?.cookieExpireDays ?? 1;
+      const token = result?.metadata?.access_token || result?.access_token || result?.accessToken;
+      const refreshToken = result?.metadata?.refresh_token || result?.refresh_token || result?.refreshToken;
 
       if (token) {
-        Cookies.set("accessToken", token, { expires: cookieExpireDays });
+        Cookies.set("accessToken", token, { expires: 2 / 24 }); // 2 hours
+      }
+
+      if (refreshToken) {
+        Cookies.set("refreshToken", refreshToken, { expires: 7 }); // 7 days
       }
 
       if (rememberMe) {
-        localStorage.setItem(REMEMBER_EMAIL_KEY, data.emailOrPhone);
+        localStorage.setItem(REMEMBER_EMAIL_KEY, data.email);
       } else {
         localStorage.removeItem(REMEMBER_EMAIL_KEY);
       }
-      router.push("/");
+      router.push("/poker-game");
     } catch (error: any) {
       const errorCode = error.response?.data?.errorCode;
       const message = error.response?.data?.message;
@@ -78,7 +82,28 @@ export function useLogin(t: any) {
       } else if (errorCode === "WRONG_PASSWORD") {
         setFieldErrors({ password: message || t("api.wrongPassword") });
       } else {
-        toastError(message || t("api.loginFailed"));
+        if (Array.isArray(message)) {
+          const newErrors: FieldErrors = {};
+          let hasFieldError = false;
+          message.forEach((err: any) => {
+            if (err && typeof err === "object" && err.field && err.error) {
+              // Map email to email if needed
+              const field = err.field === "email" ? "email" : err.field;
+              newErrors[field as keyof FieldErrors] = err.error;
+              hasFieldError = true;
+            }
+          });
+
+          if (hasFieldError) {
+            setFieldErrors(newErrors);
+          } else if (typeof message[0] === "string") {
+            toastError(message[0]);
+          } else {
+            toastError(t("api.loginFailed"));
+          }
+        } else {
+          toastError(typeof message === "string" ? message : t("api.loginFailed"));
+        }
       }
     }
   };

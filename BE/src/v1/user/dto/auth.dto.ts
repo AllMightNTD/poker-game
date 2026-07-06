@@ -33,7 +33,7 @@ export class RegisterDto {
 export class LoginDto {
   @IsString()
   @IsNotEmpty()
-  emailOrPhone: string;
+  email: string;
 
   @IsString()
   @IsNotEmpty()

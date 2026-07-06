@@ -1,19 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { GroupMember } from '../entities/group_member.entity';
 import { User } from '../entities/user.entity';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
-import { UsersModule } from 'src/domains/users/users.module';
-import { FriendModule } from '../friend/friend.module';
-import { PostModule } from '../post/post.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, GroupMember]),
-    UsersModule,
-    FriendModule,
-    PostModule,
+    TypeOrmModule.forFeature([User]),
   ],
   controllers: [UserController],
   providers: [UserService],
