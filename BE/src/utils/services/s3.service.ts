@@ -37,10 +37,10 @@ export class S3Service {
     });
   }
 
-  private getUploadParams(file: any, folder?: string): PutObjectCommandInput {
+  private getUploadParams(file: Express.Multer.File, folder?: string): PutObjectCommandInput {
     const { originalname, mimetype, buffer } = file;
     const key = `${randomUUID()}_${originalname}`;
-    file.fileName = key;
+    file.filename = key;
 
     // Convert the expiration time (number) to a Date
     const expiresAt = new Date(Date.now() + this.signedUrlExpiry * 1000);
@@ -54,7 +54,7 @@ export class S3Service {
     };
   }
 
-  public async uploadOne(file: any, folder?: string): Promise<any> {
+  public async uploadOne(file: Express.Multer.File, folder?: string): Promise<Record<string, unknown>> {
     const params = this.getUploadParams(file, folder);
     const command = new PutObjectCommand(params);
     try {
@@ -67,7 +67,7 @@ export class S3Service {
 
   public async uploadMany(files: any[], folder?: string): Promise<any> {
     const promises: Promise<unknown>[] = [];
-    const upload = async (file: any) => {
+    const upload = async (file: Express.Multer.File) => {
       const params = this.getUploadParams(file, folder);
       const command = new PutObjectCommand(params);
       try {

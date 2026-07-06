@@ -35,7 +35,7 @@ export class PokerActionProcessor {
     }
 
     let stack = parseInt(activeSeat.stack);
-    let currentBet = parseInt(activeSeat.current_bet || '0');
+    let currentBet = parseInt(String(activeSeat.current_bet || '0'));
     let highestBet = parseInt(tableState.current_highest_bet || '0');
     const originalHighestBet = highestBet;
     let lastFullRaiseSize = parseInt(tableState.last_full_raise_size || '0');
@@ -195,7 +195,7 @@ export class PokerActionProcessor {
     const anyoneNotActed = playersNeedToAct.some(p => p.has_acted !== '1');
 
     const allBetsEqual = activePlayers.every(s => {
-      const playerBet = parseInt(s.current_bet || '0');
+      const playerBet = parseInt(String(s.current_bet || '0'));
       const isAllIn = parseInt(s.stack || '0') === 0;
       return playerBet === highestBet || isAllIn;
     });
@@ -255,7 +255,7 @@ export class PokerActionProcessor {
 
     let streetPotGained = 0;
     for (const s of seats) {
-      streetPotGained += parseInt(s.current_bet || '0');
+      streetPotGained += parseInt(String(s.current_bet || '0'));
     }
     const newTotalPot = parseInt(tableState.total_pot || '0'); // Already accumulated in processPlayerAction
 
@@ -367,7 +367,7 @@ export class PokerActionProcessor {
 
       if (!seat || (seat.status !== 'active' && seat.status !== 'disconnected' && seat.status !== 'sitting_out')) return;
 
-      const currentBet = parseInt(seat.current_bet || '0');
+      const currentBet = parseInt(String(seat.current_bet || '0'));
       const highestBet = parseInt(tableState.current_highest_bet || '0');
 
       const action = currentBet >= highestBet ? 'check' : 'fold';

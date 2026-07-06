@@ -7,6 +7,7 @@ import { JwtRefreshStrategy } from './strategy/jwt-refresh.strategy';
 import { UserModule } from './user/user.module';
 import { PokerLobbyModule } from './modules/poker-lobby.module';
 import { BlogsModule } from './blogs/blogs.module';
+import { AdminModule } from './admin/admin.module';
 
 @Global()
 @Module({
@@ -25,6 +26,7 @@ import { BlogsModule } from './blogs/blogs.module';
     UserModule,
     PokerLobbyModule,
     BlogsModule,
+    AdminModule,
   ],
 
   providers: [JwtRefreshStrategy],

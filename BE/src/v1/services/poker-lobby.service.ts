@@ -1,14 +1,17 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { Response } from 'express';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import * as crypto from 'crypto';
+import { Response } from 'express';
+import { withTransaction } from 'src/common/helpers/transaction.helper';
+import { UserStatus } from 'src/constants/user-status';
+import { DataSource } from 'typeorm';
 import { PokerTable } from '../entities/poker_table.entity';
 import { RoomAdminLog } from '../entities/room_admin_log.entity';
 import { SystemRevenue } from '../entities/system_revenue.entity';
 import { TableSession } from '../entities/table_session.entity';
+import { User } from '../entities/user.entity';
 import { Wallet } from '../entities/wallet.entity';
 import { PokerStateService } from './poker-state.service';
-import { User } from '../entities/user.entity';
-import { UserStatus } from 'src/constants/user-status';
+import { CreateRoomDto } from '../dto/create-room.dto';
 
 @Injectable()
 export class PokerLobbyService {
@@ -17,6 +20,7 @@ export class PokerLobbyService {
 
   constructor(
     private readonly stateService: PokerStateService,
+    private readonly dataSource: DataSource,
   ) { }
 
   // Tracks active socket connections at lobby level
@@ -91,38 +95,47 @@ export class PokerLobbyService {
     }
 
     const now = Date.now();
-    // Dọn dẹp key cũ đã hết hạn (> 5s)
+    // Clean up expired keys (> 5s)
     for (const [key, exp] of this.idempotencyKeys.entries()) {
       if (now > exp) {
         this.idempotencyKeys.delete(key);
       }
     }
 
-    // Check trùng key
+    // Check duplicate key
     if (this.idempotencyKeys.has(idempotencyKey)) {
       throw new ConflictException('Yêu cầu đang được xử lý, vui lòng không spam!');
     }
 
-    // Set key hết hạn sau 5 giây
+    // Set key expiry after 5 seconds
     this.idempotencyKeys.set(idempotencyKey, now + 5000);
 
-    let wallet = await Wallet.findOne({ where: { user_id: userId } });
-    if (!wallet) {
-      wallet = new Wallet();
-      wallet.user_id = userId;
-      wallet.chips_balance = '0';
-    }
+    // Use transaction + pessimistic_write to prevent race conditions
+    return withTransaction(this.dataSource, async (qr) => {
+      const wallet = await qr.manager.findOne(Wallet, {
+        where: { user_id: userId },
+        lock: { mode: 'pessimistic_write' },
+      });
 
-    const currentChips = BigInt(wallet.chips_balance);
-    const freeChips = BigInt('5000000'); // 5M chips miễn phí
-    wallet.chips_balance = (currentChips + freeChips).toString();
-    await wallet.save();
+      let targetWallet = wallet;
+      if (!targetWallet) {
+        targetWallet = qr.manager.create(Wallet, {
+          user_id: userId,
+          chips_balance: '0',
+        });
+      }
 
-    return {
-      success: true,
-      chips_balance: wallet.chips_balance,
-      added_amount: '5000000',
-    };
+      const currentChips = BigInt(targetWallet.chips_balance);
+      const freeChips = BigInt('5000000'); // 5M free chips
+      targetWallet.chips_balance = (currentChips + freeChips).toString();
+      await qr.manager.save(targetWallet);
+
+      return {
+        success: true,
+        chips_balance: targetWallet.chips_balance,
+        added_amount: '5000000',
+      };
+    });
   }
 
   /**
@@ -279,15 +292,7 @@ export class PokerLobbyService {
    * 7. POST /api/v1/rooms
    * Chức năng: Tạo bàn chơi mới
    */
-  async createRoom(userId: string, body: {
-    name: string;
-    game_type?: string;
-    small_blind: number | string;
-    big_blind?: number | string;
-    max_players?: number;
-    min_buyin?: number | string;
-    max_buyin?: number | string;
-  }) {
+  async createRoom(userId: string, body: CreateRoomDto) {
     if (!body.name || !body.name.trim()) {
       throw new BadRequestException('Tên bàn chơi không được để trống.');
     }
@@ -303,29 +308,35 @@ export class PokerLobbyService {
     const maxBuyin = body.max_buyin ? body.max_buyin.toString() : (sb * 200).toString();
     const gameType = body.game_type || "Texas Hold'em";
 
-    const table = new PokerTable();
-    table.name = body.name.trim();
-    table.owner_id = userId;
-    table.game_type = gameType;
-    table.small_blind = sb.toString();
-    table.big_blind = bb.toString();
-    table.max_players = maxPlayers;
-    table.min_buyin = minBuyin;
-    table.max_buyin = maxBuyin;
-    table.ante = '0';
-    table.status = 'waiting';
-    table.is_active = true;
+    // Wrap table creation + session cleanup in one atomic transaction
+    const table = await withTransaction(this.dataSource, async (qr) => {
+      const newTable = qr.manager.create(PokerTable, {
+        name: body.name.trim(),
+        owner_id: userId,
+        game_type: gameType,
+        small_blind: sb.toString(),
+        big_blind: bb.toString(),
+        max_players: maxPlayers,
+        min_buyin: minBuyin,
+        max_buyin: maxBuyin,
+        ante: '0',
+        status: 'waiting',
+        is_active: true,
+      });
+      await qr.manager.save(newTable);
 
-    await table.save();
+      // Cleanup stale sessions from any previous table with the same ID (ID reuse safety)
+      await qr.manager.update(
+        TableSession,
+        { table_id: newTable.id, member_status: 'active' },
+        { member_status: 'left', left_at: new Date() },
+      );
 
-    // ponytail: flush Redis để tránh ghost state khi ID bị tái sử dụng (auto-increment)
+      return newTable;
+    });
+
+    // Flush Redis ghost state after DB commit
     await this.stateService.deleteAllTableKeys(table.id);
-
-    // ponytail: cleanup MySQL sessions cũ cùng room_id (phòng trường hợp ID bị tái sử dụng)
-    await TableSession.update(
-      { table_id: table.id, member_status: 'active' },
-      { member_status: 'left', left_at: new Date() }
-    );
 
     return {
       success: true,
@@ -659,23 +670,29 @@ export class PokerLobbyService {
     }
 
     const bb = sb * 2;
-    table.small_blind = sb.toString();
-    table.big_blind = bb.toString();
-    table.min_buyin = (sb * 40).toString();
-    table.max_buyin = (sb * 200).toString();
-    await table.save();
+
+    // Table update + AuditLog in single atomic transaction
+    await withTransaction(this.dataSource, async (qr) => {
+      await qr.manager.update(PokerTable, { id: roomId }, {
+        small_blind: sb.toString(),
+        big_blind: bb.toString(),
+        min_buyin: (sb * 40).toString(),
+        max_buyin: (sb * 200).toString(),
+      });
+
+      const log = qr.manager.create(RoomAdminLog, {
+        room_id: roomId,
+        actor_id: userId,
+        log_type: 'config_change',
+        description: `Chủ phòng thay đổi Small Blind thành ${sb} (Big Blind: ${bb})`,
+      });
+      await qr.manager.save(log);
+    });
 
     await this.stateService.setTableState(roomId, {
       small_blind: sb,
       big_blind: bb,
     });
-
-    const log = new RoomAdminLog();
-    log.room_id = roomId;
-    log.actor_id = userId;
-    log.log_type = 'config_change';
-    log.description = `Chủ phòng thay đổi Small Blind thành ${sb} (Big Blind: ${bb})`;
-    await log.save();
 
     return {
       success: true,
@@ -729,21 +746,13 @@ export class PokerLobbyService {
     }
 
     const session = await TableSession.findOne({
-      where: {
-        table_id: roomId,
-        user_id: targetUserId,
-        member_status: 'active',
-      },
+      where: { table_id: roomId, user_id: targetUserId, member_status: 'active' },
     });
 
     let activeSession = session;
     if (!activeSession) {
       activeSession = await TableSession.findOne({
-        where: {
-          table_id: roomId,
-          user_id: targetUserId,
-          member_status: 'sitting_out',
-        },
+        where: { table_id: roomId, user_id: targetUserId, member_status: 'sitting_out' },
       });
     }
 
@@ -753,13 +762,17 @@ export class PokerLobbyService {
 
     await this.processLeave(targetUserId, roomId, activeSession);
 
-    const log = new RoomAdminLog();
-    log.room_id = roomId;
-    log.actor_id = userId;
-    log.target_id = targetUserId;
-    log.log_type = 'kick';
-    log.description = `Chủ phòng kick user ${targetUserId} ra khỏi bàn.`;
-    await log.save();
+    // AuditLog is written atomically only if leave succeeds
+    await withTransaction(this.dataSource, async (qr) => {
+      const log = qr.manager.create(RoomAdminLog, {
+        room_id: roomId,
+        actor_id: userId,
+        target_id: targetUserId,
+        log_type: 'kick',
+        description: `Chủ phòng kick user ${targetUserId} ra khỏi bàn.`,
+      });
+      await qr.manager.save(log);
+    });
 
     return { success: true };
   }
@@ -828,29 +841,6 @@ export class PokerLobbyService {
       throw new BadRequestException('Chỉ chủ phòng mới có quyền sửa đổi Stack.');
     }
 
-    const session = await TableSession.findOne({
-      where: {
-        table_id: roomId,
-        user_id: body.target_user_id,
-        member_status: 'active',
-      },
-    });
-
-    let activeSession = session;
-    if (!activeSession) {
-      activeSession = await TableSession.findOne({
-        where: {
-          table_id: roomId,
-          user_id: body.target_user_id,
-          member_status: 'sitting_out',
-        },
-      });
-    }
-
-    if (!activeSession) {
-      throw new NotFoundException('Người chơi không ở tại ghế chơi.');
-    }
-
     const seats = await this.stateService.getAllSeats(roomId);
     const targetSeat = seats.find(s => s.user_id === body.target_user_id);
     if (!targetSeat) {
@@ -863,31 +853,44 @@ export class PokerLobbyService {
     if (body.action === 'add') {
       currentRedisStack += amt;
     } else {
-      if (currentRedisStack < amt) {
-        currentRedisStack = BigInt(0);
-      } else {
-        currentRedisStack -= amt;
-      }
+      currentRedisStack = currentRedisStack < amt ? BigInt(0) : currentRedisStack - amt;
     }
 
-    await this.stateService.setSeat(roomId, targetSeat.seat_number, {
-      stack: currentRedisStack.toString(),
+    const newStack = currentRedisStack.toString();
+
+    // Wrap DB session update + AuditLog in a single transaction with pessimistic lock
+    await withTransaction(this.dataSource, async (qr) => {
+      const session = await qr.manager.findOne(TableSession, {
+        where: [
+          { table_id: roomId, user_id: body.target_user_id, member_status: 'active' },
+          { table_id: roomId, user_id: body.target_user_id, member_status: 'sitting_out' },
+        ],
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!session) {
+        throw new NotFoundException('Người chơi không ở tại ghế chơi.');
+      }
+
+      session.chips_at_table = newStack;
+      await qr.manager.save(session);
+
+      const log = qr.manager.create(RoomAdminLog, {
+        room_id: roomId,
+        actor_id: userId,
+        target_id: body.target_user_id,
+        log_type: 'config_change',
+        description: `Chủ phòng ${body.action === 'add' ? 'cộng' : 'trừ'} ${body.amount} phỉnh cho user ${body.target_user_id}. Stack mới: ${newStack}`,
+      });
+      await qr.manager.save(log);
     });
 
-    activeSession.chips_at_table = currentRedisStack.toString();
-    await activeSession.save();
-
-    const log = new RoomAdminLog();
-    log.room_id = roomId;
-    log.actor_id = userId;
-    log.target_id = body.target_user_id;
-    log.log_type = 'config_change';
-    log.description = `Chủ phòng ${body.action === 'add' ? 'cộng' : 'trừ'} ${body.amount} phỉnh cho user ${body.target_user_id}. Stack mới: ${currentRedisStack}`;
-    await log.save();
+    // Update Redis after DB commit succeeds
+    await this.stateService.setSeat(roomId, targetSeat.seat_number, { stack: newStack });
 
     return {
       success: true,
-      new_stack: currentRedisStack.toString(),
+      new_stack: newStack,
     };
   }
 
@@ -992,9 +995,9 @@ export class PokerLobbyService {
     const max = BigInt(table.max_buyin);
     const amt = BigInt(body.buy_in_chips);
 
-    // if (amt < min || amt > max) {
-    //   throw new BadRequestException('Buy-in amount is invalid.');
-    // }
+    if (amt < min || amt > max) {
+      throw new BadRequestException('Buy-in amount is invalid.');
+    }
 
     // Check user balance
     const wallet = await Wallet.findOne({ where: { user_id: userId } });

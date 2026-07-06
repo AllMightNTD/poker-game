@@ -15,10 +15,10 @@ export function successResponse<T>(
   };
 }
 
-export function errorResponse(
+export function errorResponse<T = unknown>(
   message = 'Error',
-  data: any = null,
-): ApiResponse<any> {
+  data: T | null = null,
+): ApiResponse<T | null> {
   return {
     status: 400,
     message,

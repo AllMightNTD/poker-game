@@ -6,7 +6,7 @@ import { User } from '../entities/user.entity';
 
 @Injectable()
 export class UserService extends BaseService<User, string> {
-  protected filterableColumns: any;
+  protected filterableColumns: string[] = ['email', 'user_name'];
 
   constructor(
     @InjectRepository(User)

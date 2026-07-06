@@ -15,7 +15,7 @@ export class IsExistConstraint implements ValidatorConstraintInterface {
     // empty
   }
 
-  async validate(value: any, args: ValidationArguments) {
+  async validate(value: unknown, args: ValidationArguments) {
     const [EntityClass, findCondition = args.property] = args.constraints;
 
     const repository = this.dataSource.getRepository(EntityClass);
@@ -34,9 +34,9 @@ export class IsExistConstraint implements ValidatorConstraintInterface {
 
 export function IsExist(
   validationOptions?: ValidationOptions,
-  constraints?: any[],
+  constraints?: unknown[],
 ) {
-  return function (object: any, propertyName: string) {
+  return function (object: object, propertyName: string) {
     registerDecorator({
       target: object.constructor,
       propertyName: propertyName,

@@ -16,14 +16,14 @@ export class UploadController {
   constructor(
     private readonly configService: ConfigService,
     private readonly s3Service: S3Service,
-  ) {}
+  ) { }
 
   @Post('local')
   @UseInterceptors(
     AnyFilesInterceptor({
       storage: diskStorage({
         destination: './public/tmp',
-        filename: (_: any, file: any, cb: any) => {
+        filename: (_: unknown, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
           cb(null, `${randomUUID()}_${file.originalname}`);
         },
       }),
@@ -78,7 +78,7 @@ export class UploadController {
     let data = await this.s3Service.uploadMany(files, tmpFolder);
 
     if (data && data.length) {
-      data = data.map((el: any) => {
+      data = data.map((el: { file: Express.Multer.File & { fileName?: string; originalname?: string } }) => {
         return {
           fileName: el.file.fileName,
           filePath: `${tmpFolder}/${el.file.fileName}`,
@@ -86,8 +86,6 @@ export class UploadController {
           fieldName: el.file.fieldname,
           originalName: el.file.originalname,
           folder: tmpFolder,
-          url: el.Location,
-          bucket: el.Bucket,
           server: 'aws/s3',
         };
       });

@@ -162,7 +162,7 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       const seats = await this.stateService.getAllSeats(roomId);
       const mySeat = seats.find(s => s.user_id === userId);
       if (mySeat && mySeat.disconnected_at && mySeat.disconnected_at !== '0') {
-        const updateData: any = { disconnected_at: '0' };
+        const updateData: Record<string, string> = { disconnected_at: '0' };
         if (mySeat.status === 'disconnected') {
           updateData.status = 'active';
         }
@@ -372,7 +372,7 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
           if (seat.is_bot === '1') continue;
           const seatIp = seat.ip || '127.0.0.1';
           if (seatIp !== '127.0.0.1' && seatIp !== '::1') {
-            const seatSubnet = this.getClassCSubnet(seatIp);
+            const seatSubnet = this.getClassCSubnet(String(seatIp));
             if (seatSubnet === userSubnet) {
               throw new Error('Địa chỉ IP hoặc đường truyền của bạn bị trùng lặp với người chơi khác tại bàn này (Chống thông đồng).');
             }

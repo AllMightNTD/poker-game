@@ -3,11 +3,6 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import {
-  AcceptLanguageResolver,
-  HeaderResolver,
-  I18nModule,
-} from 'nestjs-i18n';
 import path from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -53,17 +48,6 @@ import { AppV1Module } from './v1/app-v1.module';
       }),
     }),
     MailModule,
-    I18nModule.forRoot({
-      fallbackLanguage: 'en', // ngôn ngữ mặc định nếu không tìm thấy
-      fallbacks: {
-        'ja-*': 'ja', // nếu client gửi ja-JP, ja-Jpan, ... → dùng ja
-      },
-      loaderOptions: {
-        path: path.join(__dirname, '/i18n/'), // thư mục chứa file ngôn ngữ
-        watch: true, // auto reload khi dev (tùy chọn)
-      },
-      resolvers: [new HeaderResolver(['x-lang']), AcceptLanguageResolver],
-    }),
   ],
   controllers: [AppController],
   providers: [AppService],

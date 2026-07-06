@@ -1,14 +1,14 @@
 "use client";
 
-import React from "react";
 import { motion } from "framer-motion";
+import React from "react";
 
 export const PokerAuthBackground = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="min-h-screen w-full relative flex items-center justify-center bg-[#0a0a0a] overflow-hidden">
       {/* ── Background Casino Vibe ── */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#1a2421_0%,_#050806_100%)]" />
-      
+
       {/* Subtle glowing felt table effect */}
       <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_bottom,_rgba(244,185,66,0.1)_0%,_transparent_60%)] pointer-events-none" />
 
@@ -84,8 +84,6 @@ export const PokerAuthBackground = ({ children }: { children: React.ReactNode })
 
       {/* ── Glassmorphic Container for Form ── */}
       <div className="relative z-10 w-full max-w-md px-6 py-10 sm:p-10 mx-4">
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]" />
-        
         <div className="relative z-20">
           {/* Logo / Branding Placeholder */}
           <div className="flex flex-col items-center justify-center mb-8">

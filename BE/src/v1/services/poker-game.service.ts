@@ -10,6 +10,7 @@ import { PokerStateService } from './poker-state.service';
 import { PokerBotManager } from '../engines/poker-bot.manager';
 import { PokerShowdownManager } from '../engines/poker-showdown.manager';
 import { PokerActionProcessor } from '../engines/poker-action.processor';
+import { PokerSeatState, PokerTableState, WinnerLog } from '../types/poker.types';
 
 @Injectable()
 export class PokerGameService implements OnModuleDestroy {
@@ -145,10 +146,10 @@ export class PokerGameService implements OnModuleDestroy {
 
   finalizeAndBroadcastHand(
     roomId: string,
-    winnersLog: any[],
+    winnersLog: WinnerLog[],
     totalRakedPotAmount: number,
-    tableState: any,
-    seats: any[],
+    tableState: PokerTableState,
+    seats: PokerSeatState[],
   ) {
     return this.showdownManager.finalizeAndBroadcastHand(
       roomId,

@@ -74,7 +74,7 @@ export class FileService {
     };
 
     return new Promise((resolve, reject) => {
-      fs.readdir(path, (err: Error, files: any[]) => {
+      fs.readdir(path, (err: Error, files: string[]) => {
         if (err) reject(err);
 
         files

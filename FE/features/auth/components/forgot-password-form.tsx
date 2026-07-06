@@ -1,16 +1,22 @@
 "use client";
 
 import { ArrowLeft, CheckCircle, Mail } from "lucide-react";
-import { useTranslations, useLocale } from "next-intl";
-import { useRouter as useI18nRouter, usePathname } from "@/i18n/routing";
 import Link from "next/link";
 import { useForgotPassword } from "../hooks/use-forgot-password";
 
 export function ForgotPasswordForm() {
-  const t = useTranslations("forgotPassword");
-  const locale = useLocale();
-  const i18nRouter = useI18nRouter();
-  const pathname = usePathname();
+  const t = (key: string) => {
+    const translations: Record<string, string> = {
+      "returnLogin": "Return to Login",
+      "passwordRecovery": "PASSWORD RECOVERY",
+      "description": "Enter your email to receive a reset link",
+      "email": "Email Address",
+      "sendResetLink": "SEND RESET LINK",
+      "requestSent": "REQUEST SENT",
+      "sendResetLinkDifferentEmail": "TRY ANOTHER EMAIL"
+    };
+    return translations[key] || key;
+  };
 
   const {
     register,
@@ -23,10 +29,7 @@ export function ForgotPasswordForm() {
     successMessage,
   } = useForgotPassword(t);
 
-  const changeLanguage = (newLocale: string) => {
-    localStorage.setItem("know_block_locale", newLocale);
-    i18nRouter.replace(pathname, { locale: newLocale });
-  };
+
 
   const inputBase =
     "w-full pl-12 pr-4 py-3.5 rounded-xl outline-none transition-all duration-300 text-white placeholder:text-white/40 focus:ring-2 focus:ring-[#F4B942]/50 bg-black/50 backdrop-blur-md";
@@ -35,17 +38,7 @@ export function ForgotPasswordForm() {
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-center gap-2 mb-6">
-        <span 
-          onClick={() => changeLanguage("en")}
-          className={`cursor-pointer text-xs font-bold transition-colors ${locale === "en" ? "text-[#F4B942]" : "text-white/40 hover:text-white/80"}`}
-        >EN</span>
-        <span className="text-white/20">|</span>
-        <span 
-          onClick={() => changeLanguage("vi")}
-          className={`cursor-pointer text-xs font-bold transition-colors ${locale === "vi" ? "text-[#F4B942]" : "text-white/40 hover:text-white/80"}`}
-        >VI</span>
-      </div>
+
 
       {!isSuccess ? (
         <>

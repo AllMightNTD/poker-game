@@ -4,11 +4,13 @@ import { RequestPasswordResetDto } from '../../dto/request-reset-password.dto';
 import { ResetPasswordDto } from '../../dto/reset-password.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../../../entities/user.entity';
+import { Wallet } from '../../../entities/wallet.entity';
 import { RefreshToken } from '../../../entities/refresh_token.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import { withTransaction } from 'src/common/helpers/transaction.helper';
 
 @Injectable()
 export class AuthService {
@@ -18,9 +20,10 @@ export class AuthService {
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
     private readonly jwtService: JwtService,
+    private readonly dataSource: DataSource,
   ) {}
 
-  async validateFacebookUser(facebookUser: any) {
+  async validateFacebookUser(facebookUser: Record<string, unknown>) {
     throw new BadRequestException('Facebook authentication is not supported for Poker currently');
   }
 
@@ -37,13 +40,24 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = this.userRepository.create({
-      email,
-      user_name,
-      password: hashedPassword,
-    });
+    // Wrap in transaction: User + Wallet created atomically.
+    // If wallet creation fails, user row is rolled back (no orphaned users).
+    const user = await withTransaction(this.dataSource, async (qr) => {
+      const newUser = qr.manager.create(User, {
+        email,
+        user_name,
+        password: hashedPassword,
+      });
+      await qr.manager.save(newUser);
 
-    await this.userRepository.save(user);
+      const wallet = qr.manager.create(Wallet, {
+        user_id: newUser.id,
+        chips_balance: '50000000', // 50M chips on registration
+      });
+      await qr.manager.save(wallet);
+
+      return newUser;
+    });
 
     return {
       message: 'User registered successfully',

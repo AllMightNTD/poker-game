@@ -12,6 +12,7 @@ const NO_AUTH_ENDPOINTS = [
   "/api/v1/auth/register",
   "/api/v1/auth/forgot-password",
   "/api/v1/auth/reset-password",
+  "/api/v1/admin/login",
 ];
 
 // Request Interceptor
@@ -22,7 +23,8 @@ httpClient.interceptors.request.use(
     );
 
     if (!isNoAuthEndpoint) {
-      const token = Cookies.get("accessToken");
+      const isAdminApi = config.url?.includes("/api/v1/admin") || config.url?.includes("/api/v1/users");
+      const token = isAdminApi ? Cookies.get("admin_token") : Cookies.get("accessToken");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -45,6 +47,18 @@ httpClient.interceptors.response.use(
     );
 
     if (err.response?.status === 401 && !isNoAuthEndpoint && !originalRequest._retry) {
+      const isAdminApi = originalRequest?.url?.includes("/api/v1/admin") || originalRequest?.url?.includes("/api/v1/users");
+      
+      if (isAdminApi) {
+        Cookies.remove("admin_token");
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("admin_token");
+          localStorage.removeItem("admin_info");
+          window.location.href = "/backstage/login";
+        }
+        return Promise.reject(err);
+      }
+
       originalRequest._retry = true;
       const refreshToken = Cookies.get("refreshToken");
       

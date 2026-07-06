@@ -1,4 +1,5 @@
 import { PokerGameEngine } from './poker-game.engine';
+import { PokerSeatState } from '../types/poker.types';
 
 export class PokerBotAI {
   /**
@@ -106,7 +107,7 @@ export class PokerBotAI {
   static getPositionLabel(
     seatNumber: number,
     dealerSeat: number,
-    seats: any[],
+    seats: PokerSeatState[],
   ): string {
     const activeSeats = seats
       .filter(s => s.status === 'active' || s.status === 'folded')

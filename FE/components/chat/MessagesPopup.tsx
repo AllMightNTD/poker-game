@@ -27,7 +27,7 @@ import {
   Users,
   X
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+
 import Link from "next/link";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -179,7 +179,26 @@ function SafeAvatar({ src, name, isGroup }: { src: string | null; name: string; 
 }
 
 export default function MessagesPopup({ onClose, currentUser }: MessagesPopupProps) {
-  const t = useTranslations("chat");
+  const t = (key: string) => {
+    const translations: Record<string, string> = {
+      "title": "Messages",
+      "openExpand": "Open in full page",
+      "newChat": "New chat",
+      "markAllAsRead": "Mark all as read",
+      "messageRequests": "Message Requests",
+      "archive": "Archive",
+      "hidden": "Hidden",
+      "spam": "Spam",
+      "searchPlaceholder": "Search messages...",
+      "all": "All",
+      "unread": "Unread",
+      "group": "Groups",
+      "pending": "Pending",
+      "archived": "Archived",
+      "other": "Other",
+    };
+    return translations[key] || key;
+  };
   const { socket } = useSocket();
   const { openPopup } = useMiniChat();
   const queryClient = useQueryClient();

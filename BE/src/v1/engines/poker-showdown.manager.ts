@@ -8,6 +8,7 @@ import { TableSession } from '../entities/table_session.entity';
 import { User } from '../entities/user.entity';
 import { PokerGameEngine } from './poker-game.engine';
 import { PokerGameService } from '../services/poker-game.service';
+import { PokerSeatState, PokerTableState, WinnerLog } from '../types/poker.types';
 
 export class PokerShowdownManager {
   constructor(private readonly gameService: PokerGameService) { }
@@ -195,10 +196,10 @@ export class PokerShowdownManager {
 
   async finalizeAndBroadcastHand(
     roomId: string,
-    winnersLog: any[],
+    winnersLog: WinnerLog[],
     totalRakedPotAmount: number,
-    tableState: any,
-    seats: any[],
+    tableState: PokerTableState,
+    seats: PokerSeatState[],
     uncalledRefunds: Map<string, number> = new Map()
   ) {
     let totalPotAmount = parseInt(tableState.total_pot || '0');

@@ -1,17 +1,26 @@
 "use client";
 
-import { useRouter as useI18nRouter, usePathname } from "@/i18n/routing";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Lock, Mail } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useLogin } from "../hooks/use-login";
 
 export function LoginForm() {
-  const t = useTranslations("login");
-  const locale = useLocale();
-  const i18nRouter = useI18nRouter();
-  const pathname = usePathname();
+  const t = (key: string) => {
+    const translations: Record<string, string> = {
+      welcomeBackDescription: "WELCOME BACK",
+      discoverMore: "Continue your poker journey",
+      yourEmailAddress: "Email Address",
+      password: "Password",
+      rememberMe: "Remember Me",
+      forgotPassword: "Forgot Password?",
+      loginButton: "LOGIN",
+      dontHaveAccount: "Don't have an account?",
+      registerNow: "REGISTER NOW",
+      orContinueWith: "OR CONTINUE WITH",
+    };
+    return translations[key] || key;
+  };
 
   const {
     register,
@@ -33,42 +42,30 @@ export function LoginForm() {
   const passwordHasError = !!(errors.password || fieldErrors.password);
 
   const inputBase =
-    "h-12 sm:h-14 w-full rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl pl-10 sm:pl-14 pr-4 text-sm sm:text-base text-white placeholder:text-slate-500 transition-all focus:border-yellow-400 focus:bg-white/10 focus:shadow-[0_0_30px_rgba(255,215,0,0.2)] focus:ring-0 outline-none";
-  const inputError =
-    "border-rose-500 bg-rose-500/10 focus:border-rose-400 focus:shadow-[0_0_30px_rgba(244,63,94,0.2)]";
+    "h-12 sm:h-13 w-full rounded-xl bg-[#0B1B33] border border-[#1E3A5F] pl-10 sm:pl-12 pr-4 text-sm text-white placeholder:text-slate-500 transition-colors focus:border-yellow-400/70 focus:ring-0 outline-none";
+  const inputError = "border-rose-500 focus:border-rose-400";
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-      className="relative w-full max-w-md mx-auto"
-    >
-      {/* Background Glow */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[30px] z-0">
-        <div className="absolute -top-20 -right-20 w-72 h-72 sm:w-96 sm:h-96 bg-blue-500/15 rounded-full blur-[100px] sm:blur-[140px]" />
-        <div className="absolute -bottom-20 -left-20 w-64 h-64 sm:w-80 sm:h-80 bg-yellow-500/10 rounded-full blur-[80px] sm:blur-[120px]" />
-      </div>
-
+    <div className="relative w-full max-w-md mx-auto">
       {/* Form Card */}
-      <div className="relative z-10 overflow-hidden rounded-[20px] sm:rounded-[30px] bg-gradient-to-b from-[#112A56]/90 via-[#081326]/95 to-[#050B16] backdrop-blur-2xl shadow-[0_15px_50px_rgba(0,40,255,.2)] sm:shadow-[0_25px_80px_rgba(0,40,255,.25)] p-5 sm:p-8 mx-auto">
-        {/* Inner Top Glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 sm:w-72 sm:h-72 bg-yellow-400/20 blur-[80px] sm:blur-[120px] rounded-full pointer-events-none" />
-
+      <div className="rounded-2xl bg-[#081326] border border-[#16294A] p-6 sm:p-8">
         {/* Header */}
-        <div className="relative text-center mb-6 sm:mb-8">
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-wide uppercase drop-shadow-md">
+        <div className="text-center mb-6 sm:mb-8">
+          <h2 className="text-xl sm:text-2xl font-bold text-white tracking-wide">
             {t("welcomeBackDescription") || "WELCOME BACK"}
           </h2>
-          <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-400 font-medium">{t("discoverMore") || "Continue your poker journey"}</p>
+          <p className="mt-1.5 text-xs sm:text-sm text-slate-400">
+            {t("discoverMore") || "Continue your poker journey"}
+          </p>
         </div>
 
-        <form className="relative space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
+        <form className="space-y-4" onSubmit={handleSubmit}>
           {/* Email Input */}
           <div className="space-y-1">
-            <div className="relative group">
+            <div className="relative">
               <Mail
-                className={`absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-300 ${emailHasError ? "text-rose-400" : "text-blue-300 group-focus-within:text-yellow-400"}`}
+                className={`absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${emailHasError ? "text-rose-400" : "text-slate-500"
+                  }`}
               />
               <input
                 id="email"
@@ -84,12 +81,12 @@ export function LoginForm() {
             <AnimatePresence mode="wait">
               {emailHasError && (
                 <motion.p
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  className="text-rose-400 text-[10px] sm:text-xs ml-2 flex items-center gap-1 mt-1 font-medium"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="text-rose-400 text-xs ml-1 flex items-center gap-1 mt-1"
                 >
-                  <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <AlertCircle className="w-3.5 h-3.5" />
                   {errors.email?.message || fieldErrors.email}
                 </motion.p>
               )}
@@ -98,9 +95,10 @@ export function LoginForm() {
 
           {/* Password Input */}
           <div className="space-y-1">
-            <div className="relative group">
+            <div className="relative">
               <Lock
-                className={`absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-300 ${passwordHasError ? "text-rose-400" : "text-blue-300 group-focus-within:text-yellow-400"}`}
+                className={`absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${passwordHasError ? "text-rose-400" : "text-slate-500"
+                  }`}
               />
               <input
                 id="password"
@@ -116,12 +114,12 @@ export function LoginForm() {
             <AnimatePresence mode="wait">
               {passwordHasError && (
                 <motion.p
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  className="text-rose-400 text-[10px] sm:text-xs ml-2 flex items-center gap-1 mt-1 font-medium"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="text-rose-400 text-xs ml-1 flex items-center gap-1 mt-1"
                 >
-                  <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <AlertCircle className="w-3.5 h-3.5" />
                   {errors.password?.message || fieldErrors.password}
                 </motion.p>
               )}
@@ -129,19 +127,22 @@ export function LoginForm() {
           </div>
 
           {/* Remember Me + Forgot Password */}
-          <div className="flex items-center justify-between py-1 sm:py-2">
+          <div className="flex items-center justify-between py-1">
             <button
               type="button"
               onClick={() => setRememberMe((v) => !v)}
-              className="flex items-center gap-1.5 sm:gap-2 group outline-none"
+              className="flex items-center gap-2 outline-none"
             >
               <div
-                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-[3px] sm:rounded-[4px] border flex items-center justify-center transition-all duration-300 ${rememberMe ? "border-yellow-400 bg-yellow-400/20 text-yellow-400" : "border-slate-500 bg-transparent text-transparent group-hover:border-slate-400"}`}
+                className={`w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors ${rememberMe
+                  ? "border-yellow-400 bg-yellow-400/15 text-yellow-400"
+                  : "border-slate-600 text-transparent"
+                  }`}
               >
                 <svg
                   viewBox="0 0 14 14"
                   fill="none"
-                  className={`w-2.5 h-2.5 sm:w-3 sm:h-3 transition-opacity duration-300 ${rememberMe ? "opacity-100" : "opacity-0"}`}
+                  className={`w-2.5 h-2.5 ${rememberMe ? "opacity-100" : "opacity-0"}`}
                 >
                   <path
                     d="M3 7.5L5.5 10L11 4"
@@ -153,7 +154,8 @@ export function LoginForm() {
                 </svg>
               </div>
               <span
-                className={`text-[11px] sm:text-sm transition-colors duration-300 ${rememberMe ? "text-yellow-300 font-semibold" : "text-slate-400 group-hover:text-slate-300"}`}
+                className={`text-xs sm:text-sm ${rememberMe ? "text-yellow-300" : "text-slate-400"
+                  }`}
               >
                 {t("rememberMe")}
               </span>
@@ -161,58 +163,47 @@ export function LoginForm() {
 
             <Link
               href="/forgot-password"
-              className="text-[11px] sm:text-sm font-semibold text-slate-400 hover:text-yellow-400 transition-colors"
+              className="text-xs sm:text-sm text-slate-400 hover:text-yellow-400 transition-colors"
             >
               {t("forgotPassword")}
             </Link>
           </div>
 
-          {/* Inject style for shine animation directly */}
-          <style dangerouslySetInnerHTML={{
-            __html: `
-            @keyframes shine {
-              0% { transform: translateX(-250%); }
-              100% { transform: translateX(700%); }
-            }
-          `}} />
-
-          {/* 3D Gold Metallic Button */}
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={isSubmitting}
-            className="relative overflow-hidden h-12 sm:h-14 w-full rounded-xl sm:rounded-2xl bg-gradient-to-b from-[#FFF6B3] via-[#FFD84D] to-[#C79500] font-black tracking-[.2em] sm:tracking-[.25em] text-[#091321] text-xs sm:text-sm shadow-lg shadow-yellow-500/30 transition-all hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(255,215,0,.45)] active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed uppercase"
+            className="h-12 sm:h-13 w-full rounded-xl bg-yellow-400 hover:bg-yellow-300 font-bold tracking-wide text-[#081326] text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed uppercase"
           >
-            {/* Shine effect */}
-            <div className="absolute left-[-50%] top-0 h-full w-8 sm:w-10 rotate-12 bg-white/40 blur-[2px] animate-[shine_3s_linear_infinite]" />
-            <span className="relative z-10 drop-shadow-sm">{isSubmitting ? "PROCESSING..." : t("loginButton")}</span>
+            {isSubmitting ? "PROCESSING..." : t("loginButton")}
           </button>
 
-          <p className="text-center text-[10px] sm:text-xs font-bold text-slate-400 pt-1 sm:pt-2">
+          <p className="text-center text-xs text-slate-400 pt-1">
             {t("dontHaveAccount")}{" "}
             <Link
               href="/register"
-              className="text-yellow-400 font-extrabold ml-1 hover:underline uppercase tracking-wider transition-colors"
+              className="text-yellow-400 font-semibold hover:underline"
             >
               {t("registerNow")}
             </Link>
           </p>
 
           {/* Divider */}
-          <div className="flex items-center gap-2 sm:gap-3 py-1 sm:py-2">
-            <div className="flex-1 h-px bg-blue-700/30" />
-            <span className="text-yellow-300 text-[9px] sm:text-xs font-bold tracking-[.2em] sm:tracking-[.3em] uppercase whitespace-nowrap">
-              ✦ {t("orContinueWith") || "OR CONTINUE"} ✦
+          <div className="flex items-center gap-3 py-1">
+            <div className="flex-1 h-px bg-[#16294A]" />
+            <span className="text-slate-500 text-[10px] sm:text-xs font-medium tracking-wide uppercase whitespace-nowrap">
+              {t("orContinueWith") || "OR CONTINUE"}
             </span>
-            <div className="flex-1 h-px bg-blue-700/30" />
+            <div className="flex-1 h-px bg-[#16294A]" />
           </div>
 
-          {/* Social Login Cards */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          {/* Social Login */}
+          <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              className="flex items-center justify-center gap-1.5 sm:gap-2 h-10 sm:h-12 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 hover:border-yellow-400 hover:bg-white/10 transition-all text-xs sm:text-sm font-bold text-white uppercase tracking-wider"
+              className="flex items-center justify-center gap-2 h-11 rounded-xl bg-[#0B1B33] border border-[#1E3A5F] hover:border-yellow-400/60 transition-colors text-sm font-medium text-white"
             >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                   fill="#4285F4"
@@ -236,13 +227,9 @@ export function LoginForm() {
             <button
               type="button"
               onClick={handleFacebookLogin}
-              className="flex items-center justify-center gap-1.5 sm:gap-2 h-10 sm:h-12 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 hover:border-yellow-400 hover:bg-white/10 transition-all text-xs sm:text-sm font-bold text-white uppercase tracking-wider"
+              className="flex items-center justify-center gap-2 h-11 rounded-xl bg-[#0B1B33] border border-[#1E3A5F] hover:border-yellow-400/60 transition-colors text-sm font-medium text-white"
             >
-              <svg
-                className="w-4 h-4 sm:w-5 sm:h-5"
-                viewBox="0 0 24 24"
-                fill="#1877f2"
-              >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#1877f2">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
               </svg>
               Facebook
@@ -250,6 +237,6 @@ export function LoginForm() {
           </div>
         </form>
       </div>
-    </motion.div>
+    </div>
   );
 }

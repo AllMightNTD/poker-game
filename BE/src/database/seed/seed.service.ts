@@ -2,7 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { DataSource } from 'typeorm';
 
-import { UserStatus } from 'src/constants/enums';
+import { AdminRole, UserStatus } from 'src/constants/enums';
+import { Admin } from 'src/v1/entities/admin.entity';
+import { Blog } from 'src/v1/entities/blog.entity';
 import { Role } from 'src/v1/entities/role.entity';
 import { User } from 'src/v1/entities/user.entity';
 import { UserRole } from 'src/v1/entities/user_role.entity';
@@ -39,6 +41,17 @@ export class SeedService {
       const userRoleRepo = this.dataSource.getRepository(UserRole);
       const walletRepo = this.dataSource.getRepository(Wallet);
 
+      // Add Admin
+      const adminRepo = this.dataSource.getRepository(Admin);
+      await adminRepo.save({
+        email: 'admin@example.com',
+        password: passwordHash,
+        user_name: 'Admin',
+        role: AdminRole.SUPER_ADMIN,
+        is_active: true,
+        is_two_factor_enabled: false
+      });
+
       this.logger.log('Generating 10 poker players...');
 
       for (let i = 1; i <= 10; i++) {
@@ -63,10 +76,58 @@ export class SeedService {
       }
 
       this.logger.log('Users and wallets generated successfully.');
+
+      const users = await userRepo.find();
+      const userIds = users.map(u => u.id);
+      await this.seedBlogs(userIds);
+
     } catch (err) {
       this.logger.error('Error during seeding', err);
     } finally {
       await queryRunner.release();
     }
+  }
+
+  private async seedBlogs(userIds: string[]) {
+    this.logger.log('Starting seed 10,000 blogs...');
+    const blogRepo = this.dataSource.getRepository(Blog);
+
+    const BATCH_SIZE = 1000;
+    const TOTAL_BLOGS = 10000;
+    const categories = ['Strategy', 'Tournament', 'News', 'Lifestyle'];
+
+    const thumbnails = [
+      'https://images.unsplash.com/photo-1541577717466-9b19b780829d?auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1596541624467-5d5180fbe9e3?auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1605809798401-46dc03662580?auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&q=80'
+    ];
+
+    for (let i = 0; i < TOTAL_BLOGS; i += BATCH_SIZE) {
+      const batch = [];
+      for (let j = 0; j < BATCH_SIZE; j++) {
+        const index = i + j + 1;
+        const authorId = userIds[Math.floor(Math.random() * userIds.length)];
+        const category = categories[Math.floor(Math.random() * categories.length)];
+        const thumbnail = thumbnails[Math.floor(Math.random() * thumbnails.length)];
+
+        batch.push({
+          title: `The Ultimate Poker Guide #${index} - ${category}`,
+          slug: `the-ultimate-poker-guide-${index}-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
+          thumbnail,
+          content: `<p>Welcome to our comprehensive guide on <b>${category}</b>. In this article, we dive deep into the strategies that separate the amateurs from the pros.</p><br/><p>Keep grinding and always respect the bankroll management principles.</p>`,
+          excerpt: `Discover the top secrets about ${category} in this detailed guide.`,
+          category,
+          tags: ['Poker', category, 'Pro Tips'],
+          author_id: authorId,
+          views_count: Math.floor(Math.random() * 100000),
+          is_published: Math.random() > 0.1,
+        });
+      }
+      await blogRepo.insert(batch);
+      this.logger.log(`Seeded ${i + BATCH_SIZE} / ${TOTAL_BLOGS} blogs`);
+    }
+
+    this.logger.log('Blog seeding completed successfully.');
   }
 }

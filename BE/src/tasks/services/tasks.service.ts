@@ -15,7 +15,7 @@ export class TasksService {
     private readonly configService: ConfigService,
     private readonly fileService: FileService,
     private readonly s3Service: S3Service,
-  ) {}
+  ) { }
 
   public findAll(): IJobResponse[] {
     // const jobs = this.schedulerRegistry.getCronJobs();

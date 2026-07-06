@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { PokerTableState, PokerSeatState } from '../types/poker.types';
 
 @Injectable()
 export class PokerStateService implements OnModuleInit {
@@ -41,7 +42,7 @@ export class PokerStateService implements OnModuleInit {
   /**
    * Lưu/Đọc Trạng thái bàn chơi
    */
-  async getTableState(tableId: string): Promise<Record<string, string> | null> {
+  async getTableState(tableId: string): Promise<PokerTableState | null> {
     const key = `table:${tableId}:state`;
     const data = await this.redis.hgetall(key);
     return Object.keys(data).length > 0 ? data : null;
@@ -63,10 +64,10 @@ export class PokerStateService implements OnModuleInit {
   /**
    * Lưu/Đọc Trạng thái ghế ngồi
    */
-  async getSeat(tableId: string, seatNumber: number): Promise<Record<string, string> | null> {
+  async getSeat(tableId: string, seatNumber: number): Promise<PokerSeatState | null> {
     const key = `table:${tableId}:seat:${seatNumber}`;
     const data = await this.redis.hgetall(key);
-    return Object.keys(data).length > 0 ? data : null;
+    return Object.keys(data).length > 0 ? (data as unknown as PokerSeatState) : null;
   }
 
   async setSeat(tableId: string, seatNumber: number, fields: Record<string, string | number>): Promise<void> {
@@ -79,15 +80,15 @@ export class PokerStateService implements OnModuleInit {
     await this.redis.del(key);
   }
 
-  async getAllSeats(tableId: string, maxPlayers = 9): Promise<Array<Record<string, string> & { seat_number: number }>> {
-    const seats = [];
+  async getAllSeats(tableId: string, maxPlayers = 9): Promise<PokerSeatState[]> {
+    const seats: PokerSeatState[] = [];
     for (let i = 1; i <= maxPlayers; i++) {
       const data = await this.getSeat(tableId, i);
       if (data) {
         seats.push({
           ...data,
           seat_number: i,
-        });
+        } as PokerSeatState);
       }
     }
     return seats;

@@ -43,7 +43,7 @@ export class PokerBotManager {
           const dealerSeat = parseInt(currentTableState.dealer_seat || '1');
           const positionLabel = PokerBotAI.getPositionLabel(currentTurnSeat, dealerSeat, currentSeats);
 
-          const currentBet = parseInt(currentBotSeat.current_bet || '0');
+          const currentBet = parseInt(String(currentBotSeat.current_bet || '0'));
           const highestBet = parseInt(currentTableState.current_highest_bet || '0');
           const botStack = parseInt(currentBotSeat.stack || '0');
           const sbAmount = parseInt(currentTableState.small_blind || '50');
