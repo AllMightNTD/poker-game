@@ -1,4 +1,14 @@
-import { BaseEntity, Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn, Index, JoinColumn, ManyToOne } from 'typeorm';
+import {
+  BaseEntity,
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+  Index,
+  JoinColumn,
+  ManyToOne,
+} from 'typeorm';
 import { User } from './user.entity';
 
 @Entity('transactions')
@@ -11,14 +21,21 @@ export class Transaction extends BaseEntity {
   user_id: string;
 
   @Index()
-  @Column({ type: 'enum', enum: ['DEPOSIT', 'WITHDRAW', 'TRANSFER', 'GAME_WIN', 'GAME_LOSS'] })
+  @Column({
+    type: 'enum',
+    enum: ['DEPOSIT', 'WITHDRAW', 'TRANSFER', 'GAME_WIN', 'GAME_LOSS'],
+  })
   type: string;
 
   @Column({ type: 'bigint' })
   amount: string;
 
   @Index()
-  @Column({ type: 'enum', enum: ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'FAILED'], default: 'PENDING' })
+  @Column({
+    type: 'enum',
+    enum: ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'FAILED'],
+    default: 'PENDING',
+  })
   status: string;
 
   @Column({ type: 'varchar', nullable: true })

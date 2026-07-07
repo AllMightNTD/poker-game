@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Wallet } from '../../entities/wallet.entity';
 import { UpdateWalletDto } from '../dto/update-wallet.dto';
 
@@ -34,7 +38,7 @@ export class AdminWalletsService {
     return {
       success: true,
       message: 'Wallet updated successfully',
-      new_balance: wallet.chips_balance
+      new_balance: wallet.chips_balance,
     };
   }
 }

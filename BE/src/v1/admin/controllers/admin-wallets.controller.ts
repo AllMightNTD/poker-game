@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Post, Body, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Post,
+  Body,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminGuard } from '../guards/admin.guard';
 import { AdminRoles } from '../decorators/admin-roles.decorator';
@@ -23,10 +31,16 @@ export class AdminWalletsController {
   }
 
   @Post('user/:userId/update')
-  @ApiOperation({ summary: 'Cập nhật số dư ví (Nạp/Trừ tiền)', description: 'Chỉ Finance, Admin và Super Admin mới có quyền thao tác' })
+  @ApiOperation({
+    summary: 'Cập nhật số dư ví (Nạp/Trừ tiền)',
+    description: 'Chỉ Finance, Admin và Super Admin mới có quyền thao tác',
+  })
   @AdminRoles('SUPER_ADMIN', 'ADMIN', 'FINANCE')
   @AuditAction('UPDATE_WALLET_BALANCE', 'wallets')
-  async updateWallet(@Param('userId') userId: string, @Body() dto: UpdateWalletDto) {
+  async updateWallet(
+    @Param('userId') userId: string,
+    @Body() dto: UpdateWalletDto,
+  ) {
     return this.adminWalletsService.updateWallet(userId, dto);
   }
 }

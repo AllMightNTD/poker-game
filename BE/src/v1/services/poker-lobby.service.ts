@@ -1,9 +1,17 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import * as crypto from 'crypto';
 import { Response } from 'express';
 import { withTransaction } from 'src/common/helpers/transaction.helper';
 import { UserStatus } from 'src/constants/user-status';
 import { DataSource } from 'typeorm';
+import { CreateRoomDto } from '../dto/create-room.dto';
+import { AuditLog } from '../entities/audit_log.entity';
 import { PokerTable } from '../entities/poker_table.entity';
 import { RoomAdminLog } from '../entities/room_admin_log.entity';
 import { SystemRevenue } from '../entities/system_revenue.entity';
@@ -11,7 +19,6 @@ import { TableSession } from '../entities/table_session.entity';
 import { User } from '../entities/user.entity';
 import { Wallet } from '../entities/wallet.entity';
 import { PokerStateService } from './poker-state.service';
-import { CreateRoomDto } from '../dto/create-room.dto';
 
 @Injectable()
 export class PokerLobbyService {
@@ -21,7 +28,7 @@ export class PokerLobbyService {
   constructor(
     private readonly stateService: PokerStateService,
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   // Tracks active socket connections at lobby level
   addLobbySubscriber(clientId: string) {
@@ -48,8 +55,8 @@ export class PokerLobbyService {
     const activeTables = await PokerTable.count({
       where: [
         { status: 'running', is_active: true },
-        { status: 'waiting', is_active: true }
-      ]
+        { status: 'waiting', is_active: true },
+      ],
     });
 
     // 3. Hũ Pot hôm nay (Jackpot) = Tổng doanh thu system_revenue hôm nay hoặc mock 1.2B
@@ -104,7 +111,9 @@ export class PokerLobbyService {
 
     // Check duplicate key
     if (this.idempotencyKeys.has(idempotencyKey)) {
-      throw new ConflictException('Yêu cầu đang được xử lý, vui lòng không spam!');
+      throw new ConflictException(
+        'Yêu cầu đang được xử lý, vui lòng không spam!',
+      );
     }
 
     // Set key expiry after 5 seconds
@@ -151,7 +160,10 @@ export class PokerLobbyService {
   }) {
     const searchName = query.search_name || '';
     const blindCategory = query.blind_category || 'all';
-    const statusFilter = query.status && query.status !== 'all' ? query.status.toLowerCase() : null;
+    const statusFilter =
+      query.status && query.status !== 'all'
+        ? query.status.toLowerCase()
+        : null;
     const page = Math.max(1, Number(query.page || 1));
     const limit = Math.max(1, Number(query.limit || 20));
 
@@ -164,30 +176,46 @@ export class PokerLobbyService {
     } else {
       queryBuilder.where('table.is_active = :isActive', { isActive: true });
       if (statusFilter) {
-        queryBuilder.andWhere('table.status = :status', { status: statusFilter });
+        queryBuilder.andWhere('table.status = :status', {
+          status: statusFilter,
+        });
       }
     }
 
     if (searchName) {
-      queryBuilder.andWhere('table.name LIKE :searchName', { searchName: `%${searchName}%` });
+      queryBuilder.andWhere('table.name LIKE :searchName', {
+        searchName: `%${searchName}%`,
+      });
     }
 
     // Filter out PRIVATE rooms from the public lobby
-    queryBuilder.andWhere(`(JSON_EXTRACT(table.custom_settings, '$.table_visibility') IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(table.custom_settings, '$.table_visibility')) != 'PRIVATE')`);
+    queryBuilder.andWhere(
+      `(JSON_EXTRACT(table.custom_settings, '$.table_visibility') IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(table.custom_settings, '$.table_visibility')) != 'PRIVATE')`,
+    );
 
     // Lọc theo Big Blind Category
     if (blindCategory === 'micro') {
       // Big blind <= 2000
-      queryBuilder.andWhere('CAST(table.big_blind AS DECIMAL) <= :limit', { limit: 2000 });
+      queryBuilder.andWhere('CAST(table.big_blind AS DECIMAL) <= :limit', {
+        limit: 2000,
+      });
     } else if (blindCategory === 'low') {
       // 2000 < Big blind <= 10000
-      queryBuilder.andWhere('CAST(table.big_blind AS DECIMAL) > :low AND CAST(table.big_blind AS DECIMAL) <= :high', { low: 2000, high: 10000 });
+      queryBuilder.andWhere(
+        'CAST(table.big_blind AS DECIMAL) > :low AND CAST(table.big_blind AS DECIMAL) <= :high',
+        { low: 2000, high: 10000 },
+      );
     } else if (blindCategory === 'medium') {
       // 10000 < Big blind <= 50000
-      queryBuilder.andWhere('CAST(table.big_blind AS DECIMAL) > :low AND CAST(table.big_blind AS DECIMAL) <= :high', { low: 10000, high: 50000 });
+      queryBuilder.andWhere(
+        'CAST(table.big_blind AS DECIMAL) > :low AND CAST(table.big_blind AS DECIMAL) <= :high',
+        { low: 10000, high: 50000 },
+      );
     } else if (blindCategory === 'high') {
       // Big blind > 50000
-      queryBuilder.andWhere('CAST(table.big_blind AS DECIMAL) > :limit', { limit: 50000 });
+      queryBuilder.andWhere('CAST(table.big_blind AS DECIMAL) > :limit', {
+        limit: 50000,
+      });
     }
 
     // Phân trang
@@ -205,8 +233,8 @@ export class PokerLobbyService {
         const playersCount = await TableSession.count({
           where: {
             table_id: t.id,
-            member_status: 'active'
-          }
+            member_status: 'active',
+          },
         });
 
         return {
@@ -220,7 +248,7 @@ export class PokerLobbyService {
           max_buy_in: parseInt(t.max_buyin),
           status: (t.status || 'waiting').toUpperCase(),
         };
-      })
+      }),
     );
 
     return {
@@ -236,7 +264,9 @@ export class PokerLobbyService {
    * Chức năng: Đăng ký vào bàn
    */
   async joinRoomRequest(userId: string, roomId: string) {
-    const table = await PokerTable.findOne({ where: { id: roomId, is_active: true } });
+    const table = await PokerTable.findOne({
+      where: { id: roomId, is_active: true },
+    });
     if (!table) {
       throw new NotFoundException('Bàn chơi không tồn tại hoặc đã bị đóng.');
     }
@@ -245,8 +275,8 @@ export class PokerLobbyService {
     const playersCount = await TableSession.count({
       where: {
         table_id: roomId,
-        member_status: 'active'
-      }
+        member_status: 'active',
+      },
     });
 
     if (playersCount >= table.max_players) {
@@ -259,7 +289,9 @@ export class PokerLobbyService {
     const minBuyin = BigInt(table.min_buyin);
 
     if (userChips < minBuyin) {
-      throw new BadRequestException('Số dư chips không đủ để tối thiểu buy-in vào bàn này.');
+      throw new BadRequestException(
+        'Số dư chips không đủ để tối thiểu buy-in vào bàn này.',
+      );
     }
 
     return {
@@ -277,24 +309,31 @@ export class PokerLobbyService {
    * Chức năng: Xem bàn chơi với tư cách khán giả
    */
   async spectateRoom(userId: string, roomId: string) {
-    const table = await PokerTable.findOne({ where: { id: roomId, is_active: true } });
+    const table = await PokerTable.findOne({
+      where: { id: roomId, is_active: true },
+    });
     if (!table) {
       throw new NotFoundException('Bàn chơi không tồn tại hoặc đã bị đóng.');
     }
 
     const maxSpectators = table.custom_settings?.max_spectators || 0;
-    
+
     // Check max spectators via Redis Set (we track userIds of spectators)
     const redis = this.stateService.getRedisClient();
     const spectatorsKey = `table:${roomId}:spectators`;
-    
+
     if (maxSpectators > 0) {
       const currentSpectators = await redis.scard(spectatorsKey);
       if (currentSpectators >= maxSpectators) {
         // Only block if this user isn't already a spectator
-        const isAlreadySpectating = await redis.sismember(spectatorsKey, userId);
+        const isAlreadySpectating = await redis.sismember(
+          spectatorsKey,
+          userId,
+        );
         if (!isAlreadySpectating) {
-          throw new ConflictException(`Phòng đã đạt giới hạn tối đa ${maxSpectators} người xem.`);
+          throw new ConflictException(
+            `Phòng đã đạt giới hạn tối đa ${maxSpectators} người xem.`,
+          );
         }
       }
     }
@@ -325,17 +364,27 @@ export class PokerLobbyService {
     }
 
     const maxPlayers = body.max_players ? Number(body.max_players) : 9;
-    const minBuyin = body.min_buy_in ? body.min_buy_in.toString() : (sb * 40).toString();
-    const maxBuyin = body.max_buy_in ? body.max_buy_in.toString() : (sb * 200).toString();
-    const gameType = body.game_type || "NLH";
+    const minBuyin = body.min_buy_in
+      ? body.min_buy_in.toString()
+      : (sb * 40).toString();
+    const maxBuyin = body.max_buy_in
+      ? body.max_buy_in.toString()
+      : (sb * 200).toString();
+    const gameType = body.game_type || 'NLH';
     const mode = body.mode || 'CUSTOM';
 
     let customSettings = null;
     if (body.custom_settings) {
       customSettings = { ...body.custom_settings };
       // Hash the password if it exists and table is PRIVATE
-      if (customSettings.table_visibility === 'PRIVATE' && customSettings.password) {
-        customSettings.password = crypto.createHash('sha256').update(customSettings.password).digest('hex');
+      if (
+        customSettings.table_visibility === 'PRIVATE' &&
+        customSettings.password
+      ) {
+        customSettings.password = crypto
+          .createHash('sha256')
+          .update(customSettings.password)
+          .digest('hex');
       }
     }
 
@@ -393,8 +442,19 @@ export class PokerLobbyService {
   /**
    * Buy-in vào bàn chơi (Trừ ví chính, lưu Stack lên Redis và DB)
    */
-  async buyIn(userId: string, body: { room_id: string; amount: number; seat_number: number; custom_name?: string; ip?: string }) {
-    const table = await PokerTable.findOne({ where: { id: body.room_id, is_active: true } });
+  async buyIn(
+    userId: string,
+    body: {
+      room_id: string;
+      amount: number;
+      seat_number: number;
+      custom_name?: string;
+      ip?: string;
+    },
+  ) {
+    const table = await PokerTable.findOne({
+      where: { id: body.room_id, is_active: true },
+    });
     if (!table) {
       throw new NotFoundException('Bàn chơi không tồn tại.');
     }
@@ -404,7 +464,10 @@ export class PokerLobbyService {
     }
 
     // Check ghế trống trên Redis
-    const existingSeat = await this.stateService.getSeat(body.room_id, body.seat_number);
+    const existingSeat = await this.stateService.getSeat(
+      body.room_id,
+      body.seat_number,
+    );
     if (existingSeat) {
       throw new ConflictException('Ghế này đã có người ngồi.');
     }
@@ -426,7 +489,9 @@ export class PokerLobbyService {
     const amt = BigInt(body.amount);
 
     if (amt < min || amt > max) {
-      throw new BadRequestException(`Số tiền buy-in phải từ ${min} đến ${max} chip.`);
+      throw new BadRequestException(
+        `Số tiền buy-in phải từ ${min} đến ${max} chip.`,
+      );
     }
 
     // Check user đang ngồi ở ghế khác
@@ -438,11 +503,14 @@ export class PokerLobbyService {
       },
     });
     if (activeSession) {
-      throw new BadRequestException('Bạn đang ngồi tại một ghế khác ở bàn này.');
+      throw new BadRequestException(
+        'Bạn đang ngồi tại một ghế khác ở bàn này.',
+      );
     }
 
     // Giao dịch trừ tiền ví chính & tạo session
-    const queryRunner = PokerTable.getRepository().manager.connection.createQueryRunner();
+    const queryRunner =
+      PokerTable.getRepository().manager.connection.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
@@ -476,7 +544,11 @@ export class PokerLobbyService {
 
       await this.stateService.setSeat(body.room_id, body.seat_number, {
         user_id: userId,
-        username: body.custom_name || user?.user_name || user?.email?.split('@')[0] || 'Guest',
+        username:
+          body.custom_name ||
+          user?.user_name ||
+          user?.email?.split('@')[0] ||
+          'Guest',
         avatar: user?.avatar_url || '',
         stack: amt.toString(),
         current_bet: '0',
@@ -488,7 +560,11 @@ export class PokerLobbyService {
 
       // Tăng số lượng chip nạp lũy kế trên Redis
       const redis = this.stateService.getRedisClient();
-      await redis.hincrby(`table:${body.room_id}:player:${userId}:stats`, 'purchase_count', body.amount);
+      await redis.hincrby(
+        `table:${body.room_id}:player:${userId}:stats`,
+        'purchase_count',
+        body.amount,
+      );
 
       return {
         success: true,
@@ -507,7 +583,10 @@ export class PokerLobbyService {
   /**
    * Thay đổi trạng thái ngồi chơi (Sit-out hoặc Sit-back)
    */
-  async sitAction(userId: string, body: { room_id: string; action: 'sit_out' | 'sit_back' }) {
+  async sitAction(
+    userId: string,
+    body: { room_id: string; action: 'sit_out' | 'sit_back' },
+  ) {
     const session = await TableSession.findOne({
       where: {
         table_id: body.room_id,
@@ -528,13 +607,17 @@ export class PokerLobbyService {
     }
 
     if (!targetSession) {
-      throw new NotFoundException('Không tìm thấy phiên chơi của bạn tại bàn này.');
+      throw new NotFoundException(
+        'Không tìm thấy phiên chơi của bạn tại bàn này.',
+      );
     }
 
     const seats = await this.stateService.getAllSeats(body.room_id);
-    const heroSeat = seats.find(s => s.user_id === userId);
+    const heroSeat = seats.find((s) => s.user_id === userId);
     if (!heroSeat) {
-      throw new NotFoundException('Không tìm thấy ghế chơi của bạn trên cache.');
+      throw new NotFoundException(
+        'Không tìm thấy ghế chơi của bạn trên cache.',
+      );
     }
 
     const newStatus = body.action === 'sit_out' ? 'sitting_out' : 'active';
@@ -572,15 +655,21 @@ export class PokerLobbyService {
     }
 
     if (!activeSession) {
-      throw new NotFoundException('Không tìm thấy phiên chơi của bạn tại bàn này.');
+      throw new NotFoundException(
+        'Không tìm thấy phiên chơi của bạn tại bàn này.',
+      );
     }
 
     return this.processLeave(userId, roomId, activeSession);
   }
 
-  private async processLeave(userId: string, roomId: string, session: TableSession) {
+  private async processLeave(
+    userId: string,
+    roomId: string,
+    session: TableSession,
+  ) {
     const seats = await this.stateService.getAllSeats(roomId);
-    const heroSeat = seats.find(s => s.user_id === userId);
+    const heroSeat = seats.find((s) => s.user_id === userId);
 
     let finalStackStr = session.chips_at_table;
     if (heroSeat) {
@@ -596,19 +685,34 @@ export class PokerLobbyService {
 
     try {
       const tableState = await this.stateService.getTableState(roomId);
-      const isHandRunning = tableState && tableState.game_stage && tableState.game_stage !== 'ended' && tableState.game_stage !== 'waiting';
+      const isHandRunning =
+        tableState &&
+        tableState.game_stage &&
+        tableState.game_stage !== 'ended' &&
+        tableState.game_stage !== 'waiting';
 
-      if (isHandRunning && heroSeat && ['active', 'folded', 'allin'].includes(heroSeat.status)) {
+      if (
+        isHandRunning &&
+        heroSeat &&
+        ['active', 'folded', 'allin'].includes(heroSeat.status)
+      ) {
         // Set pending leave
         await this.stateService.setSeat(roomId, heroSeat.seat_number, {
-          pending_leave: '1'
+          pending_leave: '1',
         });
-        return { success: true, pending: true, message: 'Bạn sẽ rời bàn sau khi ván đấu hiện tại kết thúc.' };
+        return {
+          success: true,
+          pending: true,
+          message: 'Bạn sẽ rời bàn sau khi ván đấu hiện tại kết thúc.',
+        };
       }
 
       if (isHandRunning && heroSeat && heroSeat.start_stack) {
         const startStack = parseInt(heroSeat.start_stack, 10);
-        const totalChipsBetEarly = parseInt(heroSeat.total_contributed || '0', 10);
+        const totalChipsBetEarly = parseInt(
+          heroSeat.total_contributed || '0',
+          10,
+        );
         const expectedStack = startStack - totalChipsBetEarly;
         const actualNewStack = parseInt(heroSeat.stack, 10);
 
@@ -616,7 +720,7 @@ export class PokerLobbyService {
           const logger = new Logger('ReconciliationLeave');
           logger.error(
             `[RECONCILIATION LEAVE ERROR] Money Exploit Detected on Leave! User ${userId} of table ${roomId}. ` +
-            `Start stack: ${startStack}, Bet: ${totalChipsBetEarly}, Expected: ${expectedStack}, Actual: ${actualNewStack}`
+              `Start stack: ${startStack}, Bet: ${totalChipsBetEarly}, Expected: ${expectedStack}, Actual: ${actualNewStack}`,
           );
           // Block user
           const user = await User.findOne({ where: { id: userId } });
@@ -627,21 +731,30 @@ export class PokerLobbyService {
 
           // Ghi Audit Log vào database
           try {
-            const audit = new (require('../../entities/audit_log.entity').AuditLog)();
+            const audit = new AuditLog();
             audit.event_type = 'CHEAT_DETECTED';
             audit.user_id = userId;
             audit.description = `Money Exploit Detected on Leave in Room ${roomId}`;
-            audit.metadata = { roomId, startStack, totalChipsBetEarly, expectedStack, actualNewStack };
+            audit.metadata = {
+              roomId,
+              startStack,
+              totalChipsBetEarly,
+              expectedStack,
+              actualNewStack,
+            };
             await audit.save();
           } catch (e) {
             logger.error(`Không thể lưu AuditLog: ${e.message}`);
           }
 
-          throw new BadRequestException('Phát hiện sai lệch số phỉnh bất thường. Tài khoản đã bị khóa để kiểm tra.');
+          throw new BadRequestException(
+            'Phát hiện sai lệch số phỉnh bất thường. Tài khoản đã bị khóa để kiểm tra.',
+          );
         }
       }
 
-      const queryRunner = PokerTable.getRepository().manager.connection.createQueryRunner();
+      const queryRunner =
+        PokerTable.getRepository().manager.connection.createQueryRunner();
       await queryRunner.connect();
       await queryRunner.startTransaction();
 
@@ -655,7 +768,9 @@ export class PokerLobbyService {
           throw new NotFoundException('Không tìm thấy ví người dùng.');
         }
 
-        wallet.chips_balance = (BigInt(wallet.chips_balance) + finalStack).toString();
+        wallet.chips_balance = (
+          BigInt(wallet.chips_balance) + finalStack
+        ).toString();
         await queryRunner.manager.save(wallet);
 
         session.member_status = 'left';
@@ -667,7 +782,11 @@ export class PokerLobbyService {
 
         // Cập nhật lũy kế cashout và dọn dẹp Redis
         const redis = this.stateService.getRedisClient();
-        await redis.hincrby(`table:${roomId}:player:${userId}:stats`, 'cashout_chips', Number(finalStack));
+        await redis.hincrby(
+          `table:${roomId}:player:${userId}:stats`,
+          'cashout_chips',
+          Number(finalStack),
+        );
 
         if (heroSeat) {
           await this.stateService.deleteSeat(roomId, heroSeat.seat_number);
@@ -693,14 +812,20 @@ export class PokerLobbyService {
   /**
    * Thay đổi cấu hình Small Blind dành cho Chủ bàn
    */
-  async updateRoomConfig(userId: string, roomId: string, body: { small_blind: number }) {
+  async updateRoomConfig(
+    userId: string,
+    roomId: string,
+    body: { small_blind: number },
+  ) {
     const table = await PokerTable.findOne({ where: { id: roomId } });
     if (!table) {
       throw new NotFoundException('Bàn chơi không tồn tại.');
     }
 
     if (table.owner_id !== userId) {
-      throw new BadRequestException('Chỉ chủ phòng mới được thay đổi cấu hình.');
+      throw new BadRequestException(
+        'Chỉ chủ phòng mới được thay đổi cấu hình.',
+      );
     }
 
     const sb = parseInt(body.small_blind.toString(), 10);
@@ -712,12 +837,16 @@ export class PokerLobbyService {
 
     // Table update + AuditLog in single atomic transaction
     await withTransaction(this.dataSource, async (qr) => {
-      await qr.manager.update(PokerTable, { id: roomId }, {
-        small_blind: sb.toString(),
-        big_blind: bb.toString(),
-        min_buyin: (sb * 40).toString(),
-        max_buyin: (sb * 200).toString(),
-      });
+      await qr.manager.update(
+        PokerTable,
+        { id: roomId },
+        {
+          small_blind: sb.toString(),
+          big_blind: bb.toString(),
+          min_buyin: (sb * 40).toString(),
+          max_buyin: (sb * 200).toString(),
+        },
+      );
 
       const log = qr.manager.create(RoomAdminLog, {
         room_id: roomId,
@@ -777,7 +906,9 @@ export class PokerLobbyService {
     }
 
     if (table.owner_id !== userId) {
-      throw new BadRequestException('Chỉ chủ phòng mới có quyền kick người chơi.');
+      throw new BadRequestException(
+        'Chỉ chủ phòng mới có quyền kick người chơi.',
+      );
     }
 
     if (targetUserId === userId) {
@@ -785,13 +916,21 @@ export class PokerLobbyService {
     }
 
     const session = await TableSession.findOne({
-      where: { table_id: roomId, user_id: targetUserId, member_status: 'active' },
+      where: {
+        table_id: roomId,
+        user_id: targetUserId,
+        member_status: 'active',
+      },
     });
 
     let activeSession = session;
     if (!activeSession) {
       activeSession = await TableSession.findOne({
-        where: { table_id: roomId, user_id: targetUserId, member_status: 'sitting_out' },
+        where: {
+          table_id: roomId,
+          user_id: targetUserId,
+          member_status: 'sitting_out',
+        },
       });
     }
 
@@ -817,6 +956,54 @@ export class PokerLobbyService {
   }
 
   /**
+   * Admin cưỡng chế kick người chơi ra khỏi bàn
+   */
+  async adminKickPlayer(actorId: string, roomId: string, targetUserId: string) {
+    const table = await PokerTable.findOne({ where: { id: roomId } });
+    if (!table) {
+      throw new NotFoundException('Bàn chơi không tồn tại.');
+    }
+
+    const session = await TableSession.findOne({
+      where: {
+        table_id: roomId,
+        user_id: targetUserId,
+        member_status: 'active',
+      },
+    });
+
+    let activeSession = session;
+    if (!activeSession) {
+      activeSession = await TableSession.findOne({
+        where: {
+          table_id: roomId,
+          user_id: targetUserId,
+          member_status: 'sitting_out',
+        },
+      });
+    }
+
+    if (!activeSession) {
+      throw new NotFoundException('Không tìm thấy người chơi này tại bàn.');
+    }
+
+    await this.processLeave(targetUserId, roomId, activeSession);
+
+    await withTransaction(this.dataSource, async (qr) => {
+      const log = qr.manager.create(RoomAdminLog, {
+        room_id: roomId,
+        actor_id: actorId,
+        target_id: targetUserId,
+        log_type: 'kick',
+        description: `Admin kick user ${targetUserId} ra khỏi bàn.`,
+      });
+      await qr.manager.save(log);
+    });
+
+    return { success: true };
+  }
+
+  /**
    * Cưỡng chế người chơi đi vắng (Force Sit-out)
    */
   async forceSitOut(userId: string, roomId: string, targetUserId: string) {
@@ -826,7 +1013,9 @@ export class PokerLobbyService {
     }
 
     if (table.owner_id !== userId) {
-      throw new BadRequestException('Chỉ chủ phòng mới có quyền cưỡng chế Sit-out.');
+      throw new BadRequestException(
+        'Chỉ chủ phòng mới có quyền cưỡng chế Sit-out.',
+      );
     }
 
     const session = await TableSession.findOne({
@@ -838,14 +1027,16 @@ export class PokerLobbyService {
     });
 
     if (!session) {
-      throw new NotFoundException('Không tìm thấy người chơi này ở trạng thái active tại bàn.');
+      throw new NotFoundException(
+        'Không tìm thấy người chơi này ở trạng thái active tại bàn.',
+      );
     }
 
     session.member_status = 'sitting_out';
     await session.save();
 
     const seats = await this.stateService.getAllSeats(roomId);
-    const targetSeat = seats.find(s => s.user_id === targetUserId);
+    const targetSeat = seats.find((s) => s.user_id === targetUserId);
     if (targetSeat) {
       await this.stateService.setSeat(roomId, targetSeat.seat_number, {
         status: 'sitting_out',
@@ -869,7 +1060,11 @@ export class PokerLobbyService {
   async modifyStack(
     userId: string,
     roomId: string,
-    body: { target_user_id: string; action: 'add' | 'subtract'; amount: number },
+    body: {
+      target_user_id: string;
+      action: 'add' | 'subtract';
+      amount: number;
+    },
   ) {
     const table = await PokerTable.findOne({ where: { id: roomId } });
     if (!table) {
@@ -877,13 +1072,17 @@ export class PokerLobbyService {
     }
 
     if (table.owner_id !== userId) {
-      throw new BadRequestException('Chỉ chủ phòng mới có quyền sửa đổi Stack.');
+      throw new BadRequestException(
+        'Chỉ chủ phòng mới có quyền sửa đổi Stack.',
+      );
     }
 
     const seats = await this.stateService.getAllSeats(roomId);
-    const targetSeat = seats.find(s => s.user_id === body.target_user_id);
+    const targetSeat = seats.find((s) => s.user_id === body.target_user_id);
     if (!targetSeat) {
-      throw new NotFoundException('Không tìm thấy thông tin ghế chơi trên cache.');
+      throw new NotFoundException(
+        'Không tìm thấy thông tin ghế chơi trên cache.',
+      );
     }
 
     const amt = BigInt(body.amount);
@@ -892,7 +1091,8 @@ export class PokerLobbyService {
     if (body.action === 'add') {
       currentRedisStack += amt;
     } else {
-      currentRedisStack = currentRedisStack < amt ? BigInt(0) : currentRedisStack - amt;
+      currentRedisStack =
+        currentRedisStack < amt ? BigInt(0) : currentRedisStack - amt;
     }
 
     const newStack = currentRedisStack.toString();
@@ -901,8 +1101,16 @@ export class PokerLobbyService {
     await withTransaction(this.dataSource, async (qr) => {
       const session = await qr.manager.findOne(TableSession, {
         where: [
-          { table_id: roomId, user_id: body.target_user_id, member_status: 'active' },
-          { table_id: roomId, user_id: body.target_user_id, member_status: 'sitting_out' },
+          {
+            table_id: roomId,
+            user_id: body.target_user_id,
+            member_status: 'active',
+          },
+          {
+            table_id: roomId,
+            user_id: body.target_user_id,
+            member_status: 'sitting_out',
+          },
         ],
         lock: { mode: 'pessimistic_write' },
       });
@@ -925,7 +1133,9 @@ export class PokerLobbyService {
     });
 
     // Update Redis after DB commit succeeds
-    await this.stateService.setSeat(roomId, targetSeat.seat_number, { stack: newStack });
+    await this.stateService.setSeat(roomId, targetSeat.seat_number, {
+      stack: newStack,
+    });
 
     return {
       success: true,
@@ -954,19 +1164,23 @@ export class PokerLobbyService {
         const user = await PokerTable.getRepository().manager.findOne(User, {
           where: { id: sess.user_id },
         });
-        const username = user?.user_name || user?.email?.split('@')[0] || 'Guest';
+        const username =
+          user?.user_name || user?.email?.split('@')[0] || 'Guest';
 
-        const currentSeat = seats.find(s => s.user_id === sess.user_id);
-        const seat_number = currentSeat ? currentSeat.seat_number : sess.seat_number;
+        const currentSeat = seats.find((s) => s.user_id === sess.user_id);
+        const seat_number = currentSeat
+          ? currentSeat.seat_number
+          : sess.seat_number;
         const status = sess.member_status;
 
         const statsKey = `table:${roomId}:player:${sess.user_id}:stats`;
         const redisStats = await redis.hgetall(statsKey);
 
-        const purchase_count = parseInt(redisStats.purchase_count || sess.chips_at_table) || 0;
+        const purchase_count =
+          parseInt(redisStats.purchase_count || sess.chips_at_table) || 0;
         const cashout_chips = parseInt(redisStats.cashout_chips || '0') || 0;
         const current_chips = currentSeat ? parseInt(currentSeat.stack) : 0;
-        const net_pnl = (current_chips + cashout_chips) - purchase_count;
+        const net_pnl = current_chips + cashout_chips - purchase_count;
 
         return {
           user_id: sess.user_id,
@@ -978,7 +1192,7 @@ export class PokerLobbyService {
           current_chips,
           net_pnl,
         };
-      })
+      }),
     );
 
     return {
@@ -995,12 +1209,16 @@ export class PokerLobbyService {
     const statsData = await this.getTableStats(userId, roomId);
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename=poker_stats_room_${roomId}.csv`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=poker_stats_room_${roomId}.csv`,
+    );
 
     // Ghi UTF-8 BOM
     res.write('\uFEFF');
 
-    let csvContent = 'Tên người chơi,Vị trí ghế,Trạng thái,Tổng nạp (Buy-in),Tổng rút (Cashout),Số chip còn lại,Lãi/Lỗ ròng (P&L)\n';
+    let csvContent =
+      'Tên người chơi,Vị trí ghế,Trạng thái,Tổng nạp (Buy-in),Tổng rút (Cashout),Số chip còn lại,Lãi/Lỗ ròng (P&L)\n';
     for (const p of statsData.players) {
       csvContent += `"${p.username}",${p.seat_number},"${p.status}",${p.purchase_count},${p.cashout_chips},${p.current_chips},${p.net_pnl}\n`;
     }
@@ -1017,7 +1235,9 @@ export class PokerLobbyService {
     roomId: string,
     body: { seat_number: number; display_name: string; buy_in_chips: number },
   ) {
-    const table = await PokerTable.findOne({ where: { id: roomId, is_active: true } });
+    const table = await PokerTable.findOne({
+      where: { id: roomId, is_active: true },
+    });
     if (!table) {
       throw new NotFoundException('Bàn chơi không tồn tại.');
     }
@@ -1045,7 +1265,10 @@ export class PokerLobbyService {
     }
 
     // Check ghế trống trên Redis
-    const existingSeat = await this.stateService.getSeat(roomId, body.seat_number);
+    const existingSeat = await this.stateService.getSeat(
+      roomId,
+      body.seat_number,
+    );
     if (existingSeat) {
       throw new BadRequestException('Seat already occupied.');
     }
@@ -1101,7 +1324,11 @@ export class PokerLobbyService {
       const requestData = {
         request_id: requestId,
         user_id: userId,
-        username: body.display_name || user?.user_name || user?.email?.split('@')[0] || 'Guest',
+        username:
+          body.display_name ||
+          user?.user_name ||
+          user?.email?.split('@')[0] ||
+          'Guest',
         avatar: user?.avatar_url || '',
         seat_number: body.seat_number,
         amount: body.buy_in_chips,
@@ -1109,7 +1336,11 @@ export class PokerLobbyService {
       };
 
       const redis = this.stateService.getRedisClient();
-      await redis.hset(`table:${roomId}:sit-requests`, requestId, JSON.stringify(requestData));
+      await redis.hset(
+        `table:${roomId}:sit-requests`,
+        requestId,
+        JSON.stringify(requestData),
+      );
 
       return {
         auto_approved: false,
@@ -1121,7 +1352,10 @@ export class PokerLobbyService {
     }
   }
 
-  async addBotToSeat(roomId: string, body: { seat_number: number; display_name?: string; buy_in_chips?: number }) {
+  async addBotToSeat(
+    roomId: string,
+    body: { seat_number: number; display_name?: string; buy_in_chips?: number },
+  ) {
     const seatIndex = body.seat_number;
     const existingSeat = await this.stateService.getSeat(roomId, seatIndex);
     if (existingSeat) {
@@ -1129,7 +1363,8 @@ export class PokerLobbyService {
     }
 
     const botId = `bot_${crypto.randomUUID()}`;
-    const name = body.display_name || `Bot_${Math.floor(1000 + Math.random() * 9000)}`;
+    const name =
+      body.display_name || `Bot_${Math.floor(1000 + Math.random() * 9000)}`;
     const amt = body.buy_in_chips || 5000;
 
     await this.stateService.setSeat(roomId, seatIndex, {

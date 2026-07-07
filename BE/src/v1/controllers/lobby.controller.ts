@@ -1,5 +1,10 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthGuard } from '../guards/auth.guard';
 import { PokerLobbyService } from '../services/poker-lobby.service';
 
@@ -13,7 +18,8 @@ export class LobbyController {
   @Get('stats')
   @ApiOperation({
     summary: 'Thống kê tổng quan sảnh',
-    description: 'Trả về số lượng người đang online, số bàn đang hoạt động và tổng jackpot hôm nay.',
+    description:
+      'Trả về số lượng người đang online, số bàn đang hoạt động và tổng jackpot hôm nay.',
   })
   @ApiResponse({
     status: 200,
@@ -26,7 +32,10 @@ export class LobbyController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Chưa đăng nhập hoặc token hết hạn' })
+  @ApiResponse({
+    status: 401,
+    description: 'Chưa đăng nhập hoặc token hết hạn',
+  })
   async getStats() {
     return this.lobbyService.getLobbyStats();
   }

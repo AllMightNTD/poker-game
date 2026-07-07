@@ -1,4 +1,11 @@
-import { BaseEntity, Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Index } from 'typeorm';
+import {
+  BaseEntity,
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Index,
+} from 'typeorm';
 
 @Entity('admin_audit_logs')
 export class AdminAuditLog extends BaseEntity {
@@ -11,7 +18,7 @@ export class AdminAuditLog extends BaseEntity {
 
   @Index()
   @Column({ type: 'varchar' })
-  action: string; 
+  action: string;
 
   @Column({ type: 'varchar' })
   resource: string;

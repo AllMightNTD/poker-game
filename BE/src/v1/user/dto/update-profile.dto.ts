@@ -4,9 +4,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
-  ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import { Gender, RelationshipStatus } from 'src/constants/enums';
 
 export class UpdateProfileDto {

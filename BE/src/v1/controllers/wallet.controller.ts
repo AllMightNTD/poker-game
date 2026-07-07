@@ -1,6 +1,18 @@
-import { Controller, Post, Headers, Request, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader,
+  Controller,
+  Post,
+  Headers,
+  Request,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiHeader,
 } from '@nestjs/swagger';
 import { AuthGuard } from '../guards/auth.guard';
 import { PokerLobbyService } from '../services/poker-lobby.service';

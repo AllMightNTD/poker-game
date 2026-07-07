@@ -88,7 +88,10 @@ export class TournamentSettingsDto {
   @IsOptional()
   min_players_to_start?: number;
 
-  @ApiProperty({ description: 'Auto start when X players joined', required: false })
+  @ApiProperty({
+    description: 'Auto start when X players joined',
+    required: false,
+  })
   @IsNumber()
   @IsOptional()
   auto_start_player_count?: number;
@@ -107,7 +110,7 @@ export class TournamentSettingsDto {
   @IsNumber()
   @IsOptional()
   break_duration?: number;
-  
+
   @ApiProperty({ enum: ['AUTO_FOLD', 'AUTO_CHECK'], default: 'AUTO_FOLD' })
   @IsIn(['AUTO_FOLD', 'AUTO_CHECK'])
   @IsOptional()
@@ -144,7 +147,11 @@ export class CreateRoomDto {
   @IsOptional()
   game_type?: string = 'NLH';
 
-  @ApiProperty({ description: 'Chế độ chơi', enum: ['CUSTOM', 'TOURNAMENT'], default: 'CUSTOM' })
+  @ApiProperty({
+    description: 'Chế độ chơi',
+    enum: ['CUSTOM', 'TOURNAMENT'],
+    default: 'CUSTOM',
+  })
   @IsIn(['CUSTOM', 'TOURNAMENT'])
   @IsOptional()
   mode?: string = 'CUSTOM';
@@ -154,37 +161,60 @@ export class CreateRoomDto {
   @Min(1)
   small_blind: number;
 
-  @ApiProperty({ description: 'Số người chơi tối đa (VD: 2, 6, 9)', default: 9 })
+  @ApiProperty({
+    description: 'Số người chơi tối đa (VD: 2, 6, 9)',
+    default: 9,
+  })
   @IsNumber()
   @IsOptional()
   max_players?: number = 9;
 
-  @ApiProperty({ description: 'Thời gian suy nghĩ mỗi Turn (giây)', default: 15 })
+  @ApiProperty({
+    description: 'Thời gian suy nghĩ mỗi Turn (giây)',
+    default: 15,
+  })
   @IsNumber()
   @IsOptional()
   turn_time_limit?: number = 15;
 
-  @ApiProperty({ description: 'Thời gian Time Bank dự trữ (giây)', default: 30 })
+  @ApiProperty({
+    description: 'Thời gian Time Bank dự trữ (giây)',
+    default: 30,
+  })
   @IsNumber()
   @IsOptional()
   time_bank?: number = 30;
 
   // Tiền buy-in cho Cash Game
-  @ApiProperty({ description: 'Mua vào tối thiểu (mặc định = 40x SB)', required: false })
+  @ApiProperty({
+    description: 'Mua vào tối thiểu (mặc định = 40x SB)',
+    required: false,
+  })
   @IsOptional()
   min_buy_in?: number;
 
-  @ApiProperty({ description: 'Mua vào tối đa (mặc định = 200x SB)', required: false })
+  @ApiProperty({
+    description: 'Mua vào tối đa (mặc định = 200x SB)',
+    required: false,
+  })
   @IsOptional()
   max_buy_in?: number;
 
-  @ApiProperty({ description: 'Cấu hình Cash Game nâng cao', type: CustomSettingsDto, required: false })
+  @ApiProperty({
+    description: 'Cấu hình Cash Game nâng cao',
+    type: CustomSettingsDto,
+    required: false,
+  })
   @ValidateNested()
   @Type(() => CustomSettingsDto)
   @IsOptional()
   custom_settings?: CustomSettingsDto;
 
-  @ApiProperty({ description: 'Cấu hình Giải đấu', type: TournamentSettingsDto, required: false })
+  @ApiProperty({
+    description: 'Cấu hình Giải đấu',
+    type: TournamentSettingsDto,
+    required: false,
+  })
   @ValidateNested()
   @Type(() => TournamentSettingsDto)
   @IsOptional()

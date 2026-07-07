@@ -3,9 +3,11 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
-  UpdateDateColumn
+  UpdateDateColumn,
 } from 'typeorm';
+import { AuditLog } from './audit_log.entity';
 
 @Entity('tables')
 export class PokerTable extends BaseEntity {
@@ -75,4 +77,7 @@ export class PokerTable extends BaseEntity {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  @OneToMany(() => AuditLog, (auditLog) => auditLog.room)
+  auditLog: AuditLog;
 }

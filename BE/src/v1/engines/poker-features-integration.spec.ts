@@ -1,10 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PokerGameService } from '../services/poker-game.service';
-import { PokerStateService } from '../services/poker-state.service';
 import { PokerLobbyService } from '../services/poker-lobby.service';
-import { PokerShowdownManager } from './poker-showdown.manager';
+import { PokerStateService } from '../services/poker-state.service';
 import { PokerGameEngine } from './poker-game.engine';
-import { createHash, randomBytes } from 'crypto';
+import { PokerShowdownManager } from './poker-showdown.manager';
 
 // ── Mock Database Entities ──
 jest.mock('../entities/poker_table.entity', () => ({
@@ -134,9 +133,12 @@ class MockPokerStateService {
     return this.decks.get(roomId) || [];
   }
 
-  async deleteActionLogs(handId: string) {}
+  async deleteActionLogs(_handId: string) {
+    console.log('_handId', _handId);
+  }
 
-  async getActionLogs(handId: string) {
+  async getActionLogs(_handId: string) {
+    console.log('handId', _handId);
     return [];
   }
 
@@ -154,8 +156,8 @@ class MockPokerStateService {
   }
 }
 
-import { PokerLobbyGateway } from '../gateways/poker-lobby.gateway';
 import { JwtService } from '@nestjs/jwt';
+import { PokerLobbyGateway } from '../gateways/poker-lobby.gateway';
 
 describe('Poker Integrated Advanced Features', () => {
   let gameService: PokerGameService;
@@ -188,7 +190,11 @@ describe('Poker Integrated Advanced Features', () => {
     } as any;
 
     gateway.server = gameService.server;
-    gateway['logger'] = { log: jest.fn(), error: jest.fn(), warn: jest.fn() } as any;
+    gateway['logger'] = {
+      log: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+    } as any;
 
     // Direct assignment to sub-manager
     showdownManager = new PokerShowdownManager(gameService);
@@ -200,9 +206,30 @@ describe('Poker Integrated Advanced Features', () => {
 
     // Mock seats: 3 active players, initial stack 2000
     await stateService.setAllSeats(roomId, [
-      { seat_number: 1, user_id: 'u1', username: 'Player1', status: 'active', stack: '2000', total_contributed: '0' },
-      { seat_number: 2, user_id: 'u2', username: 'Player2', status: 'active', stack: '2000', total_contributed: '0' },
-      { seat_number: 3, user_id: 'u3', username: 'Player3', status: 'active', stack: '2000', total_contributed: '0' },
+      {
+        seat_number: 1,
+        user_id: 'u1',
+        username: 'Player1',
+        status: 'active',
+        stack: '2000',
+        total_contributed: '0',
+      },
+      {
+        seat_number: 2,
+        user_id: 'u2',
+        username: 'Player2',
+        status: 'active',
+        stack: '2000',
+        total_contributed: '0',
+      },
+      {
+        seat_number: 3,
+        user_id: 'u3',
+        username: 'Player3',
+        status: 'active',
+        stack: '2000',
+        total_contributed: '0',
+      },
     ]);
 
     // Force next hand to be a Bomb Pot
@@ -249,8 +276,22 @@ describe('Poker Integrated Advanced Features', () => {
     });
 
     await stateService.setAllSeats(roomId, [
-      { seat_number: 1, user_id: 'u1', username: 'A', status: 'active', stack: '0', total_contributed: '500' },
-      { seat_number: 2, user_id: 'u2', username: 'B', status: 'active', stack: '0', total_contributed: '500' },
+      {
+        seat_number: 1,
+        user_id: 'u1',
+        username: 'A',
+        status: 'active',
+        stack: '0',
+        total_contributed: '500',
+      },
+      {
+        seat_number: 2,
+        user_id: 'u2',
+        username: 'B',
+        status: 'active',
+        stack: '0',
+        total_contributed: '500',
+      },
     ]);
 
     // Give players pocket cards
@@ -260,12 +301,16 @@ describe('Poker Integrated Advanced Features', () => {
     await stateService.setPlayerCards(roomId, 'u2', ['7h', '2c']);
 
     // Mock splitPot and evaluate7CardHand to trigger standard payout
-    jest.spyOn(PokerGameEngine, 'splitPot').mockReturnValue([
-      { amount: 1000, eligibleSeats: [1, 2], isUncalled: false },
-    ]);
+    jest
+      .spyOn(PokerGameEngine, 'splitPot')
+      .mockReturnValue([
+        { amount: 1000, eligibleSeats: [1, 2], isUncalled: false },
+      ]);
 
     // Spy on finalizeAndBroadcastHand
-    const finalizeSpy = jest.spyOn(showdownManager, 'finalizeAndBroadcastHand').mockImplementation(async () => {});
+    const finalizeSpy = jest
+      .spyOn(showdownManager, 'finalizeAndBroadcastHand')
+      .mockImplementation(async () => {});
 
     await showdownManager.processShowdown(roomId);
 
@@ -323,35 +368,57 @@ describe('Poker Integrated Advanced Features', () => {
 
     // 2 players: seat 1 is winner, seat 2 is loser and has auto muck turned on (muck_cards = '1')
     await stateService.setAllSeats(roomId, [
-      { seat_number: 1, user_id: 'winner_id', username: 'Winner', status: 'active', stack: '0', total_contributed: '500', muck_cards: '0' },
-      { seat_number: 2, user_id: 'loser_id', username: 'Loser', status: 'active', stack: '0', total_contributed: '500', muck_cards: '1' },
+      {
+        seat_number: 1,
+        user_id: 'winner_id',
+        username: 'Winner',
+        status: 'active',
+        stack: '0',
+        total_contributed: '500',
+        muck_cards: '0',
+      },
+      {
+        seat_number: 2,
+        user_id: 'loser_id',
+        username: 'Loser',
+        status: 'active',
+        stack: '0',
+        total_contributed: '500',
+        muck_cards: '1',
+      },
     ]);
 
     await stateService.setPlayerCards(roomId, 'winner_id', ['Ac', 'Ad']); // Two pairs
     await stateService.setPlayerCards(roomId, 'loser_id', ['3c', '4c']); // High card
 
     // Split pot
-    jest.spyOn(PokerGameEngine, 'splitPot').mockReturnValue([
-      { amount: 1000, eligibleSeats: [1, 2], isUncalled: false },
-    ]);
+    jest
+      .spyOn(PokerGameEngine, 'splitPot')
+      .mockReturnValue([
+        { amount: 1000, eligibleSeats: [1, 2], isUncalled: false },
+      ]);
 
     // Let the showdown run
     await showdownManager.processShowdown(roomId);
 
     // Verify broadcast event details
     expect(gameService.server.to).toHaveBeenCalledWith(`table_${roomId}`);
-    
+
     // Find the hand-ended event emit call
-    const handEndedCall = (gameService.server.emit as jest.Mock).mock.calls.find(
-      (call) => call[0] === 'table:hand-ended'
-    );
+    const handEndedCall = (
+      gameService.server.emit as jest.Mock
+    ).mock.calls.find((call) => call[0] === 'table:hand-ended');
     expect(handEndedCall).toBeDefined();
 
     const payload = handEndedCall[1];
     expect(payload.all_hands).toBeDefined();
 
-    const winnerHand = payload.all_hands.find((h: any) => h.user_id === 'winner_id');
-    const loserHand = payload.all_hands.find((h: any) => h.user_id === 'loser_id');
+    const winnerHand = payload.all_hands.find(
+      (h: any) => h.user_id === 'winner_id',
+    );
+    const loserHand = payload.all_hands.find(
+      (h: any) => h.user_id === 'loser_id',
+    );
 
     // Winner's card must be shown
     expect(winnerHand.pocket_cards).toEqual(['Ac', 'Ad']);

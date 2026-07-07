@@ -35,20 +35,21 @@ import { corsOriginFn } from '../../config/cors.config';
     whitelist: true,
   }),
 )
-export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+export class PokerLobbyGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
   private logger = new Logger(PokerLobbyGateway.name);
   private statsInterval: NodeJS.Timeout;
 
-
   constructor(
     private readonly lobbyService: PokerLobbyService,
     private readonly stateService: PokerStateService,
     private readonly jwtService: JwtService,
     private readonly gameService: PokerGameService,
-  ) { }
+  ) {}
 
   afterInit(server: Server) {
     this.logger.log('PokerLobbyGateway Initialized');
@@ -79,23 +80,31 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       const decoded = this.jwtService.verify(token);
       client.data.user = { id: decoded.sub };
       await client.join(`user_${decoded.sub}`);
-      this.logger.log(`Socket Client connected: ${client.id} (User: ${decoded.sub})`);
+      this.logger.log(
+        `Socket Client connected: ${client.id} (User: ${decoded.sub})`,
+      );
     } catch (err) {
       this.logger.error(`SOCKET CONNECTION AUTH ERROR: ${err.message}`);
-      client.emit('error', { message: 'Xác thực Socket thất bại: ' + err.message });
+      client.emit('error', {
+        message: 'Xác thực Socket thất bại: ' + err.message,
+      });
       client.disconnect();
     }
   }
 
   async handleDisconnect(client: Socket) {
-    this.logger.log(`Client disconnected: ${client.id} (IP: ${this.getClientIp(client)})`);
+    this.logger.log(
+      `Client disconnected: ${client.id} (IP: ${this.getClientIp(client)})`,
+    );
     this.lobbyService.removeLobbySubscriber(client.id);
 
     const userId = client.data?.user?.id;
     if (!userId) return;
 
     // Kiểm tra xem người dùng còn socket nào khác (ví dụ mở nhiều tab) không
-    const remainingSockets = await this.server.in(`user_${userId}`).fetchSockets();
+    const remainingSockets = await this.server
+      .in(`user_${userId}`)
+      .fetchSockets();
     const isFullyDisconnected = remainingSockets.length === 0;
 
     // Sử dụng subscribedRooms tự quản lý thay vì client.rooms đã bị xoá
@@ -144,7 +153,7 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
     }
 
     client.join(`table_${roomId}`);
-    
+
     // Theo dõi room để xử lý khi disconnect
     if (!client.data.subscribedRooms) {
       client.data.subscribedRooms = new Set<string>();
@@ -160,14 +169,14 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
 
       // Khôi phục trạng thái active nếu đang disconnected trên Redis
       const seats = await this.stateService.getAllSeats(roomId);
-      const mySeat = seats.find(s => s.user_id === userId);
+      const mySeat = seats.find((s) => s.user_id === userId);
       if (mySeat && mySeat.disconnected_at && mySeat.disconnected_at !== '0') {
         const updateData: Record<string, string> = { disconnected_at: '0' };
         if (mySeat.status === 'disconnected') {
           updateData.status = 'active';
         }
         await this.stateService.setSeat(roomId, mySeat.seat_number, updateData);
-        
+
         this.server.to(`table_${roomId}`).emit('table:player-reconnected', {
           user_id: userId,
           seat_number: mySeat.seat_number,
@@ -193,7 +202,8 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
   @SubscribeMessage('table:action')
   async handleTableAction(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { room_id: string; action_type: string; amount?: number },
+    @MessageBody()
+    data: { room_id: string; action_type: string; amount?: number },
   ) {
     const roomId = data.room_id;
     const userId = client.data?.user?.id;
@@ -203,7 +213,9 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
     // Distributed lock để tránh cược đè
     const lockAcquired = await this.stateService.acquireLock(roomId);
     if (!lockAcquired) {
-      client.emit('error', { message: 'Hệ thống đang xử lý cược, vui lòng thử lại.' });
+      client.emit('error', {
+        message: 'Hệ thống đang xử lý cược, vui lòng thử lại.',
+      });
       return;
     }
 
@@ -215,7 +227,7 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
 
       const seats = await this.stateService.getAllSeats(roomId);
       const currentTurnSeat = parseInt(tableState.current_turn_seat);
-      const activeSeat = seats.find(s => s.seat_number === currentTurnSeat);
+      const activeSeat = seats.find((s) => s.seat_number === currentTurnSeat);
       if (!activeSeat || activeSeat.user_id !== userId) {
         throw new Error('Chưa tới lượt hành động của bạn.');
       }
@@ -226,7 +238,12 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       await redisClient.hset(statsKey, 'consecutive_timeouts', '0');
 
       // Xử lý hành động cược
-      await this.gameService.processPlayerAction(roomId, currentTurnSeat, data.action_type, data.amount || 0);
+      await this.gameService.processPlayerAction(
+        roomId,
+        currentTurnSeat,
+        data.action_type,
+        data.amount || 0,
+      );
     } catch (err) {
       client.emit('error', { message: err.message });
       await this.gameService.broadcastTableState(roomId);
@@ -252,7 +269,7 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       const currentTurnSeat = parseInt(tableState?.current_turn_seat || '0');
 
       const seats = await this.stateService.getAllSeats(roomId);
-      const activeSeat = seats.find(s => s.seat_number === currentTurnSeat);
+      const activeSeat = seats.find((s) => s.seat_number === currentTurnSeat);
 
       if (!activeSeat || activeSeat.user_id !== userId) {
         throw new Error('Chưa tới lượt hành động của bạn.');
@@ -282,7 +299,9 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
   private getClientIp(socket: Socket): string {
     const forwarded = socket.handshake.headers['x-forwarded-for'];
     if (forwarded) {
-      const ip = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0];
+      const ip = Array.isArray(forwarded)
+        ? forwarded[0]
+        : forwarded.split(',')[0];
       return ip.trim();
     }
     return socket.handshake.address;
@@ -303,14 +322,17 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
   @SubscribeMessage('table:request-sit')
   async handleRequestSit(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { room_id: string; seat_number: number; amount: number },
+    @MessageBody()
+    data: { room_id: string; seat_number: number; amount: number },
   ) {
     const roomId = data.room_id;
     const userId = client.data?.user?.id;
     if (!roomId || !userId) return;
 
     try {
-      const table = await PokerTable.findOne({ where: { id: roomId, is_active: true } });
+      const table = await PokerTable.findOne({
+        where: { id: roomId, is_active: true },
+      });
       if (!table) {
         throw new Error('Bàn chơi không tồn tại.');
       }
@@ -320,18 +342,29 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       }
 
       // Check tournament late registration
-      if (table.mode === 'TOURNAMENT' && table.tournament_settings?.late_registration_minutes) {
+      if (
+        table.mode === 'TOURNAMENT' &&
+        table.tournament_settings?.late_registration_minutes
+      ) {
         if (table.tournament_settings.start_time) {
-          const startTimeMs = new Date(table.tournament_settings.start_time).getTime();
-          const lateRegMs = table.tournament_settings.late_registration_minutes * 60000;
+          const startTimeMs = new Date(
+            table.tournament_settings.start_time,
+          ).getTime();
+          const lateRegMs =
+            table.tournament_settings.late_registration_minutes * 60000;
           if (Date.now() > startTimeMs + lateRegMs) {
-            throw new Error('Giải đấu đã hết hạn đăng ký muộn (Late Registration).');
+            throw new Error(
+              'Giải đấu đã hết hạn đăng ký muộn (Late Registration).',
+            );
           }
         }
       }
 
       // Check ghế trống trên Redis
-      const existingSeat = await this.stateService.getSeat(roomId, data.seat_number);
+      const existingSeat = await this.stateService.getSeat(
+        roomId,
+        data.seat_number,
+      );
       if (existingSeat) {
         throw new Error('Ghế này đã có người ngồi.');
       }
@@ -377,23 +410,31 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       const userIp = this.getClientIp(client);
       const userSubnet = this.getClassCSubnet(userIp);
 
-      const antiCollusionLevel = table.custom_settings?.anti_collusion_level || 'LOW';
+      const antiCollusionLevel =
+        table.custom_settings?.anti_collusion_level || 'LOW';
 
-      if (antiCollusionLevel !== 'LOW' && userIp !== '127.0.0.1' && userIp !== '::1') {
+      if (
+        antiCollusionLevel !== 'LOW' &&
+        userIp !== '127.0.0.1' &&
+        userIp !== '::1'
+      ) {
         const seats = await this.stateService.getAllSeats(roomId);
         for (const seat of seats) {
           if (seat.is_bot === '1') continue;
           const seatIp = seat.ip || '127.0.0.1';
           if (seatIp !== '127.0.0.1' && seatIp !== '::1') {
-            
             if (antiCollusionLevel === 'HIGH') {
               const seatSubnet = this.getClassCSubnet(String(seatIp));
               if (seatSubnet === userSubnet) {
-                throw new Error('Địa chỉ IP (cùng đường truyền) của bạn bị trùng lặp với người chơi khác tại bàn này (Chống thông đồng Mức Cao).');
+                throw new Error(
+                  'Địa chỉ IP (cùng đường truyền) của bạn bị trùng lặp với người chơi khác tại bàn này (Chống thông đồng Mức Cao).',
+                );
               }
             } else if (antiCollusionLevel === 'MEDIUM') {
               if (seatIp === userIp) {
-                throw new Error('Địa chỉ IP của bạn bị trùng lặp với người chơi khác tại bàn này (Chống thông đồng Mức Trung).');
+                throw new Error(
+                  'Địa chỉ IP của bạn bị trùng lặp với người chơi khác tại bàn này (Chống thông đồng Mức Trung).',
+                );
               }
             }
           }
@@ -418,12 +459,19 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       };
 
       const redis = this.stateService.getRedisClient();
-      await redis.hset(`table:${roomId}:sit-requests`, requestId, JSON.stringify(requestData));
+      await redis.hset(
+        `table:${roomId}:sit-requests`,
+        requestId,
+        JSON.stringify(requestData),
+      );
 
       // Broadcast sự kiện cập nhật danh sách yêu cầu
       await this.gameService.broadcastSitRequests(roomId);
 
-      client.emit('table:sit-request-submitted', { success: true, request_id: requestId });
+      client.emit('table:sit-request-submitted', {
+        success: true,
+        request_id: requestId,
+      });
     } catch (err) {
       client.emit('error', { message: err.message });
     }
@@ -435,14 +483,17 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
   @SubscribeMessage('table:respond-sit')
   async handleRespondSit(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { room_id: string; request_id: string; approve: boolean },
+    @MessageBody()
+    data: { room_id: string; request_id: string; approve: boolean },
   ) {
     const roomId = data.room_id;
     const userId = client.data?.user?.id;
     if (!roomId || !userId) return;
 
     try {
-      const table = await PokerTable.findOne({ where: { id: roomId, is_active: true } });
+      const table = await PokerTable.findOne({
+        where: { id: roomId, is_active: true },
+      });
       if (!table) {
         throw new Error('Bàn chơi không tồn tại.');
       }
@@ -452,7 +503,10 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       }
 
       const redis = this.stateService.getRedisClient();
-      const requestStr = await redis.hget(`table:${roomId}:sit-requests`, data.request_id);
+      const requestStr = await redis.hget(
+        `table:${roomId}:sit-requests`,
+        data.request_id,
+      );
       if (!requestStr) {
         throw new Error('Yêu cầu không tồn tại hoặc đã hết hạn.');
       }
@@ -476,7 +530,7 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
 
         // Broadcast trạng thái bàn mới
         await this.gameService.broadcastTableState(roomId);
-        
+
         // Auto-start game if enough players are seated
         await this.gameService.checkAndNotifyWaitingState(roomId);
       } else {
@@ -510,7 +564,7 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
     try {
       const redis = this.stateService.getRedisClient();
       const requestsRaw = await redis.hgetall(`table:${roomId}:sit-requests`);
-      const list = Object.values(requestsRaw).map(v => JSON.parse(v));
+      const list = Object.values(requestsRaw).map((v) => JSON.parse(v));
       client.emit('table:sit-requests-list', { requests: list });
     } catch (err) {
       client.emit('error', { message: err.message });
@@ -532,9 +586,10 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
 
     if (!roomId || !userId) return;
 
-
     try {
-      const table = await PokerTable.findOne({ where: { id: roomId, is_active: true } });
+      const table = await PokerTable.findOne({
+        where: { id: roomId, is_active: true },
+      });
       if (!table) {
         throw new Error('Bàn chơi không tồn tại.');
       }
@@ -554,10 +609,16 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       }
 
       const seats = await this.stateService.getAllSeats(roomId);
-      const readyPlayers = seats.filter(s => (s.status === 'active' || s.status === 'waiting_for_next_hand') && parseInt(s.stack) > 0);
+      const readyPlayers = seats.filter(
+        (s) =>
+          (s.status === 'active' || s.status === 'waiting_for_next_hand') &&
+          parseInt(s.stack) > 0,
+      );
 
       if (readyPlayers.length < 2) {
-        throw new Error('Cần tối thiểu 2 người chơi có phỉnh để bắt đầu ván bài.');
+        throw new Error(
+          'Cần tối thiểu 2 người chơi có phỉnh để bắt đầu ván bài.',
+        );
       }
 
       await this.gameService.startNewHand(roomId, data.client_seed);
@@ -577,7 +638,7 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
 
     try {
       const seats = await this.stateService.getAllSeats(roomId);
-      const isPlayer = seats.some(s => s.user_id === userId);
+      const isPlayer = seats.some((s) => s.user_id === userId);
       if (!isPlayer) {
         throw new Error('Bạn không phải là người chơi trong bàn này.');
       }
@@ -586,7 +647,9 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
         next_client_seed: data.client_seed,
       });
 
-      client.emit('table:client-seed-updated', { client_seed: data.client_seed });
+      client.emit('table:client-seed-updated', {
+        client_seed: data.client_seed,
+      });
     } catch (err) {
       client.emit('error', { message: err.message });
     }
@@ -605,7 +668,9 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
     if (!roomId || !userId || !data.message?.trim()) return;
 
     try {
-      const table = await PokerTable.findOne({ where: { id: roomId, is_active: true } });
+      const table = await PokerTable.findOne({
+        where: { id: roomId, is_active: true },
+      });
       if (!table) throw new Error('Bàn chơi không tồn tại.');
 
       const allowChat = table.custom_settings?.allow_chat !== false;
@@ -615,13 +680,15 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       }
 
       const seats = await this.stateService.getAllSeats(roomId);
-      const senderSeat = seats.find(s => s.user_id === userId);
+      const senderSeat = seats.find((s) => s.user_id === userId);
       const senderUser = await User.findOne({ where: { id: userId } });
-      
+
       const payload = {
         user_id: userId,
         username: senderUser ? senderUser.user_name : 'Khán giả',
-        avatar: senderUser?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${senderUser?.user_name || 'spectator'}`,
+        avatar:
+          senderUser?.avatar_url ||
+          `https://api.dicebear.com/7.x/adventurer/svg?seed=${senderUser?.user_name || 'spectator'}`,
         seat_number: senderSeat ? senderSeat.seat_number : null,
         message: data.message.trim(),
         timestamp: Date.now(),
@@ -629,7 +696,9 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
 
       await this.stateService.pushChatMessage(roomId, JSON.stringify(payload));
 
-      this.server.to(`table_${roomId}`).emit('table:chat-message-received', payload);
+      this.server
+        .to(`table_${roomId}`)
+        .emit('table:chat-message-received', payload);
     } catch (err) {
       client.emit('error', { message: err.message });
     }
@@ -652,7 +721,11 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
 
     try {
       const tableState = await this.stateService.getTableState(roomId);
-      if (!tableState || !tableState.rit_voters || tableState.rit_voters === 'completed') {
+      if (
+        !tableState ||
+        !tableState.rit_voters ||
+        tableState.rit_voters === 'completed'
+      ) {
         return;
       }
 
@@ -662,7 +735,9 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       }
 
       if (data.agree) {
-        const yesVotes = tableState.rit_votes_yes ? tableState.rit_votes_yes.split(',') : [];
+        const yesVotes = tableState.rit_votes_yes
+          ? tableState.rit_votes_yes.split(',')
+          : [];
         if (!yesVotes.includes(userId)) {
           yesVotes.push(userId);
           await this.stateService.setTableState(roomId, {
@@ -670,7 +745,9 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
           });
         }
       } else {
-        const noVotes = tableState.rit_votes_no ? tableState.rit_votes_no.split(',') : [];
+        const noVotes = tableState.rit_votes_no
+          ? tableState.rit_votes_no.split(',')
+          : [];
         if (!noVotes.includes(userId)) {
           noVotes.push(userId);
           await this.stateService.setTableState(roomId, {
@@ -680,8 +757,12 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       }
 
       const updatedState = await this.stateService.getTableState(roomId);
-      const yesVotesNew = updatedState.rit_votes_yes ? updatedState.rit_votes_yes.split(',') : [];
-      const noVotesNew = updatedState.rit_votes_no ? updatedState.rit_votes_no.split(',') : [];
+      const yesVotesNew = updatedState.rit_votes_yes
+        ? updatedState.rit_votes_yes.split(',')
+        : [];
+      const noVotesNew = updatedState.rit_votes_no
+        ? updatedState.rit_votes_no.split(',')
+        : [];
       const totalVoted = yesVotesNew.length + noVotesNew.length;
 
       this.server.to(`table_${roomId}`).emit('table:rit-vote-updated', {
@@ -713,7 +794,7 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
 
     try {
       const seats = await this.stateService.getAllSeats(roomId);
-      const seat = seats.find(s => s.user_id === userId);
+      const seat = seats.find((s) => s.user_id === userId);
       if (seat) {
         await this.stateService.setSeat(roomId, seat.seat_number, {
           muck_cards: data.muck ? '1' : '0',
@@ -750,7 +831,9 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
         throw new Error('Không còn lá bài nào trong bộ bài.');
       }
 
-      const community = tableState.community_cards ? tableState.community_cards.split(',') : [];
+      const community = tableState.community_cards
+        ? tableState.community_cards.split(',')
+        : [];
       const cardsNeeded = 5 - community.length;
       if (cardsNeeded <= 0) {
         throw new Error('Đã chia đủ bài chung.');
@@ -782,9 +865,13 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
     try {
       const offset = Number(data.offset) || 0;
       const limit = Number(data.limit) || 20;
-      const historyJson = await this.stateService.getChatHistory(roomId, offset, limit);
-      const history = historyJson.map(h => JSON.parse(h));
-      
+      const historyJson = await this.stateService.getChatHistory(
+        roomId,
+        offset,
+        limit,
+      );
+      const history = historyJson.map((h) => JSON.parse(h));
+
       client.emit('table:chat-history-loaded', {
         room_id: roomId,
         history,
@@ -803,24 +890,29 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
   @SubscribeMessage('table:throwable-item')
   async handleThrowableItem(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { room_id: string; item_id: string; target_seat: number },
+    @MessageBody()
+    data: { room_id: string; item_id: string; target_seat: number },
   ) {
     const roomId = data.room_id;
     const userId = client.data?.user?.id;
     if (!roomId || !userId || !data.item_id) return;
 
     try {
-      const table = await PokerTable.findOne({ where: { id: roomId, is_active: true } });
+      const table = await PokerTable.findOne({
+        where: { id: roomId, is_active: true },
+      });
       if (!table) throw new Error('Bàn chơi không tồn tại.');
 
       const allowEmotes = table.custom_settings?.allow_emotes !== false;
       if (!allowEmotes) {
-        client.emit('error', { message: 'Chủ phòng đã tắt tính năng ném vật phẩm.' });
+        client.emit('error', {
+          message: 'Chủ phòng đã tắt tính năng ném vật phẩm.',
+        });
         return;
       }
 
       const seats = await this.stateService.getAllSeats(roomId);
-      const senderSeat = seats.find(s => s.user_id === userId);
+      const senderSeat = seats.find((s) => s.user_id === userId);
       if (!senderSeat) {
         throw new Error('Bạn không ngồi trong bàn để ném vật phẩm.');
       }
@@ -832,7 +924,9 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
         timestamp: Date.now(),
       };
 
-      this.server.to(`table_${roomId}`).emit('table:throwable-item-received', payload);
+      this.server
+        .to(`table_${roomId}`)
+        .emit('table:throwable-item-received', payload);
     } catch (err) {
       client.emit('error', { message: err.message });
     }

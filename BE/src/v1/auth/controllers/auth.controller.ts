@@ -1,40 +1,36 @@
 import {
-  Controller, Get, Post, Req, Body, UseGuards, HttpCode, HttpStatus,
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth, ApiExcludeEndpoint,
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
-import { FacebookAuthGuard } from '../guards/facebook-auth.guard';
-import { AuthService } from '../services/auth/auth.service';
 import { AuthGuard } from '../../guards/auth.guard';
-import { RegisterDto, LoginDto, RefreshTokenDto } from '../dto/auth.dto';
+import { LoginDto, RefreshTokenDto, RegisterDto } from '../dto/auth.dto';
 import { RequestPasswordResetDto } from '../dto/request-reset-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { AuthService } from '../services/auth/auth.service';
 
 @ApiTags('🔐 Authentication')
 @Controller()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @ApiExcludeEndpoint()
-  @Get('facebook')
-  @UseGuards(FacebookAuthGuard)
-  async facebookLogin() {
-    // Redirected by Passport to Facebook
-  }
-
-  @ApiExcludeEndpoint()
-  @Get('facebook/callback')
-  @UseGuards(FacebookAuthGuard)
-  async facebookLoginCallback(@Req() req) {
-    return this.authService.validateFacebookUser(req.user);
-  }
-
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Đăng ký tài khoản mới',
-    description: 'Tạo tài khoản người chơi mới. Tự động khởi tạo ví với 50M chips.',
+    description:
+      'Tạo tài khoản người chơi mới. Tự động khởi tạo ví với 50M chips.',
   })
   @ApiBody({ type: RegisterDto })
   @ApiResponse({
@@ -43,11 +39,18 @@ export class AuthController {
     schema: {
       example: {
         message: 'User registered successfully',
-        user: { id: 'uuid', email: 'player1@poker.com', user_name: 'PokerKing99' },
+        user: {
+          id: 'uuid',
+          email: 'player1@poker.com',
+          user_name: 'PokerKing99',
+        },
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Email hoặc username đã tồn tại / Validation error' })
+  @ApiResponse({
+    status: 400,
+    description: 'Email hoặc username đã tồn tại / Validation error',
+  })
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
@@ -56,7 +59,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Đăng nhập',
-    description: 'Xác thực người dùng và trả về access token (2h) + refresh token (7 ngày).',
+    description:
+      'Xác thực người dùng và trả về access token (2h) + refresh token (7 ngày).',
   })
   @ApiBody({ type: LoginDto })
   @ApiResponse({
@@ -66,7 +70,11 @@ export class AuthController {
       example: {
         access_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
         refresh_token: 'uuid4.plaintext-refresh-token',
-        user: { id: 'uuid', email: 'player1@poker.com', user_name: 'PokerKing99' },
+        user: {
+          id: 'uuid',
+          email: 'player1@poker.com',
+          user_name: 'PokerKing99',
+        },
       },
     },
   })
@@ -82,9 +90,14 @@ export class AuthController {
     description: 'Gửi email đặt lại mật khẩu đến địa chỉ email đã đăng ký.',
   })
   @ApiBody({ type: RequestPasswordResetDto })
-  @ApiResponse({ status: 200, description: 'Link đặt lại mật khẩu đã được gửi' })
+  @ApiResponse({
+    status: 200,
+    description: 'Link đặt lại mật khẩu đã được gửi',
+  })
   @ApiResponse({ status: 400, description: 'Email không hợp lệ' })
-  async forgotPassword(@Body() requestPasswordResetDto: RequestPasswordResetDto) {
+  async forgotPassword(
+    @Body() requestPasswordResetDto: RequestPasswordResetDto,
+  ) {
     return this.authService.forgotPassword(requestPasswordResetDto);
   }
 
@@ -95,8 +108,14 @@ export class AuthController {
     description: 'Đặt lại mật khẩu mới bằng token nhận được qua email.',
   })
   @ApiBody({ type: ResetPasswordDto })
-  @ApiResponse({ status: 200, description: 'Mật khẩu đã được đặt lại thành công' })
-  @ApiResponse({ status: 400, description: 'Token không hợp lệ hoặc đã hết hạn' })
+  @ApiResponse({
+    status: 200,
+    description: 'Mật khẩu đã được đặt lại thành công',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Token không hợp lệ hoặc đã hết hạn',
+  })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
   }
@@ -105,7 +124,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Làm mới Access Token',
-    description: 'Sử dụng refresh token để lấy access token mới mà không cần đăng nhập lại. Refresh token sẽ được xoay vòng (Token Rotation).',
+    description:
+      'Sử dụng refresh token để lấy access token mới mà không cần đăng nhập lại. Refresh token sẽ được xoay vòng (Token Rotation).',
   })
   @ApiBody({ type: RefreshTokenDto })
   @ApiResponse({
@@ -118,7 +138,10 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Refresh token không hợp lệ hoặc đã hết hạn' })
+  @ApiResponse({
+    status: 401,
+    description: 'Refresh token không hợp lệ hoặc đã hết hạn',
+  })
   async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refreshToken(refreshTokenDto);
   }
@@ -129,17 +152,12 @@ export class AuthController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Đăng xuất',
-    description: 'Thu hồi (revoke) tất cả refresh token của người dùng hiện tại.',
+    description:
+      'Thu hồi (revoke) tất cả refresh token của người dùng hiện tại.',
   })
   @ApiResponse({ status: 200, description: 'Đăng xuất thành công' })
   @ApiResponse({ status: 401, description: 'Chưa đăng nhập' })
   async logout(@Req() req) {
     return this.authService.logout(req.user.sub);
-  }
-
-  @ApiExcludeEndpoint()
-  @Get('test')
-  public getTest(@Req() request) {
-    return 1;
   }
 }

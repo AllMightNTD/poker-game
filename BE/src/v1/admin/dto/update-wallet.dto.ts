@@ -12,7 +12,10 @@ export class UpdateWalletDto {
   @IsNotEmpty()
   amount: number;
 
-  @ApiProperty({ example: 'Compensate user for server crash', description: 'Reason for the wallet modification' })
+  @ApiProperty({
+    example: 'Compensate user for server crash',
+    description: 'Reason for the wallet modification',
+  })
   @IsString()
   @IsNotEmpty()
   reason: string;

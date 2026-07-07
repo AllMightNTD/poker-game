@@ -29,7 +29,7 @@ export class TableSession extends BaseEntity {
   seat_number: number;
 
   @Column({ type: 'bigint', default: '0' })
-  chips_at_table: string;  // current stack tại bàn
+  chips_at_table: string; // current stack tại bàn
 
   /** active | sitting_out | disconnected | left */
   @Column({ type: 'varchar', length: 20, default: 'active' })

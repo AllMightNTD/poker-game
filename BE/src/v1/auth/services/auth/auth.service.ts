@@ -1,16 +1,20 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
-import { RegisterDto, LoginDto, RefreshTokenDto } from '../../dto/auth.dto';
-import { RequestPasswordResetDto } from '../../dto/request-reset-password.dto';
-import { ResetPasswordDto } from '../../dto/reset-password.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { User } from '../../../entities/user.entity';
-import { Wallet } from '../../../entities/wallet.entity';
-import { RefreshToken } from '../../../entities/refresh_token.entity';
-import { DataSource, Repository } from 'typeorm';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { withTransaction } from 'src/common/helpers/transaction.helper';
+import { DataSource, Repository } from 'typeorm';
+import { RefreshToken } from '../../../entities/refresh_token.entity';
+import { User } from '../../../entities/user.entity';
+import { Wallet } from '../../../entities/wallet.entity';
+import { LoginDto, RefreshTokenDto, RegisterDto } from '../../dto/auth.dto';
+import { RequestPasswordResetDto } from '../../dto/request-reset-password.dto';
+import { ResetPasswordDto } from '../../dto/reset-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -22,10 +26,6 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
   ) {}
-
-  async validateFacebookUser(facebookUser: Record<string, unknown>) {
-    throw new BadRequestException('Facebook authentication is not supported for Poker currently');
-  }
 
   async register(registerDto: RegisterDto) {
     const { email, password, user_name } = registerDto;
@@ -115,10 +115,10 @@ export class AuthService {
 
   async refreshToken(refreshTokenDto: RefreshTokenDto) {
     const { refreshToken } = refreshTokenDto;
-    
+
     // Refresh token format: uuid.plaintext
     const [tokenId, plainToken] = refreshToken.split('.');
-    
+
     if (!tokenId || !plainToken) {
       throw new UnauthorizedException('Invalid refresh token format');
     }
@@ -136,7 +136,10 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token expired or revoked');
     }
 
-    const isTokenValid = await bcrypt.compare(plainToken, tokenEntity.token_hash);
+    const isTokenValid = await bcrypt.compare(
+      plainToken,
+      tokenEntity.token_hash,
+    );
     if (!isTokenValid) {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -166,18 +169,20 @@ export class AuthService {
     // Ideally, revoke all refresh tokens for the user
     await this.refreshTokenRepository.update(
       { user_id: userId, revoked_at: null },
-      { revoked_at: new Date() }
+      { revoked_at: new Date() },
     );
     return { message: 'Logged out successfully' };
   }
 
-  async forgotPassword(requestPasswordResetDto: RequestPasswordResetDto) {
+  async forgotPassword(_requestPasswordResetDto: RequestPasswordResetDto) {
     // Basic stub, implement full logic if needed
+    console.log('_requestPasswordResetDto', _requestPasswordResetDto);
     return { message: 'Reset password link sent to email' };
   }
 
-  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+  async resetPassword(_resetPasswordDto: ResetPasswordDto) {
     // Basic stub, implement full logic if needed
+    console.log('_resetPasswordDto', _resetPasswordDto);
     return { message: 'Password reset successfully' };
   }
 }

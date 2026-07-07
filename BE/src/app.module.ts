@@ -51,4 +51,4 @@ import { AppV1Module } from './v1/modules/app-v1.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

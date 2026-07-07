@@ -15,7 +15,7 @@ export class TasksService {
     private readonly configService: ConfigService,
     private readonly fileService: FileService,
     private readonly s3Service: S3Service,
-  ) { }
+  ) {}
 
   public findAll(): IJobResponse[] {
     // const jobs = this.schedulerRegistry.getCronJobs();
@@ -45,27 +45,23 @@ export class TasksService {
   }
 
   public findOneByName(name: string): IJobResponse {
-    // try {
-    //   const job = this.schedulerRegistry.getCronJob(name);
-    //   const lastDate = job.lastDate();
+    try {
+      const job = this.schedulerRegistry.getCronJob(name);
+      const lastDate = job.lastDate();
 
-    //   let nextDate: any;
-    //   try {
-    //     nextDate = job.nextDates().toDate();
-    //   } catch (e) {
-    //     nextDate = 'error: next fire date is in the past!';
-    //   }
+      let nextDate: any;
+      try {
+        nextDate = job.nextDates();
+      } catch (e) {
+        console.log(e.message);
+        nextDate = 'error: next fire date is in the past!';
+      }
 
-    //   return { name, running: job.running, nextDate, lastDate };
-    // } catch (error) {
-    //   throw new NotFoundException(ExceptionsResponse.jobNotFound);
-    // }
-    return {
-      name: '',
-      running: true,
-      nextDate: '',
-      lastDate: '',
-    };
+      return { name, running: job.running, nextDate, lastDate };
+    } catch (error) {
+      console.log(error.message);
+      throw new NotFoundException(ExceptionsResponse.jobNotFound);
+    }
   }
 
   public addCronJob(
@@ -88,7 +84,8 @@ export class TasksService {
       job.stop();
 
       return true;
-    } catch (error) {
+    } catch (_error) {
+      console.log(_error.message);
       throw new NotFoundException(ExceptionsResponse.jobNotFound);
     }
   }
@@ -100,7 +97,8 @@ export class TasksService {
       job.start();
 
       return true;
-    } catch (error) {
+    } catch (_error) {
+      console.log(_error.message);
       throw new NotFoundException(ExceptionsResponse.jobNotFound);
     }
   }
@@ -115,7 +113,8 @@ export class TasksService {
       }
 
       return true;
-    } catch (error) {
+    } catch (_error) {
+      console.log(_error.message);
       throw new NotFoundException(ExceptionsResponse.jobNotFound);
     }
   }

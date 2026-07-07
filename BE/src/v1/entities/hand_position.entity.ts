@@ -50,7 +50,7 @@ export class HandPosition extends BaseEntity {
   is_active_in_hand: boolean;
 
   @Column({ type: 'bigint', default: '0' })
-  stack_at_start: string;  // stack chip lúc bắt đầu ván
+  stack_at_start: string; // stack chip lúc bắt đầu ván
 
   @CreateDateColumn()
   created_at: Date;

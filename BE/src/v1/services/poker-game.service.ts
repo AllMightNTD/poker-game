@@ -10,7 +10,11 @@ import { PokerStateService } from './poker-state.service';
 import { PokerBotManager } from '../engines/poker-bot.manager';
 import { PokerShowdownManager } from '../engines/poker-showdown.manager';
 import { PokerActionProcessor } from '../engines/poker-action.processor';
-import { PokerSeatState, PokerTableState, WinnerLog } from '../types/poker.types';
+import {
+  PokerSeatState,
+  PokerTableState,
+  WinnerLog,
+} from '../types/poker.types';
 
 @Injectable()
 export class PokerGameService implements OnModuleDestroy {
@@ -288,7 +292,9 @@ export class PokerGameService implements OnModuleDestroy {
           await this.lobbyService.leaveRoom(sess.user_id, roomId);
           this.logger.log(`Refunded user ${sess.user_id} on room destroy.`);
         } catch (err) {
-          this.logger.error(`Error refunding user ${sess.user_id}: ${err.message}`);
+          this.logger.error(
+            `Error refunding user ${sess.user_id}: ${err.message}`,
+          );
         }
       }
     } catch (e) {
@@ -462,7 +468,8 @@ export class PokerGameService implements OnModuleDestroy {
 
     for (const socket of sockets) {
       const socketUserId = socket.data?.user?.id;
-      const isSeated = socketUserId && seatedUserIds.includes(String(socketUserId));
+      const isSeated =
+        socketUserId && seatedUserIds.includes(String(socketUserId));
 
       const maskedSeats = sanitizedSeats.map((s) => {
         const isBot = s.isBot;
@@ -602,7 +609,9 @@ export class PokerGameService implements OnModuleDestroy {
     });
 
     if (canStart && !this.autoStartTimers.has(roomId)) {
-      this.logger.log(`Table ${roomId} has enough players, starting Auto-Start countdown...`);
+      this.logger.log(
+        `Table ${roomId} has enough players, starting Auto-Start countdown...`,
+      );
       const timer = setTimeout(() => {
         this.logger.log(`Auto-starting table ${roomId}...`);
         this.autoStartTimers.delete(roomId);
@@ -675,13 +684,18 @@ export class PokerGameService implements OnModuleDestroy {
       const currentSeats = [...seats];
       for (const seat of currentSeats) {
         if (seat.pending_leave === '1') {
-          this.logger.log(`User ${seat.user_id} has pending leave. Kicking from seat.`);
+          this.logger.log(
+            `User ${seat.user_id} has pending leave. Kicking from seat.`,
+          );
           await kickPlayer(seat.user_id, seat.seat_number);
           continue;
         }
 
         const statsKey = `table:${roomId}:player:${seat.user_id}:stats`;
-        if (seat.status === 'sitting_out' || (seat.disconnected_at && seat.disconnected_at !== '0')) {
+        if (
+          seat.status === 'sitting_out' ||
+          (seat.disconnected_at && seat.disconnected_at !== '0')
+        ) {
           const awayCount = await redis.hincrby(
             statsKey,
             'consecutive_away_hands',
@@ -828,7 +842,9 @@ export class PokerGameService implements OnModuleDestroy {
             const newStack = playerStack - actualAnte;
             anteCollected += actualAnte;
             player.stack = newStack.toString();
-            const currentContributed = parseInt(player.total_contributed || '0');
+            const currentContributed = parseInt(
+              player.total_contributed || '0',
+            );
             await this.stateService.setSeat(roomId, player.seat_number, {
               stack: newStack.toString(),
               total_contributed: (currentContributed + actualAnte).toString(),
@@ -899,7 +915,10 @@ export class PokerGameService implements OnModuleDestroy {
             ? `client-${representative.user_id}-${Date.now()}`
             : randomBytes(16).toString('hex');
       }
-      await this.stateService.setTableState(roomId, { next_client_seed: '', next_hand_bomb_pot: '' });
+      await this.stateService.setTableState(roomId, {
+        next_client_seed: '',
+        next_hand_bomb_pot: '',
+      });
 
       const shuffledDeck = PokerGameEngine.shuffleDeck(serverSeed, clientSeed);
 
@@ -1075,12 +1094,19 @@ export class PokerGameService implements OnModuleDestroy {
 
     try {
       const tableState = await this.stateService.getTableState(roomId);
-      if (!tableState || !tableState.rit_voters || tableState.rit_voters === 'completed') return;
+      if (
+        !tableState ||
+        !tableState.rit_voters ||
+        tableState.rit_voters === 'completed'
+      )
+        return;
 
       const voters = tableState.rit_voters.split(',');
-      const yesVotes = tableState.rit_votes_yes ? tableState.rit_votes_yes.split(',') : [];
+      const yesVotes = tableState.rit_votes_yes
+        ? tableState.rit_votes_yes.split(',')
+        : [];
 
-      const allYes = voters.every(v => yesVotes.includes(v));
+      const allYes = voters.every((v) => yesVotes.includes(v));
       const isRitActive = allYes ? '1' : '0';
 
       await this.stateService.setTableState(roomId, {
@@ -1095,7 +1121,10 @@ export class PokerGameService implements OnModuleDestroy {
 
       await this.actionProcessor.advanceStreet(roomId);
     } catch (err) {
-      this.logger.error(`Error in finalizeRitVoting: ${err.message}`, err.stack);
+      this.logger.error(
+        `Error in finalizeRitVoting: ${err.message}`,
+        err.stack,
+      );
     } finally {
       await this.stateService.releaseLock(roomId);
     }

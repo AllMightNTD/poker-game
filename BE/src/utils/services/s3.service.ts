@@ -37,7 +37,10 @@ export class S3Service {
     });
   }
 
-  private getUploadParams(file: Express.Multer.File, folder?: string): PutObjectCommandInput {
+  private getUploadParams(
+    file: Express.Multer.File,
+    folder?: string,
+  ): PutObjectCommandInput {
     const { originalname, mimetype, buffer } = file;
     const key = `${randomUUID()}_${originalname}`;
     file.filename = key;
@@ -54,7 +57,10 @@ export class S3Service {
     };
   }
 
-  public async uploadOne(file: Express.Multer.File, folder?: string): Promise<Record<string, unknown>> {
+  public async uploadOne(
+    file: Express.Multer.File,
+    folder?: string,
+  ): Promise<Record<string, unknown>> {
     const params = this.getUploadParams(file, folder);
     const command = new PutObjectCommand(params);
     try {

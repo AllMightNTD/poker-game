@@ -19,10 +19,23 @@ import { ConfigModule } from '@nestjs/config';
     ConfigModule,
     TypeOrmModule.forFeature([PokerTable, TableSession, Wallet, SystemRevenue]),
   ],
-  controllers: [LobbyController, WalletController, RoomsController, UserController],
-  providers: [PokerLobbyService, PokerLobbyGateway, PokerStateService, PokerGameService],
-  exports: [PokerLobbyService, PokerLobbyGateway, PokerStateService, PokerGameService],
+  controllers: [
+    LobbyController,
+    WalletController,
+    RoomsController,
+    UserController,
+  ],
+  providers: [
+    PokerLobbyService,
+    PokerLobbyGateway,
+    PokerStateService,
+    PokerGameService,
+  ],
+  exports: [
+    PokerLobbyService,
+    PokerLobbyGateway,
+    PokerStateService,
+    PokerGameService,
+  ],
 })
 export class PokerLobbyModule {}
-
-

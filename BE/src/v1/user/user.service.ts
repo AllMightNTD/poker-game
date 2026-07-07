@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { BaseService } from 'src/base/base.service';
+import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 
 @Injectable()
@@ -20,10 +20,8 @@ export class UserService extends BaseService<User, string> {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    
-    // Omit password
-    const { password, ...result } = user;
-    return result;
+
+    return user;
   }
 
   async getUserProfile(userId: string) {

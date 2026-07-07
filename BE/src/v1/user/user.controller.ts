@@ -1,8 +1,9 @@
+import { Controller, Get, Request, UseGuards } from '@nestjs/common';
 import {
-  Controller, Get, Request, UseGuards,
-} from '@nestjs/common';
-import {
-  ApiTags, ApiOperation, ApiResponse, ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthGuard } from '../guards/auth.guard';
 import { UserService } from './user.service';
@@ -44,7 +45,10 @@ export class UserController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Chưa đăng nhập hoặc token hết hạn' })
+  @ApiResponse({
+    status: 401,
+    description: 'Chưa đăng nhập hoặc token hết hạn',
+  })
   async getMe(@Request() req) {
     return this.userService.getMe(req.user.sub);
   }
@@ -54,7 +58,8 @@ export class UserController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Số dư chips hiện tại',
-    description: 'Lấy số dư chips trong ví của người dùng. Tự động tạo ví với 50M chips nếu chưa có.',
+    description:
+      'Lấy số dư chips trong ví của người dùng. Tự động tạo ví với 50M chips nếu chưa có.',
   })
   @ApiResponse({
     status: 200,

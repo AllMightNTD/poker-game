@@ -48,7 +48,10 @@ export class PokerStateService implements OnModuleInit {
     return Object.keys(data).length > 0 ? data : null;
   }
 
-  async setTableState(tableId: string, fields: Record<string, string | number>): Promise<void> {
+  async setTableState(
+    tableId: string,
+    fields: Record<string, string | number>,
+  ): Promise<void> {
     const key = `table:${tableId}:state`;
     await this.redis.hset(key, {
       ...fields,
@@ -64,13 +67,22 @@ export class PokerStateService implements OnModuleInit {
   /**
    * Lưu/Đọc Trạng thái ghế ngồi
    */
-  async getSeat(tableId: string, seatNumber: number): Promise<PokerSeatState | null> {
+  async getSeat(
+    tableId: string,
+    seatNumber: number,
+  ): Promise<PokerSeatState | null> {
     const key = `table:${tableId}:seat:${seatNumber}`;
     const data = await this.redis.hgetall(key);
-    return Object.keys(data).length > 0 ? (data as unknown as PokerSeatState) : null;
+    return Object.keys(data).length > 0
+      ? (data as unknown as PokerSeatState)
+      : null;
   }
 
-  async setSeat(tableId: string, seatNumber: number, fields: Record<string, string | number>): Promise<void> {
+  async setSeat(
+    tableId: string,
+    seatNumber: number,
+    fields: Record<string, string | number>,
+  ): Promise<void> {
     const key = `table:${tableId}:seat:${seatNumber}`;
     await this.redis.hset(key, fields);
   }
@@ -80,7 +92,10 @@ export class PokerStateService implements OnModuleInit {
     await this.redis.del(key);
   }
 
-  async getAllSeats(tableId: string, maxPlayers = 9): Promise<PokerSeatState[]> {
+  async getAllSeats(
+    tableId: string,
+    maxPlayers = 9,
+  ): Promise<PokerSeatState[]> {
     const seats: PokerSeatState[] = [];
     for (let i = 1; i <= maxPlayers; i++) {
       const data = await this.getSeat(tableId, i);
@@ -103,7 +118,11 @@ export class PokerStateService implements OnModuleInit {
     return cardsStr ? cardsStr.split(',') : [];
   }
 
-  async setPlayerCards(tableId: string, userId: string, cards: string[]): Promise<void> {
+  async setPlayerCards(
+    tableId: string,
+    userId: string,
+    cards: string[],
+  ): Promise<void> {
     const key = `table:${tableId}:player:${userId}:cards`;
     if (cards.length === 0) {
       await this.redis.del(key);
@@ -176,7 +195,13 @@ export class PokerStateService implements OnModuleInit {
     // Xoá tất cả table keys
     let cursor = '0';
     do {
-      const [nextCursor, keys] = await this.redis.scan(cursor, 'MATCH', `table:${tableId}:*`, 'COUNT', 100);
+      const [nextCursor, keys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        `table:${tableId}:*`,
+        'COUNT',
+        100,
+      );
       cursor = nextCursor;
       if (keys.length > 0) {
         await this.redis.del(...keys);
@@ -186,7 +211,13 @@ export class PokerStateService implements OnModuleInit {
     // Xoá tất cả lock keys của table
     cursor = '0';
     do {
-      const [nextCursor, keys] = await this.redis.scan(cursor, 'MATCH', `lock:table:${tableId}*`, 'COUNT', 100);
+      const [nextCursor, keys] = await this.redis.scan(
+        cursor,
+        'MATCH',
+        `lock:table:${tableId}*`,
+        'COUNT',
+        100,
+      );
       cursor = nextCursor;
       if (keys.length > 0) {
         await this.redis.del(...keys);
@@ -206,7 +237,11 @@ export class PokerStateService implements OnModuleInit {
   /**
    * Lấy Lịch sử Chat phân trang từ đuôi (mới nhất)
    */
-  async getChatHistory(tableId: string, offset: number, limit: number): Promise<string[]> {
+  async getChatHistory(
+    tableId: string,
+    offset: number,
+    limit: number,
+  ): Promise<string[]> {
     const key = `table:${tableId}:chats`;
     const start = -limit - offset;
     const end = -1 - offset;

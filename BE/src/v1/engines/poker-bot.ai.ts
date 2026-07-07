@@ -12,7 +12,10 @@ export class PokerBotAI {
       return this.evaluatePreflopStrength(pocket[0], pocket[1]);
     }
 
-    const evalResult = PokerGameEngine.evaluate7CardHand([...pocket, ...community]);
+    const evalResult = PokerGameEngine.evaluate7CardHand([
+      ...pocket,
+      ...community,
+    ]);
     const category = Math.floor(evalResult.score / 10000000);
     const tie = evalResult.score % 10000000;
 
@@ -27,23 +30,23 @@ export class PokerBotAI {
         break;
       case 1: // One Pair
         base = 0.15;
-        range = 0.20;
+        range = 0.2;
         break;
       case 2: // Two Pair
         base = 0.35;
-        range = 0.20;
+        range = 0.2;
         break;
       case 3: // Three of a Kind
         base = 0.55;
-        range = 0.10;
+        range = 0.1;
         break;
       case 4: // Straight
         base = 0.65;
-        range = 0.10;
+        range = 0.1;
         break;
       case 5: // Flush
         base = 0.75;
-        range = 0.10;
+        range = 0.1;
         break;
       case 6: // Full House
         base = 0.85;
@@ -73,8 +76,19 @@ export class PokerBotAI {
     const s2 = card2[1];
 
     const rankVals: Record<string, number> = {
-      '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
-      'T': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14
+      '2': 2,
+      '3': 3,
+      '4': 4,
+      '5': 5,
+      '6': 6,
+      '7': 7,
+      '8': 8,
+      '9': 9,
+      T: 10,
+      J: 11,
+      Q: 12,
+      K: 13,
+      A: 14,
     };
 
     const v1 = rankVals[r1] || 2;
@@ -110,15 +124,15 @@ export class PokerBotAI {
     seats: PokerSeatState[],
   ): string {
     const activeSeats = seats
-      .filter(s => s.status === 'active' || s.status === 'folded')
-      .map(s => s.seat_number)
+      .filter((s) => s.status === 'active' || s.status === 'folded')
+      .map((s) => s.seat_number)
       .sort((a, b) => a - b);
 
     if (activeSeats.length === 0) return 'BTN';
 
     let dealerIndex = activeSeats.indexOf(dealerSeat);
     if (dealerIndex === -1) {
-      dealerIndex = activeSeats.findIndex(s => s >= dealerSeat);
+      dealerIndex = activeSeats.findIndex((s) => s >= dealerSeat);
       if (dealerIndex === -1) dealerIndex = 0;
     }
 
@@ -162,26 +176,49 @@ export class PokerBotAI {
     botStack: number,
   ): { action: string; amount: number } {
     const callAmount = highestBet - currentBet;
-    const ACTIONS = { FOLD: 'fold', CHECK: 'check', CALL: 'call', RAISE: 'raise' };
+    const ACTIONS = {
+      FOLD: 'fold',
+      CHECK: 'check',
+      CALL: 'call',
+      RAISE: 'raise',
+    };
 
     // EARLY POSITION (UTG, UTG+1)
     if (position === 'UTG' || position === 'UTG+1') {
       if (handStrength >= 0.85) {
-        return { action: ACTIONS.RAISE, amount: this.calculateRaiseAmount(highestBet, bigBlindAmount, botStack) };
+        return {
+          action: ACTIONS.RAISE,
+          amount: this.calculateRaiseAmount(
+            highestBet,
+            bigBlindAmount,
+            botStack,
+          ),
+        };
       } else if (stage === 'preflop') {
-        return callAmount === 0 ? { action: ACTIONS.CHECK, amount: 0 } : { action: ACTIONS.FOLD, amount: 0 };
+        return callAmount === 0
+          ? { action: ACTIONS.CHECK, amount: 0 }
+          : { action: ACTIONS.FOLD, amount: 0 };
       } else {
-        return callAmount === 0 ? { action: ACTIONS.CHECK, amount: 0 } : { action: ACTIONS.FOLD, amount: 0 };
+        return callAmount === 0
+          ? { action: ACTIONS.CHECK, amount: 0 }
+          : { action: ACTIONS.FOLD, amount: 0 };
       }
     }
 
     // MIDDLE POSITION (MP1, MP2, HJ)
     if (position === 'MP1' || position === 'MP2' || position === 'HJ') {
       if (handStrength >= 0.75) {
-        return { action: ACTIONS.RAISE, amount: this.calculateRaiseAmount(highestBet, bigBlindAmount, botStack) };
+        return {
+          action: ACTIONS.RAISE,
+          amount: this.calculateRaiseAmount(
+            highestBet,
+            bigBlindAmount,
+            botStack,
+          ),
+        };
       } else if (callAmount === 0) {
         return { action: ACTIONS.CHECK, amount: 0 };
-      } else if (callAmount > 0 && handStrength >= 0.60) {
+      } else if (callAmount > 0 && handStrength >= 0.6) {
         return { action: ACTIONS.CALL, amount: 0 };
       } else {
         return { action: ACTIONS.FOLD, amount: 0 };
@@ -192,13 +229,29 @@ export class PokerBotAI {
     if (position === 'CO' || position === 'BTN') {
       if (timesRaisedBeforeMe === 0) {
         if (handStrength >= 0.45) {
-          return { action: ACTIONS.RAISE, amount: this.calculateRaiseAmount(highestBet, bigBlindAmount, botStack) };
+          return {
+            action: ACTIONS.RAISE,
+            amount: this.calculateRaiseAmount(
+              highestBet,
+              bigBlindAmount,
+              botStack,
+            ),
+          };
         } else {
-          return callAmount === 0 ? { action: ACTIONS.CHECK, amount: 0 } : { action: ACTIONS.FOLD, amount: 0 };
+          return callAmount === 0
+            ? { action: ACTIONS.CHECK, amount: 0 }
+            : { action: ACTIONS.FOLD, amount: 0 };
         }
       } else {
-        if (handStrength >= 0.70) {
-          return { action: ACTIONS.RAISE, amount: this.calculateRaiseAmount(highestBet, bigBlindAmount, botStack) };
+        if (handStrength >= 0.7) {
+          return {
+            action: ACTIONS.RAISE,
+            amount: this.calculateRaiseAmount(
+              highestBet,
+              bigBlindAmount,
+              botStack,
+            ),
+          };
         } else if (handStrength >= 0.55) {
           return { action: ACTIONS.CALL, amount: 0 };
         } else {
@@ -213,19 +266,34 @@ export class PokerBotAI {
         return { action: ACTIONS.CHECK, amount: 0 };
       }
 
-      if (handStrength >= 0.80) {
-        return { action: ACTIONS.RAISE, amount: this.calculateRaiseAmount(highestBet, bigBlindAmount, botStack) };
+      if (handStrength >= 0.8) {
+        return {
+          action: ACTIONS.RAISE,
+          amount: this.calculateRaiseAmount(
+            highestBet,
+            bigBlindAmount,
+            botStack,
+          ),
+        };
       } else if (callAmount > 0 && handStrength >= 0.65) {
         return { action: ACTIONS.CALL, amount: 0 };
       } else {
-        return callAmount === 0 ? { action: ACTIONS.CHECK, amount: 0 } : { action: ACTIONS.FOLD, amount: 0 };
+        return callAmount === 0
+          ? { action: ACTIONS.CHECK, amount: 0 }
+          : { action: ACTIONS.FOLD, amount: 0 };
       }
     }
 
-    return callAmount === 0 ? { action: ACTIONS.CHECK, amount: 0 } : { action: ACTIONS.FOLD, amount: 0 };
+    return callAmount === 0
+      ? { action: ACTIONS.CHECK, amount: 0 }
+      : { action: ACTIONS.FOLD, amount: 0 };
   }
 
-  private static calculateRaiseAmount(highestBet: number, bigBlindAmount: number, botStack: number): number {
+  private static calculateRaiseAmount(
+    highestBet: number,
+    bigBlindAmount: number,
+    botStack: number,
+  ): number {
     const baseRaise = highestBet > 0 ? highestBet * 3 : bigBlindAmount * 3;
     return Math.min(botStack, baseRaise);
   }

@@ -1,4 +1,12 @@
-import {BaseEntity, Entity, JoinColumn, ManyToOne, PrimaryColumn, CreateDateColumn, UpdateDateColumn} from 'typeorm';
+import {
+  BaseEntity,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Role } from './role.entity';
 import { Permission } from './permission.entity';
 

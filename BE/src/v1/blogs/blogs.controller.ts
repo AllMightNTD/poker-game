@@ -1,6 +1,10 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiQuery, ApiParam, ApiResponse,
+  ApiTags,
+  ApiOperation,
+  ApiQuery,
+  ApiParam,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { BlogsService } from './blogs.service';
 
@@ -21,7 +25,8 @@ export class BlogsController {
     name: 'cursor',
     required: false,
     type: String,
-    description: 'Cursor opaque token từ response trước (meta.next_cursor). Bỏ trống để bắt đầu từ đầu.',
+    description:
+      'Cursor opaque token từ response trước (meta.next_cursor). Bỏ trống để bắt đầu từ đầu.',
     example: 'MjAyNi0wNy0wNlQwNTowMDowMC4wMDBaX191dWlkNDU2',
   })
   @ApiQuery({
@@ -74,7 +79,8 @@ export class BlogsController {
   @Get(':slug')
   @ApiOperation({
     summary: 'Chi tiết bài viết',
-    description: 'Lấy nội dung đầy đủ của một bài viết theo slug. Tự động tăng `views_count` mỗi lần gọi.',
+    description:
+      'Lấy nội dung đầy đủ của một bài viết theo slug. Tự động tăng `views_count` mỗi lần gọi.',
   })
   @ApiParam({
     name: 'slug',
@@ -102,7 +108,10 @@ export class BlogsController {
       },
     },
   })
-  @ApiResponse({ status: 404, description: 'Bài viết không tồn tại hoặc chưa được xuất bản' })
+  @ApiResponse({
+    status: 404,
+    description: 'Bài viết không tồn tại hoặc chưa được xuất bản',
+  })
   async findOneBySlug(@Param('slug') slug: string) {
     return this.blogsService.findOneBySlug(slug);
   }

@@ -14,7 +14,7 @@ import { Wallet } from 'src/v1/entities/wallet.entity';
 export class SeedService {
   private readonly logger = new Logger(SeedService.name);
 
-  constructor(private readonly dataSource: DataSource) { }
+  constructor(private readonly dataSource: DataSource) {}
 
   async seedAll() {
     this.logger.log('Starting minimal poker database seed...');
@@ -32,8 +32,14 @@ export class SeedService {
 
       // Roles
       const roleRepo = this.dataSource.getRepository(Role);
-      const r1 = await roleRepo.save({ name: 'SUPER_ADMIN', description: 'Admin tối cao' });
-      const r2 = await roleRepo.save({ name: 'MEMBER', description: 'Người dùng thường' });
+      const r1 = await roleRepo.save({
+        name: 'SUPER_ADMIN',
+        description: 'Admin tối cao',
+      });
+      const r2 = await roleRepo.save({
+        name: 'MEMBER',
+        description: 'Người dùng thường',
+      });
 
       // Users
       const passwordHash = await bcrypt.hash('123456', 10);
@@ -49,7 +55,7 @@ export class SeedService {
         user_name: 'Admin',
         role: AdminRole.SUPER_ADMIN,
         is_active: true,
-        is_two_factor_enabled: false
+        is_two_factor_enabled: false,
       });
 
       this.logger.log('Generating 10 poker players...');
@@ -61,7 +67,6 @@ export class SeedService {
           status: UserStatus.ACTIVE,
           is_active_status: true,
           user_name: `Player${i}`,
-
         });
 
         await userRoleRepo.save({
@@ -78,9 +83,8 @@ export class SeedService {
       this.logger.log('Users and wallets generated successfully.');
 
       const users = await userRepo.find();
-      const userIds = users.map(u => u.id);
+      const userIds = users.map((u) => u.id);
       await this.seedBlogs(userIds);
-
     } catch (err) {
       this.logger.error('Error during seeding', err);
     } finally {
@@ -100,7 +104,7 @@ export class SeedService {
       'https://images.unsplash.com/photo-1541577717466-9b19b780829d?auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1596541624467-5d5180fbe9e3?auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1605809798401-46dc03662580?auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&q=80'
+      'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&q=80',
     ];
 
     for (let i = 0; i < TOTAL_BLOGS; i += BATCH_SIZE) {
@@ -108,8 +112,10 @@ export class SeedService {
       for (let j = 0; j < BATCH_SIZE; j++) {
         const index = i + j + 1;
         const authorId = userIds[Math.floor(Math.random() * userIds.length)];
-        const category = categories[Math.floor(Math.random() * categories.length)];
-        const thumbnail = thumbnails[Math.floor(Math.random() * thumbnails.length)];
+        const category =
+          categories[Math.floor(Math.random() * categories.length)];
+        const thumbnail =
+          thumbnails[Math.floor(Math.random() * thumbnails.length)];
 
         batch.push({
           title: `The Ultimate Poker Guide #${index} - ${category}`,

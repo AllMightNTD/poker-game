@@ -20,10 +20,58 @@ export class PokerGameEngine {
    */
   static shuffleDeck(serverSeed: string, clientSeed: string): string[] {
     const deck = [
-      '2C', '3C', '4C', '5C', '6C', '7C', '8C', '9C', 'TC', 'JC', 'QC', 'KC', 'AC', // Clubs
-      '2D', '3D', '4D', '5D', '6D', '7D', '8D', '9D', 'TD', 'JD', 'QD', 'KD', 'AD', // Diamonds
-      '2H', '3H', '4H', '5H', '6H', '7H', '8H', '9H', 'TH', 'JH', 'QH', 'KH', 'AH', // Hearts
-      '2S', '3S', '4S', '5S', '6S', '7S', '8S', '9S', 'TS', 'JS', 'QS', 'KS', 'AS', // Spades
+      '2C',
+      '3C',
+      '4C',
+      '5C',
+      '6C',
+      '7C',
+      '8C',
+      '9C',
+      'TC',
+      'JC',
+      'QC',
+      'KC',
+      'AC', // Clubs
+      '2D',
+      '3D',
+      '4D',
+      '5D',
+      '6D',
+      '7D',
+      '8D',
+      '9D',
+      'TD',
+      'JD',
+      'QD',
+      'KD',
+      'AD', // Diamonds
+      '2H',
+      '3H',
+      '4H',
+      '5H',
+      '6H',
+      '7H',
+      '8H',
+      '9H',
+      'TH',
+      'JH',
+      'QH',
+      'KH',
+      'AH', // Hearts
+      '2S',
+      '3S',
+      '4S',
+      '5S',
+      '6S',
+      '7S',
+      '8S',
+      '9S',
+      'TS',
+      'JS',
+      'QS',
+      'KS',
+      'AS', // Spades
     ];
 
     const hmac = crypto.createHmac('sha512', clientSeed);
@@ -54,8 +102,8 @@ export class PokerGameEngine {
    */
   static splitPot(players: PokerPlayerState[]): SidePot[] {
     const remaining = players
-      .filter(p => p.bet > 0)
-      .map(p => ({
+      .filter((p) => p.bet > 0)
+      .map((p) => ({
         ...p,
         remaining: p.bet,
       }));
@@ -63,12 +111,14 @@ export class PokerGameEngine {
     const pots: SidePot[] = [];
 
     while (true) {
-      const contributors = remaining.filter(p => p.remaining > 0);
+      const contributors = remaining.filter((p) => p.remaining > 0);
       if (contributors.length === 0) break;
 
-      const minContribution = Math.min(...contributors.map(p => p.remaining));
+      const minContribution = Math.min(...contributors.map((p) => p.remaining));
       const amount = contributors.length * minContribution;
-      const eligibleSeats = contributors.filter(p => !p.folded).map(p => p.seat);
+      const eligibleSeats = contributors
+        .filter((p) => !p.folded)
+        .map((p) => p.seat);
       const isUncalled = contributors.length === 1; // Uncalled bet if only 1 contributor
 
       if (amount > 0) {
@@ -98,7 +148,7 @@ export class PokerGameEngine {
       const lastPot = mergedPots[mergedPots.length - 1];
       const sameSeats =
         lastPot.eligibleSeats.length === pot.eligibleSeats.length &&
-        lastPot.eligibleSeats.every(s => pot.eligibleSeats.includes(s));
+        lastPot.eligibleSeats.every((s) => pot.eligibleSeats.includes(s));
       const sameUncalled = lastPot.isUncalled === pot.isUncalled;
 
       if (sameSeats && sameUncalled) {
@@ -150,35 +200,46 @@ export class PokerGameEngine {
     return result;
   }
 
-  private static evaluate5CardHand(cards: string[]): { score: number; name: string } {
+  private static evaluate5CardHand(cards: string[]): {
+    score: number;
+    name: string;
+  } {
     const rankMap: Record<string, number> = {
-      '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
-      'T': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14
+      '2': 2,
+      '3': 3,
+      '4': 4,
+      '5': 5,
+      '6': 6,
+      '7': 7,
+      '8': 8,
+      '9': 9,
+      T: 10,
+      J: 11,
+      Q: 12,
+      K: 13,
+      A: 14,
     };
 
     // Phân tích tay bài
-    const parsed = cards.map(c => ({
+    const parsed = cards.map((c) => ({
       rank: rankMap[c[0]],
-      suit: c[1]
+      suit: c[1],
     }));
 
     // Sắp xếp giảm dần theo rank
     parsed.sort((a, b) => b.rank - a.rank);
 
-    const ranks = parsed.map(p => p.rank);
-    const suits = parsed.map(p => p.suit);
+    const ranks = parsed.map((p) => p.rank);
+    const suits = parsed.map((p) => p.suit);
 
-    const isFlush = suits.every(s => s === suits[0]);
+    const isFlush = suits.every((s) => s === suits[0]);
 
     // Check Straight (5 liên tiếp)
     let isStraight = false;
     let straightHigh = 0;
 
     // Trường hợp sảnh chuẩn
-    if (
-      ranks[0] - ranks[4] === 4 &&
-      new Set(ranks).size === 5
-    ) {
+    if (ranks[0] - ranks[4] === 4 && new Set(ranks).size === 5) {
       isStraight = true;
       straightHigh = ranks[0];
     }
@@ -233,7 +294,10 @@ export class PokerGameEngine {
       name = 'Full House';
     } else if (isFlush) {
       category = 5;
-      tieBreaker = ranks.reduce((acc, r, idx) => acc + r * Math.pow(15, 4 - idx), 0);
+      tieBreaker = ranks.reduce(
+        (acc, r, idx) => acc + r * Math.pow(15, 4 - idx),
+        0,
+      );
       name = 'Flush';
     } else if (isStraight) {
       category = 4;
@@ -249,14 +313,18 @@ export class PokerGameEngine {
       name = 'Two Pair';
     } else if (freq[0].count === 2) {
       category = 1;
-      tieBreaker = freq[0].rank * Math.pow(15, 3) +
+      tieBreaker =
+        freq[0].rank * Math.pow(15, 3) +
         freq[1].rank * Math.pow(15, 2) +
         freq[2].rank * 15 +
         freq[3].rank;
       name = 'One Pair';
     } else {
       category = 0;
-      tieBreaker = ranks.reduce((acc, r, idx) => acc + r * Math.pow(15, 4 - idx), 0);
+      tieBreaker = ranks.reduce(
+        (acc, r, idx) => acc + r * Math.pow(15, 4 - idx),
+        0,
+      );
       name = 'High Card';
     }
 

@@ -7,7 +7,7 @@ import { AdminLoginDto } from '../dto/admin-login.dto';
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly jwtService: JwtService) { }
+  constructor(private readonly jwtService: JwtService) {}
 
   async login(dto: AdminLoginDto) {
     const admin = await Admin.findOne({ where: { email: dto.email } });
@@ -23,7 +23,10 @@ export class AdminService {
     }
 
     // Validate admin role
-    if (admin.role !== AdminRole.ADMIN && admin.role !== AdminRole.SUPER_ADMIN) {
+    if (
+      admin.role !== AdminRole.ADMIN &&
+      admin.role !== AdminRole.SUPER_ADMIN
+    ) {
       throw new UnauthorizedException('Invalid admin role');
     }
 
@@ -41,7 +44,7 @@ export class AdminService {
         user_name: admin.user_name,
         email: admin.email,
         role: admin.role,
-      }
+      },
     };
   }
 }

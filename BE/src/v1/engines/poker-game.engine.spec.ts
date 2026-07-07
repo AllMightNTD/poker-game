@@ -2,12 +2,11 @@ import { PokerGameEngine } from './poker-game.engine';
 
 describe('PokerGameEngine - Unit Tests', () => {
   describe('splitPot Logic', () => {
-    
     it('[POT-001] Tạo Side Pot đơn giản: 3 người All-in với số chip lệch nhau (1000, 500, 500)', () => {
       const playerBetStates = [
         { seat: 1, bet: 1000, folded: false, allIn: true }, // Player A
-        { seat: 2, bet: 500, folded: false, allIn: true },  // Player B
-        { seat: 3, bet: 500, folded: false, allIn: true },  // Player C
+        { seat: 2, bet: 500, folded: false, allIn: true }, // Player B
+        { seat: 3, bet: 500, folded: false, allIn: true }, // Player C
       ];
 
       const pots = PokerGameEngine.splitPot(playerBetStates);
@@ -15,7 +14,7 @@ describe('PokerGameEngine - Unit Tests', () => {
       // Theo kịch bản POT-001, hệ thống phải tạo ra 2 pot:
       // Pot 1 (Main): 500 + 500 + 500 = 1500 (Dành cho A, B, C)
       // Pot 2 (Uncalled Refund): 1000 - 500 = 500 (Trả lại cho A)
-      
+
       expect(pots.length).toBe(2);
 
       // Main Pot
@@ -42,7 +41,7 @@ describe('PokerGameEngine - Unit Tests', () => {
       // Main Pot: 100 + 100 + 100 = 300 (A, B, C)
       // Side Pot 1: 200 + 200 = 400 (B, C)
       // Side Pot 2 (Uncalled Refund): 200 (C)
-      
+
       expect(pots.length).toBe(3);
 
       // Main Pot
@@ -64,7 +63,7 @@ describe('PokerGameEngine - Unit Tests', () => {
     it('Dead money từ người Fold phải gộp vào Pot trước đó một cách chính xác', () => {
       const playerBetStates = [
         { seat: 1, bet: 1000, folded: false, allIn: true }, // Player A
-        { seat: 2, bet: 200, folded: true, allIn: false },  // Player B (Folded)
+        { seat: 2, bet: 200, folded: true, allIn: false }, // Player B (Folded)
         { seat: 3, bet: 1000, folded: false, allIn: true }, // Player C
       ];
 
@@ -76,12 +75,11 @@ describe('PokerGameEngine - Unit Tests', () => {
       // Side Pot 1: 800(A) + 800(C) = 1600 (A, C)
       // Nhưng vì tập hợp người có quyền ở Main Pot và Side Pot 1 giống nhau [A, C], chúng sẽ được gộp lại.
       // Tổng Pot: 600 + 1600 = 2200 (A, C)
-      
+
       expect(pots.length).toBe(1);
       expect(pots[0].amount).toBe(2200);
       expect(pots[0].eligibleSeats).toEqual(expect.arrayContaining([1, 3]));
       expect(pots[0].isUncalled).toBe(false);
     });
-
   });
 });

@@ -25,11 +25,11 @@ const routes: Routes = [
   {
     path: 'v1',
     module: AdminModule,
-  }
+  },
 ];
 
 @Module({
   imports: [RouterModule.register(routes)],
   exports: [RouterModule],
 })
-export class AppV1Route { }
+export class AppV1Route {}

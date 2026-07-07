@@ -39,12 +39,19 @@ export class BlogsService {
       }
     }
 
-    const qb = this.blogRepository.createQueryBuilder('blog')
+    const qb = this.blogRepository
+      .createQueryBuilder('blog')
       .where('blog.is_published = :isPublished', { isPublished: true })
       .select([
-        'blog.id', 'blog.title', 'blog.slug', 'blog.thumbnail',
-        'blog.excerpt', 'blog.category', 'blog.tags',
-        'blog.views_count', 'blog.created_at',
+        'blog.id',
+        'blog.title',
+        'blog.slug',
+        'blog.thumbnail',
+        'blog.excerpt',
+        'blog.category',
+        'blog.tags',
+        'blog.views_count',
+        'blog.created_at',
       ])
       .orderBy('blog.created_at', 'DESC')
       .addOrderBy('blog.id', 'DESC')
@@ -97,7 +104,7 @@ export class BlogsService {
 
     // Increment views safely
     await this.blogRepository.increment({ id: blog.id }, 'views_count', 1);
-    
+
     // Return with incremented view count
     blog.views_count += 1;
     return blog;

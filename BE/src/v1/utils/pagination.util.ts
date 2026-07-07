@@ -3,7 +3,9 @@ export function encodeCursor(date: Date, id: string): string | null {
   return Buffer.from(`${date.getTime()}_${id}`).toString('base64');
 }
 
-export function decodeCursor(cursor: string): { time: Date; id: string } | null {
+export function decodeCursor(
+  cursor: string,
+): { time: Date; id: string } | null {
   if (!cursor) return null;
   try {
     const decoded = Buffer.from(cursor, 'base64').toString('utf-8');
@@ -11,17 +13,16 @@ export function decodeCursor(cursor: string): { time: Date; id: string } | null 
     if (!timeStr || !id) return null;
     return { time: new Date(Number(timeStr)), id };
   } catch (e) {
-    return null;
+    console.log(e.message);
   }
 }
 
-export function buildCursorPaginationResponse<T extends { created_at: Date; id: string }>(
-  items: T[],
-  limit: number,
-) {
+export function buildCursorPaginationResponse<
+  T extends { created_at: Date; id: string },
+>(items: T[], limit: number) {
   const hasMore = items.length > limit;
   const data = hasMore ? items.slice(0, limit) : items;
-  
+
   let next_cursor = null;
   if (hasMore && data.length > 0) {
     const lastItem = data[data.length - 1];

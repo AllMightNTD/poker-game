@@ -28,10 +28,10 @@ export class SystemRevenue extends BaseEntity {
   id: string;
 
   @Column({ type: 'bigint' })
-  room_id: string;  // poker_tables.id
+  room_id: string; // poker_tables.id
 
   @Column({ type: 'bigint' })
-  hand_id: string;  // game_hands.id
+  hand_id: string; // game_hands.id
 
   /** Số chip rake thực tế thu được (đã áp trần rake_cap) */
   @Column({ type: 'bigint', default: '0' })
