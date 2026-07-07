@@ -5,8 +5,7 @@ const DURATIONS: Record<AnimationStepType, number> = {
   HIGHLIGHT_WINNERS: 1000,
   COLLECT_POT_TO_CENTER: 800,
   FLY_CHIPS_TO_WINNERS: 1200,
-  SHOW_BANNER: 2500,
-  NEXT_HAND_COUNTDOWN: 5000,
+  SHOW_BANNER: 2500
 };
 
 export const useAnimationTimeline = () => {
@@ -62,12 +61,7 @@ export const useAnimationTimeline = () => {
         type: "SHOW_BANNER",
         duration: DURATIONS.SHOW_BANNER,
         payload,
-      },
-      {
-        type: "NEXT_HAND_COUNTDOWN",
-        duration: DURATIONS.NEXT_HAND_COUNTDOWN,
-        payload,
-      },
+      }
     ];
 
     stepQueue.current = timeline;

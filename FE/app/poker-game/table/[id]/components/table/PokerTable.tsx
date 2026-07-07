@@ -6,6 +6,7 @@ import { usePokerGame } from "../hooks/usePokerGame";
 import { BoardStage } from "./BoardStage";
 import { CommunityCards } from "./CommunityCards";
 import { PotDisplay } from "./PotDisplay";
+import { PokerCard } from "../ui/PokerCard";
 import DealerDeck from "./DealerDeck";
 import Seat from "./Seat";
 
@@ -18,6 +19,15 @@ export const PokerTable = memo(function PokerTable() {
     players,
     waitingMessage,
     maxPlayers,
+    isRitVotingActive,
+    ritVotesYesCount,
+    ritVoters,
+    voteRit,
+    gameStage,
+    communityCards,
+    rabbitCards,
+    triggerRabbitHunt,
+    cardDeckStyle,
   } = usePokerGame();
 
   const felt = getFeltStyles(tableBackground);
@@ -57,6 +67,36 @@ export const PokerTable = memo(function PokerTable() {
           <PotDisplay />
           <CommunityCards />
           <BoardStage />
+
+          {gameStage === 'ended' && communityCards.length > 0 && communityCards.length < 5 && !rabbitCards && (
+            <button
+              onClick={triggerRabbitHunt}
+              className="mt-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-black text-xs font-black tracking-wider uppercase shadow-[0_0_12px_rgba(245,158,11,0.3)] active:scale-95 transition-all flex items-center gap-1.5"
+            >
+              🐰 Săn thỏ (Rabbit Hunt)
+            </button>
+          )}
+
+          {rabbitCards && rabbitCards.length > 0 && (
+            <div className="mt-2 flex flex-col items-center gap-1">
+              <span className="text-[10px] text-amber-400 font-bold uppercase tracking-widest bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/20">
+                🐰 Thỏ săn được
+              </span>
+              <div className="flex gap-1.5 py-1">
+                {rabbitCards.map((card, idx) => (
+                  <div key={`rabbit-${idx}`} className="relative opacity-90 scale-90 border border-amber-500/30 rounded-lg overflow-hidden shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                    <PokerCard
+                      suit={card.suit}
+                      rank={card.rank}
+                      isFaceUp={true}
+                      size="md"
+                      deckStyle={cardDeckStyle}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Player seats */}
@@ -65,6 +105,37 @@ export const PokerTable = memo(function PokerTable() {
           const player = players.find((p) => p.seatIndex === seatNumber);
           return <Seat key={`seat-${seatNumber}`} seatNumber={seatNumber} player={player} />;
         })}
+
+        {/* RIT Voting Modal Overlay */}
+        {isRitVotingActive && (
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center rounded-[100px] sm:rounded-[140px] md:rounded-[180px] overflow-hidden">
+            <div className="bg-[#14221d] border border-amber-500/40 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-[0_10px_50px_rgba(0,0,0,0.8)] text-center flex flex-col items-center gap-4">
+              <div className="text-amber-400 text-lg font-extrabold uppercase tracking-wider animate-pulse flex items-center gap-1.5">
+                🔀 Run It Twice?
+              </div>
+              <p className="text-xs text-[#FDF1BA]/80 leading-relaxed">
+                Tất cả người chơi đều All-In! Bạn có đồng ý Run It Twice (chia 2 board bài chung, chia đôi Pot) không?
+              </p>
+              <div className="text-xs text-amber-300/60 font-mono">
+                Biểu quyết: {ritVotesYesCount} / {ritVoters.length} Đồng ý
+              </div>
+              <div className="flex gap-4 w-full mt-2">
+                <button
+                  onClick={() => voteRit(true)}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold shadow-[0_4px_12px_rgba(16,185,129,0.3)] active:scale-95 transition-all"
+                >
+                  Đồng ý
+                </button>
+                <button
+                  onClick={() => voteRit(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-rose-700 to-red-800 hover:from-rose-600 hover:to-red-700 text-white text-sm font-bold shadow-[0_4px_12px_rgba(244,63,94,0.3)] active:scale-95 transition-all"
+                >
+                  Từ chối
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Action HUD Fixed at Bottom ── */}

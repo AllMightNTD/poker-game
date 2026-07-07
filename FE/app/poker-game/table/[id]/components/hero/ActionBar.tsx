@@ -28,6 +28,8 @@ export const ActionBar: React.FC = () => {
     ownerId,
     startGame,
     gameStage,
+    muckOption,
+    setMuckOption,
   } = usePokerGame();
 
   const allPlayers = players as PokerPlayer[];
@@ -67,14 +69,40 @@ export const ActionBar: React.FC = () => {
   }
 
   if (!hero) return null;
-  if (hero.isFolded) return <TableStatusBanner variant="folded" />;
+
+  const muckOptionBar = (
+    <div className="flex justify-end items-center px-2 py-1 text-xs text-[#FDF1BA]/70 select-none">
+      <label className="flex items-center gap-1.5 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={muckOption}
+          onChange={(e) => setMuckOption(e.target.checked)}
+          className="rounded border-[#FDF1BA]/20 bg-black/40 text-amber-500 focus:ring-amber-500/50 w-3.5 h-3.5 cursor-pointer"
+        />
+        <span>Tự động úp bài (Auto Muck)</span>
+      </label>
+    </div>
+  );
+
+  if (hero.isFolded) return (
+    <div className="w-full flex flex-col">
+      {muckOptionBar}
+      <TableStatusBanner variant="folded" />
+    </div>
+  );
   if (!hero.isActive) {
     const activePlayer = allPlayers.find((p) => p.isActive);
-    return <TableStatusBanner variant="waiting-turn" activePlayerName={activePlayer?.name} />;
+    return (
+      <div className="w-full flex flex-col">
+        {muckOptionBar}
+        <TableStatusBanner variant="waiting-turn" activePlayerName={activePlayer?.name} />
+      </div>
+    );
   }
 
   return (
     <div className="w-full flex flex-col relative">
+      {muckOptionBar}
       <div className="w-full rounded-t-md overflow-hidden mb-1">
         <LinearTimer value={timerVal} max={maxTimerVal} />
       </div>

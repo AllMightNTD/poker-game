@@ -18,8 +18,7 @@ export class PokerShowdownManager {
 
     const tableState = await this.gameService.stateService.getTableState(roomId);
     const seats = await this.gameService.stateService.getAllSeats(roomId);
-    const community = tableState.community_cards ? tableState.community_cards.split(',') : [];
-
+    
     const dbTable = await PokerTable.findOne({ where: { id: roomId } });
     const maxPlayers = dbTable ? dbTable.max_players : 9;
 
@@ -27,15 +26,19 @@ export class PokerShowdownManager {
       s => parseInt(s.total_contributed || '0') > 0 && s.status !== 'folded',
     );
 
-    const evaluatedPlayers = await Promise.all(
+    const isRitActive = tableState.is_rit_active === '1';
+    const community1 = tableState.community_cards ? tableState.community_cards.split(',') : [];
+    const community2 = isRitActive && tableState.rit_board2_cards ? tableState.rit_board2_cards.split(',') : [];
+
+    const evaluatedPlayers1 = await Promise.all(
       activePlayers.map(async p => {
         const pocket = await this.gameService.stateService.getPlayerCards(roomId, p.user_id);
         const evalResult = PokerGameEngine.evaluate7CardHand([
           ...pocket,
-          ...community,
+          ...community1,
         ]);
 
-        this.gameService.logger.log(`[SHOWDOWN] eval player seat=${p.seat_number} user=${p.user_id} pocket=${pocket.join(',')} score=${evalResult.score} hand=${evalResult.name}`);
+        this.gameService.logger.log(`[SHOWDOWN] Board 1 eval player seat=${p.seat_number} user=${p.user_id} pocket=${pocket.join(',')} score=${evalResult.score} hand=${evalResult.name}`);
 
         return {
           seat: p.seat_number,
@@ -48,8 +51,29 @@ export class PokerShowdownManager {
       }),
     );
 
-    console.log('evaluatedPlayers', evaluatedPlayers);
+    let evaluatedPlayers2: typeof evaluatedPlayers1 = [];
+    if (isRitActive) {
+      evaluatedPlayers2 = await Promise.all(
+        activePlayers.map(async p => {
+          const pocket = await this.gameService.stateService.getPlayerCards(roomId, p.user_id);
+          const evalResult = PokerGameEngine.evaluate7CardHand([
+            ...pocket,
+            ...community2,
+          ]);
 
+          this.gameService.logger.log(`[SHOWDOWN] Board 2 eval player seat=${p.seat_number} user=${p.user_id} pocket=${pocket.join(',')} score=${evalResult.score} hand=${evalResult.name}`);
+
+          return {
+            seat: p.seat_number,
+            user_id: p.user_id,
+            username: p.username,
+            pocket,
+            score: evalResult.score,
+            handName: evalResult.name,
+          };
+        }),
+      );
+    }
 
     const playerBetStates = seats.map(s => ({
       seat: s.seat_number,
@@ -62,6 +86,7 @@ export class PokerShowdownManager {
     const winnerMap = new Map();
     let totalRakedPot = 0;
     const uncalledRefunds = new Map<string, number>();
+    const dealerSeatNum = parseInt(tableState.dealer_seat || '1');
 
     for (const [i, pot] of pots.entries()) {
       if (pot.isUncalled) {
@@ -75,62 +100,155 @@ export class PokerShowdownManager {
 
       totalRakedPot += pot.amount;
 
-      const eligibleEvaluations = evaluatedPlayers.filter(p =>
-        pot.eligibleSeats.includes(p.seat),
-      );
+      if (isRitActive) {
+        const amount1 = Math.floor(pot.amount / 2) + (pot.amount % 2);
+        const amount2 = Math.floor(pot.amount / 2);
 
-      if (eligibleEvaluations.length === 0) {
-        continue;
-      }
-
-      let maxScore = -1;
-      let potWinners: typeof eligibleEvaluations = [];
-
-      for (const player of eligibleEvaluations) {
-        if (player.score > maxScore) {
-          maxScore = player.score;
-          potWinners = [player];
-        } else if (player.score === maxScore) {
-          potWinners.push(player);
+        // Distribute for Board 1
+        if (amount1 > 0) {
+          const eligible1 = evaluatedPlayers1.filter(p => pot.eligibleSeats.includes(p.seat));
+          if (eligible1.length > 0) {
+            let maxScore = -1;
+            let potWinners: typeof eligible1 = [];
+            for (const player of eligible1) {
+              if (player.score > maxScore) {
+                maxScore = player.score;
+                potWinners = [player];
+              } else if (player.score === maxScore) {
+                potWinners.push(player);
+              }
+            }
+            const winShare = Math.floor(amount1 / potWinners.length);
+            let remainder = amount1 % potWinners.length;
+            potWinners.sort((a, b) => {
+              const distA = (a.seat - dealerSeatNum - 1 + maxPlayers) % maxPlayers;
+              const distB = (b.seat - dealerSeatNum - 1 + maxPlayers) % maxPlayers;
+              return distA - distB;
+            });
+            for (const winner of potWinners) {
+              const extraChip = remainder > 0 ? 1 : 0;
+              if (remainder > 0) remainder--;
+              const finalWinAmount = winShare + extraChip;
+              const existing = winnerMap.get(winner.user_id);
+              const potLabel = pots.length === 1 ? 'Board 1' : `Board 1 - Pot ${i}`;
+              if (existing) {
+                existing.win_amount += finalWinAmount;
+                if (!existing.pots) existing.pots = [];
+                existing.pots.push({ label: potLabel, amount: finalWinAmount });
+              } else {
+                winnerMap.set(winner.user_id, {
+                  user_id: winner.user_id,
+                  seat_number: winner.seat,
+                  username: winner.username,
+                  win_amount: finalWinAmount,
+                  hand_name: winner.handName,
+                  pocket_cards: winner.pocket,
+                  pots: [{ label: potLabel, amount: finalWinAmount }]
+                });
+              }
+            }
+          }
         }
-      }
 
-      const winShare = Math.floor(pot.amount / potWinners.length);
-      let remainder = pot.amount % potWinners.length;
+        // Distribute for Board 2
+        if (amount2 > 0) {
+          const eligible2 = evaluatedPlayers2.filter(p => pot.eligibleSeats.includes(p.seat));
+          if (eligible2.length > 0) {
+            let maxScore = -1;
+            let potWinners: typeof eligible2 = [];
+            for (const player of eligible2) {
+              if (player.score > maxScore) {
+                maxScore = player.score;
+                potWinners = [player];
+              } else if (player.score === maxScore) {
+                potWinners.push(player);
+              }
+            }
+            const winShare = Math.floor(amount2 / potWinners.length);
+            let remainder = amount2 % potWinners.length;
+            potWinners.sort((a, b) => {
+              const distA = (a.seat - dealerSeatNum - 1 + maxPlayers) % maxPlayers;
+              const distB = (b.seat - dealerSeatNum - 1 + maxPlayers) % maxPlayers;
+              return distA - distB;
+            });
+            for (const winner of potWinners) {
+              const extraChip = remainder > 0 ? 1 : 0;
+              if (remainder > 0) remainder--;
+              const finalWinAmount = winShare + extraChip;
+              const existing = winnerMap.get(winner.user_id);
+              const potLabel = pots.length === 1 ? 'Board 2' : `Board 2 - Pot ${i}`;
+              if (existing) {
+                existing.win_amount += finalWinAmount;
+                if (!existing.pots) existing.pots = [];
+                existing.pots.push({ label: potLabel, amount: finalWinAmount });
+              } else {
+                winnerMap.set(winner.user_id, {
+                  user_id: winner.user_id,
+                  seat_number: winner.seat,
+                  username: winner.username,
+                  win_amount: finalWinAmount,
+                  hand_name: winner.handName,
+                  pocket_cards: winner.pocket,
+                  pots: [{ label: potLabel, amount: finalWinAmount }]
+                });
+              }
+            }
+          }
+        }
+      } else {
+        const eligibleEvaluations = evaluatedPlayers1.filter(p =>
+          pot.eligibleSeats.includes(p.seat),
+        );
 
-      const dealerSeatNum = parseInt(tableState.dealer_seat || '1');
+        if (eligibleEvaluations.length === 0) {
+          continue;
+        }
 
-      potWinners.sort((a, b) => {
-        const distA = (a.seat - dealerSeatNum - 1 + maxPlayers) % maxPlayers;
-        const distB = (b.seat - dealerSeatNum - 1 + maxPlayers) % maxPlayers;
-        return distA - distB;
-      });
+        let maxScore = -1;
+        let potWinners: typeof eligibleEvaluations = [];
 
-      for (const winner of potWinners) {
-        const extraChip = remainder > 0 ? 1 : 0;
-        if (remainder > 0) remainder--;
+        for (const player of eligibleEvaluations) {
+          if (player.score > maxScore) {
+            maxScore = player.score;
+            potWinners = [player];
+          } else if (player.score === maxScore) {
+            potWinners.push(player);
+          }
+        }
 
-        const finalWinAmount = winShare + extraChip;
+        const winShare = Math.floor(pot.amount / potWinners.length);
+        let remainder = pot.amount % potWinners.length;
 
-        const existing = winnerMap.get(winner.user_id);
-        const potLabel = pots.length === 1 ? undefined : (i === 0 ? 'Main Pot' : `Side Pot ${i}`);
+        potWinners.sort((a, b) => {
+          const distA = (a.seat - dealerSeatNum - 1 + maxPlayers) % maxPlayers;
+          const distB = (b.seat - dealerSeatNum - 1 + maxPlayers) % maxPlayers;
+          return distA - distB;
+        });
 
-        if (existing) {
-          existing.win_amount += finalWinAmount;
-          if (!existing.pots) existing.pots = [];
-          existing.pots.push({ label: potLabel, amount: finalWinAmount });
-          console.log('[Process Showndown Existing]', JSON.stringify(existing), JSON.stringify(winnerMap));
+        for (const winner of potWinners) {
+          const extraChip = remainder > 0 ? 1 : 0;
+          if (remainder > 0) remainder--;
 
-        } else {
-          winnerMap.set(winner.user_id, {
-            user_id: winner.user_id,
-            seat_number: winner.seat,
-            username: winner.username,
-            win_amount: finalWinAmount,
-            hand_name: winner.handName,
-            pocket_cards: winner.pocket,
-            pots: [{ label: potLabel, amount: finalWinAmount }]
-          });
+          const finalWinAmount = winShare + extraChip;
+
+          const existing = winnerMap.get(winner.user_id);
+          const potLabel = pots.length === 1 ? undefined : (i === 0 ? 'Main Pot' : `Side Pot ${i}`);
+
+          if (existing) {
+            existing.win_amount += finalWinAmount;
+            if (!existing.pots) existing.pots = [];
+            existing.pots.push({ label: potLabel, amount: finalWinAmount });
+          } else {
+            winnerMap.set(winner.user_id, {
+              user_id: winner.user_id,
+              seat_number: winner.seat,
+              username: winner.username,
+              win_amount: finalWinAmount,
+              hand_name: winner.handName,
+              pocket_cards: winner.pocket,
+              pots: [{ label: potLabel, amount: finalWinAmount }]
+            });
+          }
         }
       }
     }
@@ -382,15 +500,21 @@ export class PokerShowdownManager {
 
     // 8. Phát sự kiện hand-ended
     // Gửi bài của TẤT CẢ player không fold để FE có thể reveal đúng
+    const winnerUserIds = winnersLog.map(w => w.user_id);
+
     const allHandsForBroadcast = await Promise.all(
       seats
         .filter(s => s.status !== 'folded' && parseInt(s.total_contributed || '0') > 0)
         .map(async (seat) => {
           const pocketCards = await this.gameService.stateService.getPlayerCards(roomId, seat.user_id);
+          const isWinner = winnerUserIds.includes(seat.user_id);
+          const autoMuck = seat.muck_cards === '1';
+          const shouldMuck = !isWinner && autoMuck && dbTable?.custom_settings?.allow_muck;
           return {
             user_id: seat.user_id,
             seat_number: seat.seat_number,
-            pocket_cards: pocketCards,
+            pocket_cards: shouldMuck ? [] : pocketCards,
+            is_mucked: shouldMuck,
           };
         })
     );
@@ -402,13 +526,12 @@ export class PokerShowdownManager {
     console.log('[Finalize And BroadCast Hand]tableState.server_seed', tableState.server_seed);
     console.log('[Finalize And BroadCast Hand]tableState.client_seed', tableState.client_seed);
 
-
-
     this.gameService.server.to(`table_${roomId}`).emit('table:hand-ended', {
       winners: winnersLog,
       all_hands: allHandsForBroadcast,
       total_pot: totalPotAmount,
       rake_amount: rakeCalculated.toString(),
+      rit_board2_cards: tableState.is_rit_active === '1' && tableState.rit_board2_cards ? tableState.rit_board2_cards.split(',') : [],
       provably_fair: {
         server_seed_plain: tableState.server_seed,
         client_seed: tableState.client_seed,

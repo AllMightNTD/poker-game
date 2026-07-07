@@ -24,9 +24,13 @@ export interface Player {
 }
 
 export interface ChatMessage {
+  id?: string;
   sender: string;
   text: string;
   isSystem?: boolean;
+  avatar?: string;
+  seatNumber?: number | null;
+  timestamp?: number;
 }
 
 export type TableBackgroundTheme = "classic_green" | "royal_blue" | "ruby_red" | "shadow_black";
@@ -137,8 +141,7 @@ export type AnimationStepType =
   | "HIGHLIGHT_WINNERS"
   | "COLLECT_POT_TO_CENTER"
   | "FLY_CHIPS_TO_WINNERS"
-  | "SHOW_BANNER"
-  | "NEXT_HAND_COUNTDOWN";
+  | "SHOW_BANNER";
 
 export interface AnimationStep {
   type: AnimationStepType;

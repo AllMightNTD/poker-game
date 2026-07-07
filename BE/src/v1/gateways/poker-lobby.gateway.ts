@@ -319,6 +319,17 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
         throw new Error('Vị trí ghế không hợp lệ.');
       }
 
+      // Check tournament late registration
+      if (table.mode === 'TOURNAMENT' && table.tournament_settings?.late_registration_minutes) {
+        if (table.tournament_settings.start_time) {
+          const startTimeMs = new Date(table.tournament_settings.start_time).getTime();
+          const lateRegMs = table.tournament_settings.late_registration_minutes * 60000;
+          if (Date.now() > startTimeMs + lateRegMs) {
+            throw new Error('Giải đấu đã hết hạn đăng ký muộn (Late Registration).');
+          }
+        }
+      }
+
       // Check ghế trống trên Redis
       const existingSeat = await this.stateService.getSeat(roomId, data.seat_number);
       if (existingSeat) {
@@ -366,15 +377,24 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       const userIp = this.getClientIp(client);
       const userSubnet = this.getClassCSubnet(userIp);
 
-      if (userIp !== '127.0.0.1' && userIp !== '::1') {
+      const antiCollusionLevel = table.custom_settings?.anti_collusion_level || 'LOW';
+
+      if (antiCollusionLevel !== 'LOW' && userIp !== '127.0.0.1' && userIp !== '::1') {
         const seats = await this.stateService.getAllSeats(roomId);
         for (const seat of seats) {
           if (seat.is_bot === '1') continue;
           const seatIp = seat.ip || '127.0.0.1';
           if (seatIp !== '127.0.0.1' && seatIp !== '::1') {
-            const seatSubnet = this.getClassCSubnet(String(seatIp));
-            if (seatSubnet === userSubnet) {
-              throw new Error('Địa chỉ IP hoặc đường truyền của bạn bị trùng lặp với người chơi khác tại bàn này (Chống thông đồng).');
+            
+            if (antiCollusionLevel === 'HIGH') {
+              const seatSubnet = this.getClassCSubnet(String(seatIp));
+              if (seatSubnet === userSubnet) {
+                throw new Error('Địa chỉ IP (cùng đường truyền) của bạn bị trùng lặp với người chơi khác tại bàn này (Chống thông đồng Mức Cao).');
+              }
+            } else if (antiCollusionLevel === 'MEDIUM') {
+              if (seatIp === userIp) {
+                throw new Error('Địa chỉ IP của bạn bị trùng lặp với người chơi khác tại bàn này (Chống thông đồng Mức Trung).');
+              }
             }
           }
         }
@@ -567,6 +587,252 @@ export class PokerLobbyGateway implements OnGatewayInit, OnGatewayConnection, On
       });
 
       client.emit('table:client-seed-updated', { client_seed: data.client_seed });
+    } catch (err) {
+      client.emit('error', { message: err.message });
+    }
+  }
+
+  /**
+   * Client gửi tin nhắn Chat trong bàn chơi
+   */
+  @SubscribeMessage('table:chat-message')
+  async handleChatMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { room_id: string; message: string },
+  ) {
+    const roomId = data.room_id;
+    const userId = client.data?.user?.id;
+    if (!roomId || !userId || !data.message?.trim()) return;
+
+    try {
+      const table = await PokerTable.findOne({ where: { id: roomId, is_active: true } });
+      if (!table) throw new Error('Bàn chơi không tồn tại.');
+
+      const allowChat = table.custom_settings?.allow_chat !== false;
+      if (!allowChat) {
+        client.emit('error', { message: 'Chủ phòng đã tắt tính năng chat.' });
+        return;
+      }
+
+      const seats = await this.stateService.getAllSeats(roomId);
+      const senderSeat = seats.find(s => s.user_id === userId);
+      const senderUser = await User.findOne({ where: { id: userId } });
+      
+      const payload = {
+        user_id: userId,
+        username: senderUser ? senderUser.user_name : 'Khán giả',
+        avatar: senderUser?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${senderUser?.user_name || 'spectator'}`,
+        seat_number: senderSeat ? senderSeat.seat_number : null,
+        message: data.message.trim(),
+        timestamp: Date.now(),
+      };
+
+      await this.stateService.pushChatMessage(roomId, JSON.stringify(payload));
+
+      this.server.to(`table_${roomId}`).emit('table:chat-message-received', payload);
+    } catch (err) {
+      client.emit('error', { message: err.message });
+    }
+  }
+
+  @SubscribeMessage('table:rit-vote')
+  async handleRitVote(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { room_id: string; agree: boolean },
+  ) {
+    const roomId = data.room_id;
+    const userId = client.data?.user?.id;
+    if (!roomId || !userId) return;
+
+    const lockAcquired = await this.stateService.acquireLock(roomId);
+    if (!lockAcquired) {
+      client.emit('error', { message: 'Hệ thống đang bận, vui lòng thử lại.' });
+      return;
+    }
+
+    try {
+      const tableState = await this.stateService.getTableState(roomId);
+      if (!tableState || !tableState.rit_voters || tableState.rit_voters === 'completed') {
+        return;
+      }
+
+      const voters = tableState.rit_voters.split(',');
+      if (!voters.includes(userId)) {
+        throw new Error('Bạn không có quyền biểu quyết RIT.');
+      }
+
+      if (data.agree) {
+        const yesVotes = tableState.rit_votes_yes ? tableState.rit_votes_yes.split(',') : [];
+        if (!yesVotes.includes(userId)) {
+          yesVotes.push(userId);
+          await this.stateService.setTableState(roomId, {
+            rit_votes_yes: yesVotes.join(','),
+          });
+        }
+      } else {
+        const noVotes = tableState.rit_votes_no ? tableState.rit_votes_no.split(',') : [];
+        if (!noVotes.includes(userId)) {
+          noVotes.push(userId);
+          await this.stateService.setTableState(roomId, {
+            rit_votes_no: noVotes.join(','),
+          });
+        }
+      }
+
+      const updatedState = await this.stateService.getTableState(roomId);
+      const yesVotesNew = updatedState.rit_votes_yes ? updatedState.rit_votes_yes.split(',') : [];
+      const noVotesNew = updatedState.rit_votes_no ? updatedState.rit_votes_no.split(',') : [];
+      const totalVoted = yesVotesNew.length + noVotesNew.length;
+
+      this.server.to(`table_${roomId}`).emit('table:rit-vote-updated', {
+        yes_count: yesVotesNew.length,
+        no_count: noVotesNew.length,
+        total_voters: voters.length,
+      });
+
+      if (totalVoted >= voters.length) {
+        await this.stateService.releaseLock(roomId);
+        await this.gameService.finalizeRitVoting(roomId);
+        return;
+      }
+    } catch (err) {
+      client.emit('error', { message: err.message });
+    } finally {
+      await this.stateService.releaseLock(roomId);
+    }
+  }
+
+  @SubscribeMessage('table:set-muck')
+  async handleSetMuck(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { room_id: string; muck: boolean },
+  ) {
+    const roomId = data.room_id;
+    const userId = client.data?.user?.id;
+    if (!roomId || !userId) return;
+
+    try {
+      const seats = await this.stateService.getAllSeats(roomId);
+      const seat = seats.find(s => s.user_id === userId);
+      if (seat) {
+        await this.stateService.setSeat(roomId, seat.seat_number, {
+          muck_cards: data.muck ? '1' : '0',
+        });
+        await this.gameService.broadcastTableState(roomId);
+      }
+    } catch (err) {
+      client.emit('error', { message: err.message });
+    }
+  }
+
+  @SubscribeMessage('table:rabbit-hunt')
+  async handleRabbitHunt(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { room_id: string },
+  ) {
+    const roomId = data.room_id;
+    const userId = client.data?.user?.id;
+    if (!roomId || !userId) return;
+
+    try {
+      const dbTable = await PokerTable.findOne({ where: { id: roomId } });
+      if (!dbTable || !dbTable.custom_settings?.allow_rabbit_hunt) {
+        throw new Error('Tính năng Rabbit Hunting không được bật ở bàn này.');
+      }
+
+      const tableState = await this.stateService.getTableState(roomId);
+      if (!tableState || tableState.game_stage !== 'ended') {
+        throw new Error('Chỉ có thể săn thỏ khi ván đấu đã kết thúc.');
+      }
+
+      const deck = await this.stateService.getDeck(roomId);
+      if (!deck || deck.length === 0) {
+        throw new Error('Không còn lá bài nào trong bộ bài.');
+      }
+
+      const community = tableState.community_cards ? tableState.community_cards.split(',') : [];
+      const cardsNeeded = 5 - community.length;
+      if (cardsNeeded <= 0) {
+        throw new Error('Đã chia đủ bài chung.');
+      }
+
+      const rabbitCards = deck.slice(0, cardsNeeded);
+
+      this.server.to(`table_${roomId}`).emit('table:rabbit-cards', {
+        user_id: userId,
+        rabbit_cards: rabbitCards,
+      });
+    } catch (err) {
+      client.emit('error', { message: err.message });
+    }
+  }
+
+  /**
+   * Client lấy lịch sử Chat trong bàn chơi (phục vụ cuộn vô hạn)
+   */
+  @SubscribeMessage('table:get-chat-history')
+  async handleGetChatHistory(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { room_id: string; offset: number; limit: number },
+  ) {
+    const roomId = data.room_id;
+    const userId = client.data?.user?.id;
+    if (!roomId || !userId) return;
+
+    try {
+      const offset = Number(data.offset) || 0;
+      const limit = Number(data.limit) || 20;
+      const historyJson = await this.stateService.getChatHistory(roomId, offset, limit);
+      const history = historyJson.map(h => JSON.parse(h));
+      
+      client.emit('table:chat-history-loaded', {
+        room_id: roomId,
+        history,
+        offset,
+        limit,
+        hasMore: history.length === limit,
+      });
+    } catch (err) {
+      client.emit('error', { message: err.message });
+    }
+  }
+
+  /**
+   * Client ném vật phẩm (Throwable Item / Emotes)
+   */
+  @SubscribeMessage('table:throwable-item')
+  async handleThrowableItem(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { room_id: string; item_id: string; target_seat: number },
+  ) {
+    const roomId = data.room_id;
+    const userId = client.data?.user?.id;
+    if (!roomId || !userId || !data.item_id) return;
+
+    try {
+      const table = await PokerTable.findOne({ where: { id: roomId, is_active: true } });
+      if (!table) throw new Error('Bàn chơi không tồn tại.');
+
+      const allowEmotes = table.custom_settings?.allow_emotes !== false;
+      if (!allowEmotes) {
+        client.emit('error', { message: 'Chủ phòng đã tắt tính năng ném vật phẩm.' });
+        return;
+      }
+
+      const seats = await this.stateService.getAllSeats(roomId);
+      const senderSeat = seats.find(s => s.user_id === userId);
+      if (!senderSeat) {
+        throw new Error('Bạn không ngồi trong bàn để ném vật phẩm.');
+      }
+
+      const payload = {
+        sender_seat: senderSeat.seat_number,
+        target_seat: data.target_seat,
+        item_id: data.item_id,
+        timestamp: Date.now(),
+      };
+
+      this.server.to(`table_${roomId}`).emit('table:throwable-item-received', payload);
     } catch (err) {
       client.emit('error', { message: err.message });
     }

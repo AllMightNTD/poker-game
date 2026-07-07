@@ -193,4 +193,23 @@ export class PokerStateService implements OnModuleInit {
       }
     } while (cursor !== '0');
   }
+
+  /**
+   * Lưu Chat Message vào Redis List
+   */
+  async pushChatMessage(tableId: string, chatJson: string): Promise<void> {
+    const key = `table:${tableId}:chats`;
+    await this.redis.rpush(key, chatJson);
+    await this.redis.ltrim(key, -1000, -1);
+  }
+
+  /**
+   * Lấy Lịch sử Chat phân trang từ đuôi (mới nhất)
+   */
+  async getChatHistory(tableId: string, offset: number, limit: number): Promise<string[]> {
+    const key = `table:${tableId}:chats`;
+    const start = -limit - offset;
+    const end = -1 - offset;
+    return this.redis.lrange(key, start, end);
+  }
 }

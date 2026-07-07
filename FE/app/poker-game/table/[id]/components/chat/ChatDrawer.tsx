@@ -6,14 +6,60 @@ import { Send, MessageSquare, X, Smile } from "lucide-react";
 import { usePokerGame } from "../hooks/usePokerGame";
 import { useResponsive } from "../hooks/useResponsive";
 
+import { useCurrentUser } from "@/core/providers/user-provider";
+
 const QUICK_REACTIONS = ["👍", "🔥", "😂", "🤔", "💰", "😎"];
 
 const ChatContent = ({ onClose }: { onClose?: () => void }) => {
-  const { chatInput, setChatInput, chatMessages, sendChatMessage } = usePokerGame();
+  const {
+    chatInput,
+    setChatInput,
+    chatMessages,
+    sendChatMessage,
+    loadMoreChats,
+    hasMoreChats,
+    isLoadingHistory,
+  } = usePokerGame();
+  const { currentUser } = useCurrentUser();
   const chatEndRef = React.useRef<HTMLDivElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
+  const isLiftingScroll = React.useRef(false);
+  const prevScrollHeightRef = React.useRef<number>(0);
+
+  // Sắp xếp tin nhắn theo created_at / timestamp tăng dần
+  const sortedMessages = React.useMemo(() => {
+    return [...chatMessages].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+  }, [chatMessages]);
+
+  // Xử lý sự kiện scroll lên đỉnh để load history
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    if (target.scrollTop === 0 && hasMoreChats && !isLoadingHistory) {
+      prevScrollHeightRef.current = target.scrollHeight;
+      isLiftingScroll.current = true;
+      loadMoreChats();
+    }
+  };
+
+  // Điều chỉnh scroll position để tránh giật vị trí khi prepending history
+  React.useLayoutEffect(() => {
+    if (containerRef.current && isLiftingScroll.current && prevScrollHeightRef.current > 0) {
+      const newScrollHeight = containerRef.current.scrollHeight;
+      const diff = newScrollHeight - prevScrollHeightRef.current;
+      if (diff > 0) {
+        containerRef.current.scrollTop = diff;
+      }
+      isLiftingScroll.current = false;
+      prevScrollHeightRef.current = 0;
+    }
+  }, [chatMessages]);
+
+  // Tự động cuộn xuống dưới khi có tin nhắn mới (chỉ khi không phải đang load history)
   React.useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!isLiftingScroll.current) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [chatMessages]);
 
   return (
@@ -54,25 +100,74 @@ const ChatContent = ({ onClose }: { onClose?: () => void }) => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2.5 text-xs">
-        {chatMessages.map((msg, idx) =>
-          msg.isSystem ? (
-            <div key={idx} className="text-center">
-              <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-500 text-[9px] font-medium">
-                {msg.text}
-              </span>
-            </div>
-          ) : (
-            <div key={idx} className="space-y-0.5">
-              <span className="font-black text-slate-300 text-[9px] uppercase tracking-wide">
-                {msg.sender}
-              </span>
-              <div className="bg-slate-900/60 border border-slate-800/60 rounded-xl rounded-tl-sm px-3 py-2">
-                <span className="text-slate-300 text-[11px] leading-relaxed">{msg.text}</span>
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-3 space-y-3.5 text-xs select-none scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-800"
+      >
+        {/* Loading Spinner khi tải tin cũ */}
+        {isLoadingHistory && (
+          <div className="flex justify-center py-2 shrink-0">
+            <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {sortedMessages.map((msg, idx) => {
+          if (msg.isSystem) {
+            return (
+              <div key={msg.id || idx} className="text-center py-1">
+                <span className="px-2 py-0.5 rounded-md bg-slate-900/80 border border-slate-800/40 text-slate-500 text-[9px] font-medium tracking-wide">
+                  {msg.text}
+                </span>
+              </div>
+            );
+          }
+
+          const isMe = currentUser && (msg.sender === currentUser.user_name || msg.sender === currentUser.username || msg.sender === "Bạn");
+          const avatarUrl = msg.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${msg.sender}`;
+
+          return (
+            <div key={msg.id || idx} className={`flex items-start gap-2 ${isMe ? "flex-row-reverse text-right" : ""}`}>
+              {/* Avatar */}
+              <img
+                src={avatarUrl}
+                alt={msg.sender}
+                className="w-7 h-7 rounded-full border border-slate-800 bg-slate-900 object-cover shrink-0"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/adventurer/svg?seed=${msg.sender}`;
+                }}
+              />
+
+              {/* Message Content */}
+              <div className={`flex flex-col gap-1 max-w-[80%] ${isMe ? "items-end" : "items-start"}`}>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[10px] font-black tracking-wide ${isMe ? "text-emerald-400" : "text-slate-300"}`}>
+                    {msg.sender}
+                  </span>
+                  {msg.seatNumber !== null && msg.seatNumber !== undefined ? (
+                    <span className="px-1 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-black uppercase tracking-wider">
+                      Ghế #{msg.seatNumber}
+                    </span>
+                  ) : (
+                    <span className="px-1 py-0.5 rounded bg-slate-800 border border-slate-700/60 text-slate-500 text-[8px] font-black uppercase tracking-wider">
+                      Khán giả
+                    </span>
+                  )}
+                </div>
+
+                <div
+                  className={`px-3 py-2 rounded-2xl text-[11px] leading-relaxed shadow-sm border ${
+                    isMe
+                       ? "bg-emerald-600/10 border-emerald-500/20 text-emerald-300 rounded-tr-sm"
+                      : "bg-slate-900/80 border-slate-850 text-slate-300 rounded-tl-sm"
+                  }`}
+                >
+                  <span className="break-all whitespace-pre-wrap">{msg.text}</span>
+                </div>
               </div>
             </div>
-          )
-        )}
+          );
+        })}
         <div ref={chatEndRef} />
       </div>
 

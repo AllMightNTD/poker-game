@@ -23,36 +23,36 @@ const WinnerHighlight: React.FC<{ winners: WinnerData[]; maxPlayers: number; her
         const pos = positions[winner.seatNumber - 1];
         if (!pos) return null;
         return (
+          <motion.div
+            key={winner.userId}
+            className="absolute pointer-events-none flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2"
+            style={{ top: `${pos.top}%`, left: `${pos.left}%` }}
+          >
+            {/* Highlight Ring */}
             <motion.div
-              key={winner.userId}
-              className="absolute pointer-events-none flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2"
-              style={{ top: `${pos.top}%`, left: `${pos.left}%` }}
-            >
-              {/* Highlight Ring */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.06, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className="absolute w-[110px] sm:w-[150px] md:w-[200px] h-[110px] sm:h-[150px] md:h-[200px] rounded-full border-4 border-[#F4B942] shadow-[0_0_30px_rgba(244,185,66,0.6)]"
-              />
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: [0.4, 1, 0.4], scale: [1, 1.06, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              className="absolute w-[110px] sm:w-[150px] md:w-[200px] h-[110px] sm:h-[150px] md:h-[200px] rounded-full border-4 border-[#F4B942] shadow-[0_0_30px_rgba(244,185,66,0.6)]"
+            />
 
-              {/* Net Gain Text Popup */}
-              {winner.netGainLoss !== undefined && winner.netGainLoss > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 0, scale: 0.5 }}
-                  animate={{ opacity: [0, 1, 1, 0], y: -80, scale: 1.2 }}
-                  transition={{ duration: 2.5, ease: "easeOut", delay: 0.5 }}
-                  className="absolute z-50 text-2xl md:text-4xl font-black tracking-wider"
-                  style={{
-                    color: "#4ade80",
-                    textShadow: "0px 4px 10px rgba(74, 222, 128, 0.8), 0px 0px 20px rgba(0,0,0,0.8)",
-                    WebkitTextStroke: "1px #14532d",
-                  }}
-                >
-                  +${winner.netGainLoss.toLocaleString()}
-                </motion.div>
-              )}
-            </motion.div>
+            {/* Net Gain Text Popup */}
+            {winner.netGainLoss !== undefined && winner.netGainLoss > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 0, scale: 0.5 }}
+                animate={{ opacity: [0, 1, 1, 0], y: -80, scale: 1.2 }}
+                transition={{ duration: 2.5, ease: "easeOut", delay: 0.5 }}
+                className="absolute z-50 text-2xl md:text-4xl font-black tracking-wider"
+                style={{
+                  color: "#4ade80",
+                  textShadow: "0px 4px 10px rgba(74, 222, 128, 0.8), 0px 0px 20px rgba(0,0,0,0.8)",
+                  WebkitTextStroke: "1px #14532d",
+                }}
+              >
+                +${winner.netGainLoss.toLocaleString()}
+              </motion.div>
+            )}
+          </motion.div>
         );
       })}
     </div>
@@ -194,7 +194,7 @@ export const AnimationManager: React.FC<AnimationManagerProps> = ({ socket }) =>
         const handName = w.hand_name || "Winner";
         const playerName = w.display_name || w.username || `Player ${w.seat_number}`;
         const isBigWin = (w.win_amount || 0) > 1000000;
-        
+
         if (w.pots && w.pots.length > 0) {
           w.pots.forEach((p: any) => {
             formattedWinners.push({
@@ -260,8 +260,6 @@ export const AnimationManager: React.FC<AnimationManagerProps> = ({ socket }) =>
             {hasBigWin && <Confetti />}
           </>
         )}
-
-        {currentStep === "NEXT_HAND_COUNTDOWN" && <NextHandOverlay />}
       </AnimatePresence>
     </>
   );

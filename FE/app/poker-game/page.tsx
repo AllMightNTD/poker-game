@@ -2,7 +2,6 @@
 
 import { useSocket } from "@/core/providers/SocketProvider";
 import { UserProvider, useCurrentUser } from "@/core/providers/user-provider";
-import { useRouter } from "next/navigation";
 import api from "@/lib/axios";
 import {
   keepPreviousData,
@@ -12,6 +11,7 @@ import {
 } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Coins, Plus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CreateTableModal } from "./components/CreateTableModal";
 import { HeroBanner } from "./components/HeroBanner";
@@ -98,8 +98,23 @@ function PokerGameLobby() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const showToast = (type: "success" | "error", text: string) => {
-    setToast({ type, text });
+  const showToast = (type: "success" | "error", text: any) => {
+    let formattedText = "Đã xảy ra lỗi không xác định.";
+    if (typeof text === "string") {
+      formattedText = text;
+    } else if (Array.isArray(text)) {
+      formattedText = text
+        .map((err: any) => {
+          if (typeof err === "object" && err !== null) {
+            return err.error || err.message || JSON.stringify(err);
+          }
+          return String(err);
+        })
+        .join(", ");
+    } else if (typeof text === "object" && text !== null) {
+      formattedText = text.error || text.message || JSON.stringify(text);
+    }
+    setToast({ type, text: formattedText });
     setTimeout(() => setToast(null), 4000);
   };
 
@@ -174,7 +189,7 @@ function PokerGameLobby() {
   // ---------------------------------------------------------------------
   const createTableMutation = useMutation({
     mutationFn: async (payload: {
-      name: string;
+      room_name: string;
       game_type: string;
       small_blind: number;
       big_blind: number;
@@ -207,7 +222,7 @@ function PokerGameLobby() {
       );
 
       setIsCreateModalOpen(false);
-      showToast("success", `Bàn "${payload.name}" đã sẵn sàng — chúc bạn may mắn!`);
+      showToast("success", `Bàn "${payload.room_name}" đã sẵn sàng — chúc bạn may mắn!`);
 
       setTimeout(() => {
         router.push(`/poker-game/table/${newTableObj.id}`);

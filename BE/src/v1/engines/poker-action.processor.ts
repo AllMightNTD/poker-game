@@ -253,6 +253,30 @@ export class PokerActionProcessor {
     else if (currentStage === 'flop') nextStage = 'turn';
     else if (currentStage === 'turn') nextStage = 'river';
 
+    if (isAutoRunBoard && dbTable?.custom_settings?.allow_rit !== false && nextStage !== 'showdown') {
+      if (!tableState.rit_voters) {
+        const ritVoters = activePlayers.map((p) => p.user_id);
+        await this.gameService.stateService.setTableState(roomId, {
+          rit_voters: ritVoters.join(','),
+          rit_votes_yes: '',
+          rit_votes_no: '',
+        });
+
+        this.gameService.server.to(`table_${roomId}`).emit('table:rit-vote-request', {
+          voters: ritVoters,
+          time_limit: 5,
+        });
+
+        setTimeout(async () => {
+          await this.gameService.finalizeRitVoting(roomId);
+        }, 5000);
+
+        return;
+      } else if (tableState.rit_voters !== 'completed') {
+        return;
+      }
+    }
+
     let streetPotGained = 0;
     for (const s of seats) {
       streetPotGained += parseInt(String(s.current_bet || '0'));
@@ -260,14 +284,28 @@ export class PokerActionProcessor {
     const newTotalPot = parseInt(tableState.total_pot || '0'); // Already accumulated in processPlayerAction
 
     let updatedCommunityCards = tableState.community_cards || '';
+    let updatedRitCards = tableState.rit_board2_cards || '';
     let deck = await this.gameService.stateService.getDeck(roomId);
+    const isRitActive = tableState.is_rit_active === '1';
 
-    if (nextStage === 'flop' && deck.length >= 3) {
-      const flopCards = [deck.shift(), deck.shift(), deck.shift()];
-      updatedCommunityCards = flopCards.join(',');
-    } else if ((nextStage === 'turn' || nextStage === 'river') && deck.length >= 1) {
-      const nextCard = deck.shift();
-      updatedCommunityCards = updatedCommunityCards ? `${updatedCommunityCards},${nextCard}` : nextCard;
+    if (nextStage === 'flop') {
+      if (deck.length >= 3) {
+        const flopCards = [deck.shift(), deck.shift(), deck.shift()];
+        updatedCommunityCards = flopCards.join(',');
+      }
+      if (isRitActive && deck.length >= 3) {
+        const flopCards2 = [deck.shift(), deck.shift(), deck.shift()];
+        updatedRitCards = flopCards2.join(',');
+      }
+    } else if (nextStage === 'turn' || nextStage === 'river') {
+      if (deck.length >= 1) {
+        const nextCard = deck.shift();
+        updatedCommunityCards = updatedCommunityCards ? `${updatedCommunityCards},${nextCard}` : nextCard;
+      }
+      if (isRitActive && deck.length >= 1) {
+        const nextCard2 = deck.shift();
+        updatedRitCards = updatedRitCards ? `${updatedRitCards},${nextCard2}` : nextCard2;
+      }
     }
 
     await this.gameService.stateService.setDeck(roomId, deck);
@@ -285,12 +323,14 @@ export class PokerActionProcessor {
       current_highest_bet: '0',
       last_full_raise_size: '0',
       community_cards: updatedCommunityCards,
+      rit_board2_cards: updatedRitCards,
       current_turn_seat: '0',
     });
 
     this.gameService.server.to(`table_${roomId}`).emit('table:street-advanced', {
       game_stage: nextStage,
       community_cards: updatedCommunityCards ? updatedCommunityCards.split(',') : [],
+      rit_board2_cards: updatedRitCards ? updatedRitCards.split(',') : [],
       total_pot: newTotalPot,
     });
 
@@ -370,7 +410,13 @@ export class PokerActionProcessor {
       const currentBet = parseInt(String(seat.current_bet || '0'));
       const highestBet = parseInt(tableState.current_highest_bet || '0');
 
-      const action = currentBet >= highestBet ? 'check' : 'fold';
+      let action = currentBet >= highestBet ? 'check' : 'fold';
+      
+      const dbTable = await PokerTable.findOne({ where: { id: roomId } });
+      if (dbTable?.custom_settings?.table_timeout_action === 'AUTO_FOLD') {
+        action = 'fold';
+      }
+
       await this.processPlayerAction(roomId, seatNumber, action, 0);
 
       const statsKey = `table:${roomId}:player:${seat.user_id}:stats`;

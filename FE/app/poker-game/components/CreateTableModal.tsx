@@ -1,12 +1,12 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Plus, X } from "lucide-react";
+import React, { useState } from "react";
 
 interface CreateTableModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (payload: {
-    name: string;
+    room_name: string;
     game_type: string;
     small_blind: number;
     big_blind: number;
@@ -36,7 +36,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
     if (isNaN(sbVal) || sbVal <= 0) return;
 
     onSubmit({
-      name: newTableName,
+      room_name: newTableName,
       game_type: newGameType,
       small_blind: sbVal,
       big_blind: sbVal * 2,

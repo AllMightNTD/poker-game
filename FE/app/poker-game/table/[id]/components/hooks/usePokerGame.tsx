@@ -72,11 +72,22 @@ interface PokerGameContextProps {
   handHistory: string[];
   setHandHistory: React.Dispatch<React.SetStateAction<string[]>>;
   toastMsg: { text: string; type: "success" | "error" | "info" | "warning" } | null;
-  showToast: (text: string, type?: "success" | "error" | "info" | "warning") => void;
+  showToast: (text: any, type?: "success" | "error" | "info" | "warning") => void;
   handleUserAction: (action: string, amount?: number) => void;
   requestExtraTime: () => void;
   communityCards: Card[];
   setCommunityCards: React.Dispatch<React.SetStateAction<Card[]>>;
+  isBombPot: boolean;
+  ritBoard2Cards: Card[];
+  isRitVotingActive: boolean;
+  ritVoters: string[];
+  ritVotesYesCount: number;
+  ritVotesNoCount: number;
+  voteRit: (agree: boolean) => void;
+  muckOption: boolean;
+  setMuckOption: (v: boolean) => void;
+  rabbitCards: Card[] | null;
+  triggerRabbitHunt: () => void;
   tableId: string;
   tableRef: React.RefObject<HTMLDivElement | null>;
   tableScale: number;
@@ -96,6 +107,9 @@ interface PokerGameContextProps {
   minBuyin: number;
   maxBuyin: number;
   maxPlayers: number;
+  loadMoreChats: () => void;
+  hasMoreChats: boolean;
+  isLoadingHistory: boolean;
 
   // Host Mod Actions
   roomStatus: string;
@@ -163,6 +177,32 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [gameStage, setGameStage] = useState<"preflop" | "flop" | "turn" | "river" | "showdown" | "ended" | "waiting">("waiting");
   const [players, setPlayers] = useState<Player[]>([]);
   const [communityCards, setCommunityCards] = useState<Card[]>([]);
+  const [isBombPot, setIsBombPot] = useState(false);
+  const [ritBoard2Cards, setRitBoard2Cards] = useState<Card[]>([]);
+  const [isRitVotingActive, setIsRitVotingActive] = useState(false);
+  const [ritVoters, setRitVoters] = useState<string[]>([]);
+  const [ritVotesYesCount, setRitVotesYesCount] = useState(0);
+  const [ritVotesNoCount, setRitVotesNoCount] = useState(0);
+  const [muckOption, _setMuckOption] = useState(false);
+  const [rabbitCards, setRabbitCards] = useState<Card[] | null>(null);
+
+  const voteRit = (agree: boolean) => {
+    if (!socket) return;
+    socket.emit("table:rit-vote", { room_id: tableId, agree });
+    setIsRitVotingActive(false);
+  };
+
+  const setMuckOption = (v: boolean) => {
+    _setMuckOption(v);
+    if (socket) {
+      socket.emit("table:set-muck", { room_id: tableId, muck: v });
+    }
+  };
+
+  const triggerRabbitHunt = () => {
+    if (!socket) return;
+    socket.emit("table:rabbit-hunt", { room_id: tableId });
+  };
   const [ownerId, setOwnerId] = useState("");
   const [currentTurnSeat, setCurrentTurnSeat] = useState(0);
   const [dealerSeat, setDealerSeat] = useState(1);
@@ -178,6 +218,8 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [handHistory, setHandHistory] = useState<string[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [hasMoreChats, setHasMoreChats] = useState(true);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Disconnect & network status
   const [isConnecting, setIsConnecting] = useState(false);
@@ -236,8 +278,23 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     currentTurnSeatRef.current = currentTurnSeat;
   }, [currentTurnSeat]);
 
-  const showToast = (text: string, type: "success" | "error" | "info" | "warning" = "success") => {
-    setToastMsg({ text, type });
+  const showToast = (text: any, type: "success" | "error" | "info" | "warning" = "success") => {
+    let formattedText = "Đã xảy ra lỗi không xác định.";
+    if (typeof text === "string") {
+      formattedText = text;
+    } else if (Array.isArray(text)) {
+      formattedText = text
+        .map((err: any) => {
+          if (typeof err === "object" && err !== null) {
+            return err.error || err.message || JSON.stringify(err);
+          }
+          return String(err);
+        })
+        .join(", ");
+    } else if (typeof text === "object" && text !== null) {
+      formattedText = text.error || text.message || JSON.stringify(text);
+    }
+    setToastMsg({ text: formattedText, type });
     setTimeout(() => setToastMsg(null), 3000);
   };
 
@@ -338,6 +395,8 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     // Join room
     socket.emit("table:subscribe", { room_id: tableId });
+    // Fetch initial chat history
+    socket.emit("table:get-chat-history", { room_id: tableId, offset: 0, limit: 20 });
 
     socket.on("error", (data: Record<string, unknown>) => {
       showToast((data.message as string) || "Đã xảy ra lỗi không xác định.", "error");
@@ -363,6 +422,18 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setMaxBuyin(data.max_buyin || 0);
       setSmallBlind(data.small_blind ? data.small_blind.toString() : "50");
       setBigBlind(data.big_blind ? data.big_blind.toString() : "100");
+
+      setIsBombPot(!!data.is_bomb_pot);
+      if (data.rit_board2_cards) {
+        if (typeof data.rit_board2_cards === 'string') {
+          const arr = (data.rit_board2_cards as string).split(',').filter(c => c.trim() !== '');
+          setRitBoard2Cards(arr.map(parseCard));
+        } else if (Array.isArray(data.rit_board2_cards)) {
+          setRitBoard2Cards(data.rit_board2_cards.map(parseCard));
+        }
+      } else {
+        setRitBoard2Cards([]);
+      }
 
       // Sync players list
       if (data.seats) {
@@ -530,6 +601,16 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     socket.on("table:hand-started", (data: SocketTypes.HandStartedPayload) => {
       setCommunityCards([]);
+      setIsBombPot(!!data.is_bomb_pot);
+      setRitBoard2Cards([]);
+      setIsRitVotingActive(false);
+      setRitVoters([]);
+      setRitVotesYesCount(0);
+      setRitVotesNoCount(0);
+      setRabbitCards(null);
+      if (data.community_cards && data.community_cards.length > 0) {
+        setCommunityCards(data.community_cards.map(parseCard));
+      }
       setGameStage("preflop");
       setHandHistory((prev) => [...prev, `--- Bắt đầu ván bài mới #${data.hand_id} ---`]);
       setProvablyFair({
@@ -576,6 +657,15 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setCommunityCards([]);
       }
 
+      if (data.rit_board2_cards && typeof data.rit_board2_cards === "string") {
+        const cardsArray = (data.rit_board2_cards as string).split(",").filter((c: string) => c.trim() !== "");
+        setRitBoard2Cards(cardsArray.map(parseCard));
+      } else if (Array.isArray(data.rit_board2_cards)) {
+        setRitBoard2Cards(data.rit_board2_cards.map(parseCard));
+      } else {
+        setRitBoard2Cards([]);
+      }
+
       showToast(`Vòng chơi mới: ${stage.toUpperCase()}`, "info");
       setHandHistory((prev) => [...prev, `Bắt đầu vòng cược: ${stage.toUpperCase()}`]);
     });
@@ -587,6 +677,13 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         server_seed_plain: data.provably_fair?.server_seed_plain,
         client_seed: data.provably_fair?.client_seed ?? "",
       });
+
+      if (data.rit_board2_cards && typeof data.rit_board2_cards === "string") {
+        const cardsArray = (data.rit_board2_cards as string).split(",").filter((c: string) => c.trim() !== "");
+        setRitBoard2Cards(cardsArray.map(parseCard));
+      } else if (Array.isArray(data.rit_board2_cards)) {
+        setRitBoard2Cards(data.rit_board2_cards.map(parseCard));
+      }
 
       if (data.winners) {
         data.winners.forEach((w) => {
@@ -640,6 +737,31 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       // Remove player from the seat
       setPlayers((prev) => prev.filter(p => p.seatIndex !== data.seat_number));
+    });
+
+    socket.on("table:rit-vote-request", (data: { voters: string[]; time_limit: number }) => {
+      setRitVoters(data.voters);
+      setRitVotesYesCount(0);
+      setRitVotesNoCount(0);
+      setIsRitVotingActive(true);
+      showToast("Có biểu quyết Run It Twice (All-In Showdown)!", "info");
+    });
+
+    socket.on("table:rit-vote-updated", (data: { yes_count: number; no_count: number; total_voters: number }) => {
+      setRitVotesYesCount(data.yes_count);
+      setRitVotesNoCount(data.no_count);
+    });
+
+    socket.on("table:rit-vote-finalized", (data: { is_rit_active: boolean; yes_votes: string[] }) => {
+      setIsRitVotingActive(false);
+      showToast(data.is_rit_active ? "Run It Twice ĐƯỢC CHẤP NHẬN!" : "Run It Twice BỊ TỪ CHỐI!", data.is_rit_active ? "success" : "warning");
+    });
+
+    socket.on("table:rabbit-cards", (data: { user_id: string; rabbit_cards: string[] }) => {
+      const cards = data.rabbit_cards.map(parseCard);
+      setRabbitCards(cards);
+      const user = playersRef.current.find(p => p.id === data.user_id);
+      showToast(`${user ? user.name : "Người chơi"} đã săn thỏ: ${data.rabbit_cards.join(', ')}`, "info");
     });
 
     socket.on("table:player-left-seat", (data: Record<string, unknown>) => {
@@ -757,7 +879,45 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }, 2000);
     });
 
+    socket.on("table:chat-message-received", (data: { user_id: string; username: string; avatar: string; seat_number: number | null; message: string; timestamp: number }) => {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: `${data.user_id}-${data.timestamp}`,
+          sender: data.username,
+          text: data.message,
+          avatar: data.avatar,
+          isSystem: false,
+          seatNumber: data.seat_number,
+          timestamp: data.timestamp
+        },
+      ]);
+    });
+
+    socket.on("table:chat-history-loaded", (data: { room_id: string; history: any[]; offset: number; limit: number; hasMore: boolean }) => {
+      setIsLoadingHistory(false);
+      setHasMoreChats(data.hasMore);
+      
+      const newMsgs = data.history.map(item => ({
+        id: `${item.user_id}-${item.timestamp}`,
+        sender: item.username,
+        text: item.message,
+        avatar: item.avatar,
+        isSystem: false,
+        seatNumber: item.seat_number,
+        timestamp: item.timestamp
+      }));
+
+      setChatMessages((prev) => {
+        const existingIds = new Set(prev.map(m => m.id));
+        const filteredNew = newMsgs.filter(m => !existingIds.has(m.id));
+        return [...filteredNew, ...prev];
+      });
+    });
+
     return () => {
+      socket.off("table:chat-message-received");
+      socket.off("table:chat-history-loaded");
       socket.off("table:state");
       socket.off("table:private-cards");
       socket.off("table:action-recorded");
@@ -840,17 +1000,24 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Send Chat messages
   const sendChatMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim()) return;
+    if (!chatInput.trim() || !socket || !isConnected) return;
 
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        sender: currentUser?.name || currentUser?.username || "Bạn",
-        text: chatInput,
-        isSystem: false,
-      },
-    ]);
+    socket.emit("table:chat-message", {
+      room_id: tableId,
+      message: chatInput,
+    });
     setChatInput("");
+  };
+
+  const loadMoreChats = () => {
+    if (!socket || !isConnected || isLoadingHistory || !hasMoreChats) return;
+    setIsLoadingHistory(true);
+    const userMsgsCount = chatMessages.filter(m => !m.isSystem).length;
+    socket.emit("table:get-chat-history", {
+      room_id: tableId,
+      offset: userMsgsCount,
+      limit: 20,
+    });
   };
 
   // Format chip numbers
@@ -989,6 +1156,17 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         requestExtraTime,
         communityCards,
         setCommunityCards,
+        isBombPot,
+        ritBoard2Cards,
+        isRitVotingActive,
+        ritVoters,
+        ritVotesYesCount,
+        ritVotesNoCount,
+        voteRit,
+        muckOption,
+        setMuckOption,
+        rabbitCards,
+        triggerRabbitHunt,
         tableId,
         tableRef,
         tableScale,
@@ -1021,6 +1199,9 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         maxBuyin,
         maxPlayers,
         leaveTable,
+        loadMoreChats,
+        hasMoreChats,
+        isLoadingHistory,
       }}
     >
       {children}

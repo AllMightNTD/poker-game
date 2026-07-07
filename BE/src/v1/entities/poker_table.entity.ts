@@ -47,6 +47,17 @@ export class PokerTable extends BaseEntity {
   @Column({ type: 'bigint', default: '0' })
   rake_cap: string;
 
+  // --- Game Config ---
+  @Column({ type: 'varchar', length: 20, default: 'CUSTOM' })
+  mode: string; // CUSTOM | TOURNAMENT
+
+  // JSON columns to store advanced settings efficiently
+  @Column({ type: 'json', nullable: true })
+  custom_settings: Record<string, any> | null;
+
+  @Column({ type: 'json', nullable: true })
+  tournament_settings: Record<string, any> | null;
+
   @Column({ type: 'varchar', length: 20, default: 'waiting' })
   status: string; // waiting | running | paused | closed
 

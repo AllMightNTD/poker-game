@@ -21,6 +21,8 @@ export interface TableStatePayload {
   community_cards: string[];
   min_raise: number | string;
   last_full_raise_size?: number | string;
+  is_bomb_pot?: boolean | string;
+  rit_board2_cards?: string[] | string;
   seats: Array<{
     id: string;
     seatIndex: number;
@@ -59,6 +61,7 @@ export interface StreetAdvancedPayload {
   stage?: "waiting" | "preflop" | "flop" | "turn" | "river" | "showdown" | "ended";
   game_stage?: "waiting" | "preflop" | "flop" | "turn" | "river" | "showdown" | "ended";
   community_cards: string[] | string;
+  rit_board2_cards?: string[] | string;
   total_pot: number;
 }
 
@@ -80,6 +83,7 @@ export interface HandEndedPayload {
   }>;
   total_pot: number;
   rake_amount: string | number;
+  rit_board2_cards?: string[] | string;
   provably_fair?: {
     server_seed_plain?: string;
     client_seed?: string;
@@ -94,7 +98,8 @@ export interface HandStartedPayload {
   server_seed_hash?: string;
   client_seed?: string;
   hand_id?: string;
-
+  is_bomb_pot?: boolean | string;
+  community_cards?: string[];
 }
 
 export interface SitRequest {

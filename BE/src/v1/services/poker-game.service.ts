@@ -785,13 +785,27 @@ export class PokerGameService implements OnModuleDestroy {
       const sbSeat = findNextActiveSeat(dealerSeat);
       const bbSeat = findNextActiveSeat(sbSeat);
 
+      const sbAmount = dbTable ? parseInt(dbTable.small_blind || '50') : 50;
+      const bbAmount = dbTable ? parseInt(dbTable.big_blind || '100') : 100;
       const anteAmount = dbTable ? parseInt(dbTable.ante || '0') : 0;
-      let anteCollected = 0;
 
-      if (anteAmount > 0) {
+      let isBombPot = false;
+      if (dbTable?.custom_settings?.allow_bomb_pot) {
+        const nextHandBomb = tableStateBefore?.next_hand_bomb_pot === '1';
+        if (nextHandBomb || Math.random() < 0.1) {
+          isBombPot = true;
+        }
+      }
+
+      let anteCollected = 0;
+      let sbBet = 0;
+      let bbBet = 0;
+
+      if (isBombPot) {
+        const bombPotAnte = bbAmount * 5;
         for (const player of activePlayers) {
           const playerStack = parseInt(player.stack);
-          const actualAnte = Math.min(playerStack, anteAmount);
+          const actualAnte = Math.min(playerStack, bombPotAnte);
           const newStack = playerStack - actualAnte;
           anteCollected += actualAnte;
           player.stack = newStack.toString();
@@ -804,6 +818,65 @@ export class PokerGameService implements OnModuleDestroy {
             roomId,
             player.user_id,
             newStack.toString(),
+          );
+        }
+      } else {
+        if (anteAmount > 0) {
+          for (const player of activePlayers) {
+            const playerStack = parseInt(player.stack);
+            const actualAnte = Math.min(playerStack, anteAmount);
+            const newStack = playerStack - actualAnte;
+            anteCollected += actualAnte;
+            player.stack = newStack.toString();
+            const currentContributed = parseInt(player.total_contributed || '0');
+            await this.stateService.setSeat(roomId, player.seat_number, {
+              stack: newStack.toString(),
+              total_contributed: (currentContributed + actualAnte).toString(),
+            });
+            await this.syncSeatStackToDb(
+              roomId,
+              player.user_id,
+              newStack.toString(),
+            );
+          }
+        }
+
+        const sbPlayer = activePlayers.find((s) => s.seat_number === sbSeat);
+        const bbPlayer = activePlayers.find((s) => s.seat_number === bbSeat);
+
+        if (sbPlayer) {
+          const currentStack = parseInt(sbPlayer.stack);
+          sbBet = Math.min(currentStack, sbAmount);
+          const sbStack = currentStack - sbBet;
+          const sbContributed =
+            parseInt(sbPlayer.total_contributed || '0') + sbBet;
+          await this.stateService.setSeat(roomId, sbSeat, {
+            stack: sbStack.toString(),
+            current_bet: sbBet.toString(),
+            total_contributed: sbContributed.toString(),
+          });
+          await this.syncSeatStackToDb(
+            roomId,
+            sbPlayer.user_id,
+            sbStack.toString(),
+          );
+        }
+
+        if (bbPlayer) {
+          const currentStack = parseInt(bbPlayer.stack);
+          bbBet = Math.min(currentStack, bbAmount);
+          const bbStack = currentStack - bbBet;
+          const bbContributed =
+            parseInt(bbPlayer.total_contributed || '0') + bbBet;
+          await this.stateService.setSeat(roomId, bbSeat, {
+            stack: bbStack.toString(),
+            current_bet: bbBet.toString(),
+            total_contributed: bbContributed.toString(),
+          });
+          await this.syncSeatStackToDb(
+            roomId,
+            bbPlayer.user_id,
+            bbStack.toString(),
           );
         }
       }
@@ -826,7 +899,7 @@ export class PokerGameService implements OnModuleDestroy {
             ? `client-${representative.user_id}-${Date.now()}`
             : randomBytes(16).toString('hex');
       }
-      await this.stateService.setTableState(roomId, { next_client_seed: '' });
+      await this.stateService.setTableState(roomId, { next_client_seed: '', next_hand_bomb_pot: '' });
 
       const shuffledDeck = PokerGameEngine.shuffleDeck(serverSeed, clientSeed);
 
@@ -861,7 +934,13 @@ export class PokerGameService implements OnModuleDestroy {
         await this.stateService.setPlayerCards(roomId, player.user_id, cards);
       }
 
-      const remainingDeck = shuffledDeck.slice(cardIdx);
+      let remainingDeck = shuffledDeck.slice(cardIdx);
+      let communityCards = '';
+      if (isBombPot) {
+        const flopCards = remainingDeck.slice(0, 3);
+        remainingDeck = remainingDeck.slice(3);
+        communityCards = flopCards.join(',');
+      }
       await this.stateService.setDeck(roomId, remainingDeck);
 
       const integrity = await this.verifyCardIntegrity(roomId);
@@ -873,67 +952,21 @@ export class PokerGameService implements OnModuleDestroy {
         return;
       }
 
-      const sbAmount = parseInt(tableStateBefore?.small_blind || '50');
-      const bbAmount = sbAmount * 2;
-
-      const sbPlayer = activePlayers.find((s) => s.seat_number === sbSeat);
-      const bbPlayer = activePlayers.find((s) => s.seat_number === bbSeat);
-
-      let sbBet = 0;
-      let bbBet = 0;
-
-      if (sbPlayer) {
-        const currentStack = parseInt(sbPlayer.stack);
-        sbBet = Math.min(currentStack, sbAmount);
-        const sbStack = currentStack - sbBet;
-        const sbContributed =
-          parseInt(sbPlayer.total_contributed || '0') + sbBet;
-        await this.stateService.setSeat(roomId, sbSeat, {
-          stack: sbStack.toString(),
-          current_bet: sbBet.toString(),
-          total_contributed: sbContributed.toString(),
-        });
-        await this.syncSeatStackToDb(
-          roomId,
-          sbPlayer.user_id,
-          sbStack.toString(),
-        );
-      }
-
-      if (bbPlayer) {
-        const currentStack = parseInt(bbPlayer.stack);
-        bbBet = Math.min(currentStack, bbAmount);
-        const bbStack = currentStack - bbBet;
-        const bbContributed =
-          parseInt(bbPlayer.total_contributed || '0') + bbBet;
-        await this.stateService.setSeat(roomId, bbSeat, {
-          stack: bbStack.toString(),
-          current_bet: bbBet.toString(),
-          total_contributed: bbContributed.toString(),
-        });
-        await this.syncSeatStackToDb(
-          roomId,
-          bbPlayer.user_id,
-          bbStack.toString(),
-        );
-      }
-
       const totalPot = anteCollected + sbBet + bbBet;
       const handId = randomUUID();
 
-      const firstTurn = findNextActiveSeat(bbSeat);
-
+      const firstTurn = isBombPot ? sbSeat : findNextActiveSeat(bbSeat);
       const highestBetValue = Math.max(sbBet, bbBet);
 
       await this.stateService.setTableState(roomId, {
-        game_stage: 'preflop',
+        game_stage: isBombPot ? 'flop' : 'preflop',
         total_pot: totalPot.toString(),
-        current_highest_bet: highestBetValue.toString(),
-        last_full_raise_size: bbAmount.toString(),
+        current_highest_bet: isBombPot ? '0' : highestBetValue.toString(),
+        last_full_raise_size: isBombPot ? '0' : bbAmount.toString(),
         dealer_seat: dealerSeat,
         small_blind_seat: sbSeat,
         big_blind_seat: bbSeat,
-        community_cards: '',
+        community_cards: communityCards,
         current_turn_seat: firstTurn,
         server_seed: serverSeed,
         server_seed_hash: serverSeedHash,
@@ -942,6 +975,12 @@ export class PokerGameService implements OnModuleDestroy {
         current_hand_id: handId,
         is_running_board: '',
         shuffled_deck: shuffledDeck.join(','),
+        is_bomb_pot: isBombPot ? '1' : '0',
+        is_rit_active: '0',
+        rit_board2_cards: '',
+        rit_voters: '',
+        rit_votes_yes: '',
+        rit_votes_no: '',
       });
 
       // Đồng bộ trạng thái chạy vào DB
@@ -964,6 +1003,8 @@ export class PokerGameService implements OnModuleDestroy {
         big_blind_seat: bbSeat,
         server_seed_hash: serverSeedHash,
         client_seed: clientSeed,
+        is_bomb_pot: isBombPot,
+        community_cards: communityCards ? communityCards.split(',') : [],
       });
 
       for (const player of activePlayers) {
@@ -1021,5 +1062,42 @@ export class PokerGameService implements OnModuleDestroy {
 
     this.server.to(`table_${roomId}`).emit('table:hand-aborted', { reason });
     await this.broadcastTableState(roomId);
+  }
+
+  async finalizeRitVoting(roomId: string) {
+    const lockAcquired = await this.stateService.acquireLock(roomId);
+    if (!lockAcquired) {
+      setTimeout(async () => {
+        await this.finalizeRitVoting(roomId);
+      }, 100);
+      return;
+    }
+
+    try {
+      const tableState = await this.stateService.getTableState(roomId);
+      if (!tableState || !tableState.rit_voters || tableState.rit_voters === 'completed') return;
+
+      const voters = tableState.rit_voters.split(',');
+      const yesVotes = tableState.rit_votes_yes ? tableState.rit_votes_yes.split(',') : [];
+
+      const allYes = voters.every(v => yesVotes.includes(v));
+      const isRitActive = allYes ? '1' : '0';
+
+      await this.stateService.setTableState(roomId, {
+        is_rit_active: isRitActive,
+        rit_voters: 'completed',
+      });
+
+      this.server.to(`table_${roomId}`).emit('table:rit-vote-finalized', {
+        is_rit_active: allYes,
+        yes_votes: yesVotes,
+      });
+
+      await this.actionProcessor.advanceStreet(roomId);
+    } catch (err) {
+      this.logger.error(`Error in finalizeRitVoting: ${err.message}`, err.stack);
+    } finally {
+      await this.stateService.releaseLock(roomId);
+    }
   }
 }

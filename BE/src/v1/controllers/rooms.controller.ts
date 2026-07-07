@@ -49,9 +49,9 @@ export class RoomsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Tạo phòng mới', description: 'Tạo bàn chơi mới. Người tạo sẽ trở thành chủ phòng.' })
-  @ApiBody({ schema: { example: { name: 'High Roller VIP', game_type: "Texas Hold'em", small_blind: 500, big_blind: 1000, max_players: 9, min_buyin: 20000, max_buyin: 200000 } } })
-  @ApiResponse({ status: 201, description: 'Phòng được tạo thành công', schema: { example: { success: true, room_id: 42, room_name: 'High Roller VIP', small_blind: 500, big_blind: 1000, max_players: 9, min_buy_in: 20000, max_buy_in: 200000, current_players_count: 0 } } })
+  @ApiOperation({ summary: 'Tạo phòng mới', description: 'Tạo bàn chơi mới. Hỗ trợ mode CUSTOM (chơi tự do) và TOURNAMENT (giải đấu).' })
+  @ApiBody({ schema: { example: { room_name: 'Bàn VIP 1', game_type: 'NLH', mode: 'CUSTOM', max_players: 6, small_blind: 500, min_buy_in: 20000, max_buy_in: 100000, turn_time_limit: 20, time_bank: 30, custom_settings: { table_visibility: 'PRIVATE', password: 'vip', allow_rebuy: true, table_timeout_action: 'AUTO_FOLD', allow_chat: true, allow_emotes: true, max_spectators: 10, max_waiting_list: 5, anti_collusion_level: 'MEDIUM' } } } })
+  @ApiResponse({ status: 201, description: 'Phòng được tạo thành công', schema: { example: { success: true, room_id: 42, room_name: 'Bàn VIP 1', small_blind: 500, big_blind: 1000, max_players: 6, min_buy_in: 20000, max_buy_in: 100000, current_players_count: 0 } } })
   @BadRequest400() @Auth401()
   async createRoom(@Request() req, @Body() body: CreateRoomDto) {
     return this.lobbyService.createRoom(req.user.sub, body);

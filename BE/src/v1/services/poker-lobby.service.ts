@@ -172,6 +172,9 @@ export class PokerLobbyService {
       queryBuilder.andWhere('table.name LIKE :searchName', { searchName: `%${searchName}%` });
     }
 
+    // Filter out PRIVATE rooms from the public lobby
+    queryBuilder.andWhere(`(JSON_EXTRACT(table.custom_settings, '$.table_visibility') IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(table.custom_settings, '$.table_visibility')) != 'PRIVATE')`);
+
     // Lọc theo Big Blind Category
     if (blindCategory === 'micro') {
       // Big blind <= 2000
@@ -279,7 +282,26 @@ export class PokerLobbyService {
       throw new NotFoundException('Bàn chơi không tồn tại hoặc đã bị đóng.');
     }
 
-    // Ghi nhận spectator - Không cần persist DB nếu chỉ dùng socket room
+    const maxSpectators = table.custom_settings?.max_spectators || 0;
+    
+    // Check max spectators via Redis Set (we track userIds of spectators)
+    const redis = this.stateService.getRedisClient();
+    const spectatorsKey = `table:${roomId}:spectators`;
+    
+    if (maxSpectators > 0) {
+      const currentSpectators = await redis.scard(spectatorsKey);
+      if (currentSpectators >= maxSpectators) {
+        // Only block if this user isn't already a spectator
+        const isAlreadySpectating = await redis.sismember(spectatorsKey, userId);
+        if (!isAlreadySpectating) {
+          throw new ConflictException(`Phòng đã đạt giới hạn tối đa ${maxSpectators} người xem.`);
+        }
+      }
+    }
+
+    // Add user to spectators set and set an expiry (e.g., 2 hours) so it doesn't leak forever if they disconnect ungracefully
+    await redis.sadd(spectatorsKey, userId);
+    await redis.expire(spectatorsKey, 7200);
 
     return {
       success: true,
@@ -293,7 +315,7 @@ export class PokerLobbyService {
    * Chức năng: Tạo bàn chơi mới
    */
   async createRoom(userId: string, body: CreateRoomDto) {
-    if (!body.name || !body.name.trim()) {
+    if (!body.room_name || !body.room_name.trim()) {
       throw new BadRequestException('Tên bàn chơi không được để trống.');
     }
 
@@ -302,24 +324,41 @@ export class PokerLobbyService {
       throw new BadRequestException('Mức Small Blind không hợp lệ.');
     }
 
-    const bb = body.big_blind ? parseInt(body.big_blind.toString(), 10) : sb * 2;
     const maxPlayers = body.max_players ? Number(body.max_players) : 9;
-    const minBuyin = body.min_buyin ? body.min_buyin.toString() : (sb * 40).toString();
-    const maxBuyin = body.max_buyin ? body.max_buyin.toString() : (sb * 200).toString();
-    const gameType = body.game_type || "Texas Hold'em";
+    const minBuyin = body.min_buy_in ? body.min_buy_in.toString() : (sb * 40).toString();
+    const maxBuyin = body.max_buy_in ? body.max_buy_in.toString() : (sb * 200).toString();
+    const gameType = body.game_type || "NLH";
+    const mode = body.mode || 'CUSTOM';
+
+    let customSettings = null;
+    if (body.custom_settings) {
+      customSettings = { ...body.custom_settings };
+      // Hash the password if it exists and table is PRIVATE
+      if (customSettings.table_visibility === 'PRIVATE' && customSettings.password) {
+        customSettings.password = crypto.createHash('sha256').update(customSettings.password).digest('hex');
+      }
+    }
+
+    let tournamentSettings = null;
+    if (body.tournament_settings) {
+      tournamentSettings = { ...body.tournament_settings };
+    }
 
     // Wrap table creation + session cleanup in one atomic transaction
     const table = await withTransaction(this.dataSource, async (qr) => {
       const newTable = qr.manager.create(PokerTable, {
-        name: body.name.trim(),
+        name: body.room_name.trim(),
         owner_id: userId,
         game_type: gameType,
+        mode: mode,
         small_blind: sb.toString(),
-        big_blind: bb.toString(),
+        big_blind: (sb * 2).toString(),
         max_players: maxPlayers,
         min_buyin: minBuyin,
         max_buyin: maxBuyin,
         ante: '0',
+        custom_settings: customSettings,
+        tournament_settings: tournamentSettings,
         status: 'waiting',
         is_active: true,
       });
@@ -343,7 +382,7 @@ export class PokerLobbyService {
       room_id: parseInt(table.id),
       room_name: table.name,
       small_blind: sb,
-      big_blind: bb,
+      big_blind: sb * 2,
       max_players: table.max_players,
       min_buy_in: parseInt(table.min_buyin),
       max_buy_in: parseInt(table.max_buyin),
