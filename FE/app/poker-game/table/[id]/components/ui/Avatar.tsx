@@ -55,6 +55,7 @@ export const Avatar: React.FC<AvatarProps> = ({
         `}
       >
         {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt={name || "Player"} className="w-full h-full object-cover" />
         ) : (
           <User size={iconSizeMap[size]} className="text-slate-400" />

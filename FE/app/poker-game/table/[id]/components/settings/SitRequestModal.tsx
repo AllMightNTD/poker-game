@@ -41,6 +41,7 @@ export const SitRequestModal: React.FC = () => {
           <div className="relative">
             <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center border-2 border-slate-700 overflow-hidden shadow-xl">
               {req.avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img src={req.avatar} alt={req.username} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-2xl font-black text-slate-500">

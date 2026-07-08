@@ -4,10 +4,10 @@ import React from "react";
 import { usePokerGame } from "../hooks/usePokerGame";
 
 const BG_TINTS: Record<string, string> = {
-  classic_green: "from-emerald-950/40 via-slate-950 to-slate-950",
-  royal_blue: "from-blue-950/40 via-slate-950 to-slate-950",
-  ruby_red: "from-rose-950/40 via-slate-950 to-slate-950",
-  shadow_black: "from-slate-900/50 via-slate-950 to-slate-950",
+  classic_green: "from-emerald-950/20 via-slate-900/25 to-slate-950/30",
+  royal_blue: "from-blue-950/20 via-slate-900/25 to-slate-950/30",
+  ruby_red: "from-rose-950/20 via-slate-900/25 to-slate-950/30",
+  shadow_black: "from-slate-900/20 via-slate-900/25 to-slate-950/30",
 };
 
 export const TableBackground = () => {
@@ -18,7 +18,7 @@ export const TableBackground = () => {
     <>
       {/* Background Image from AI */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.85] z-0 pointer-events-none transition-all duration-1000"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-[0.95] z-0 pointer-events-none transition-all duration-1000"
         style={{ backgroundImage: 'url("/images/room_bg.png")' }}
       />
       {/* Base gradient to darken edges */}
@@ -27,7 +27,7 @@ export const TableBackground = () => {
       />
       {/* Radial glow at center to focus on the table */}
       <div
-        className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_45%,rgba(0,0,0,0)_0%,rgba(0,0,0,0.7)_100%)] z-0 pointer-events-none"
+        className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_45%,rgba(0,0,0,0)_0%,rgba(0,0,0,0.55)_100%)] z-0 pointer-events-none"
       />
       {/* Subtle noise/grain texture */}
       <div

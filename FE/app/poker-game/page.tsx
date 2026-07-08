@@ -345,14 +345,19 @@ function PokerGameLobby() {
       className="min-h-screen text-[#F7EFDD] py-8 px-4 md:px-8 relative overflow-hidden"
       style={{
         background:
-          "radial-gradient(ellipse 120% 80% at 50% -10%, #1B6B4F 0%, #0B3D2E 45%, #082A20 100%)",
+          "radial-gradient(circle at 50% 0%, #12221b 0%, #060e0a 50%, #020504 100%)",
       }}
     >
-      <div className="pointer-events-none fixed inset-0 opacity-[0.06] select-none overflow-hidden">
+      {/* Brand N Indicator in bottom-left */}
+      <div className="fixed bottom-6 left-6 w-9 h-9 rounded-full border border-white/10 flex items-center justify-center bg-black/40 backdrop-blur-sm z-30 select-none pointer-events-none">
+        <span className="text-white/50 text-xs font-black">N</span>
+      </div>
+
+      <div className="pointer-events-none fixed inset-0 opacity-[0.03] select-none overflow-hidden">
         {["♠", "♥", "♦", "♣", "♠", "♦"].map((s, i) => (
           <span
             key={i}
-            className="absolute text-[9rem] md:text-[13rem] font-black leading-none"
+            className="absolute text-[12rem] md:text-[18rem] font-black leading-none"
             style={{
               top: `${(i * 37) % 100}%`,
               left: `${(i * 53) % 100}%`,
@@ -373,7 +378,7 @@ function PokerGameLobby() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.9 }}
               className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl border text-sm font-semibold backdrop-blur-md text-white ${toast.type === "success"
-                ? "bg-[#1B6B4F]/95 border-[#F4B942]/40"
+                ? "bg-[#1b2b36]/95 border-[#F4B942]/40"
                 : "bg-[#E23744]/95 border-[#E23744]"
                 }`}
             >
@@ -424,20 +429,20 @@ function PokerGameLobby() {
             ))}
           </div>
         ) : (
-          <div className="bg-[#0F4438]/80 border border-[#F4B942]/15 rounded-3xl p-12 text-center flex flex-col items-center justify-center shadow-lg">
-            <div className="flex gap-1 mb-4 text-4xl">
-              <span className="text-[#F7EFDD]/20">♠</span>
-              <span className="text-[#E23744]/20">♥</span>
-              <span className="text-[#E23744]/20">♦</span>
-              <span className="text-[#F7EFDD]/20">♣</span>
+          <div className="py-20 text-center flex flex-col items-center justify-center">
+            <div className="flex gap-2 mb-4 text-4xl select-none">
+              <span className="text-white/60">♠</span>
+              <span className="text-[#E23744]/80">♥</span>
+              <span className="text-[#E23744]/80">♦</span>
+              <span className="text-white/60">♣</span>
             </div>
-            <h3 className="text-lg font-black text-[#F7EFDD]">Chưa có bàn nào khớp bộ lọc</h3>
-            <p className="text-[#F7EFDD]/50 text-sm max-w-sm mt-1">
+            <h3 className="text-xl font-bold text-[#F7EFDD]">Chưa có bàn nào khớp bộ lọc</h3>
+            <p className="text-[#F7EFDD]/50 text-sm max-w-sm mt-2 leading-relaxed">
               Thử đổi từ khóa tìm kiếm hoặc mức cược, hoặc tự mở một bàn mới — bạn làm chủ ván bài.
             </p>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 text-xs font-black text-[#142019] rounded-xl bg-gradient-to-r from-[#F4B942] to-[#E0942A] hover:brightness-110 transition-all shadow-md active:scale-95"
+              className="mt-6 inline-flex items-center gap-1.5 px-6 py-3 text-xs font-black text-[#142019] rounded-xl bg-[#F4B942] hover:bg-[#E0942A] transition-all shadow-lg active:scale-95"
             >
               <Plus size={14} />
               Tạo Bàn Chơi Mới

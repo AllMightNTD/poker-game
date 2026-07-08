@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { getSeatPositions } from "../constants";
 import { usePokerGame } from "../hooks/usePokerGame";
 import { WinnerData } from "../types";
@@ -160,34 +160,7 @@ const Confetti: React.FC = () => {
   );
 };
 
-// 5. Next Hand Countdown
-const NextHandOverlay: React.FC = () => {
-  const [seconds, setSeconds] = useState(5);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSeconds((prev) => (prev > 1 ? prev - 1 : 1));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs pointer-events-none">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="bg-slate-900/95 border border-[#F4B942]/25 rounded-2xl px-6 py-4 flex flex-col items-center gap-2 shadow-2xl"
-      >
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-          Chuẩn bị ván tiếp theo
-        </span>
-        <div className="text-3xl font-black text-[#F4B942] animate-pulse">
-          Bắt đầu sau {seconds}s
-        </div>
-      </motion.div>
-    </div>
-  );
-};
 
 export const AnimationManager: React.FC<AnimationManagerProps> = ({ socket }) => {
   const { currentStep, activePayload, triggerWinnerTimeline } = useAnimationTimeline();

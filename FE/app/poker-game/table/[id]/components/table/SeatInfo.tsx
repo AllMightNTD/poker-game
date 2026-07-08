@@ -22,15 +22,15 @@ const SeatInfo: React.FC<SeatInfoProps> = React.memo(({ name, chips, isHero, isM
   const isWaiting = status === 'Waiting';
 
   return (
-    <div className="relative z-10 -mt-2 bg-[#1a1a1a]/90 border border-[#4FC3F7] rounded-md px-3 py-1 flex flex-col items-center justify-center min-w-[80px] shadow-lg backdrop-blur-md">
+    <div className="relative z-10 -mt-2 bg-[#0a0a0a]/95 border border-[#F4B942]/60 rounded-md px-3 py-1 flex flex-col items-center justify-center min-w-[85px] shadow-[0_0_8px_rgba(244,185,66,0.15)] backdrop-blur-md">
       <span className={`font-bold truncate leading-none uppercase max-w-[80px] md:max-w-[100px]
-        ${isHero ? "text-amber-400" : "text-white"}
+        ${isHero ? "text-amber-300" : "text-white"}
         ${isMobile ? "text-[8px]" : "text-[10px]"}`}
       >
         {name}
-        {isBot && <span className="ml-1 px-1 py-0.5 rounded text-[7px] bg-slate-700 text-slate-300">BOT</span>}
+        {isBot && <span className="ml-1 px-1 py-0.5 rounded text-[7px] bg-amber-950 text-amber-300 border border-amber-500/20">BOT</span>}
       </span>
-      <span className={`font-black text-[#4FC3F7] truncate leading-none mt-1
+      <span className={`font-black text-[#F4B942] truncate leading-none mt-1
         ${isMobile ? "text-[9px]" : "text-[11px]"}`}
       >
         ${formatChipsVal(chips)}

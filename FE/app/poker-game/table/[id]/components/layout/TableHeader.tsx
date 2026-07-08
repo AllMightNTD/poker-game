@@ -1,7 +1,7 @@
 "use client";
 
 import { useCurrentUser } from "@/core/providers/user-provider";
-import Link from "next/link";
+
 import {
   ChevronLeft,
   FileText,
@@ -23,6 +23,7 @@ import { usePokerGame } from "../hooks/usePokerGame";
 import { useResponsive } from "../hooks/useResponsive";
 import { StatsModal } from "../settings/StatsModal";
 import { ProvablyFairModal } from "../ui/ProvablyFairModal";
+import { HostSettingsModal } from "../settings/HostSettingsModal";
 
 export const TableHeader = () => {
   const { isMobile } = useResponsive();
@@ -90,7 +91,7 @@ export const TableHeader = () => {
       <div className="flex items-center gap-2 md:gap-3 min-w-0">
         <button
           onClick={leaveTable}
-          className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors py-2 px-2.5 rounded-xl hover:bg-slate-900/60 shrink-0"
+          className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors py-2 px-2.5 rounded-xl hover:bg-slate-900/60 shrink-0 cursor-pointer"
         >
           <ChevronLeft size={16} />
           {!isMobile && <span className="text-[10px] font-bold uppercase tracking-wider">Rời bàn</span>}
@@ -134,7 +135,7 @@ export const TableHeader = () => {
         {/* Provably Fair */}
         <button
           onClick={() => setProvablyFairOpen(true)}
-          className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+          className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
           title="Xác minh công bằng"
         >
           <ShieldCheck size={14} />
@@ -143,7 +144,7 @@ export const TableHeader = () => {
         {/* Stats */}
         <button
           onClick={() => setStatsOpen(true)}
-          className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+          className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
           title="Báo cáo phiên chơi"
         >
           <FileText size={14} />
@@ -154,7 +155,7 @@ export const TableHeader = () => {
           <>
             <button
               onClick={() => togglePause(roomStatus !== 'paused')}
-              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-colors ${
+              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${
                 roomStatus === 'paused'
                   ? "bg-rose-500/10 border-rose-500/30 text-rose-500 hover:bg-rose-500/20"
                   : "bg-slate-900 hover:bg-slate-800 border-slate-800 text-amber-500"
@@ -165,7 +166,7 @@ export const TableHeader = () => {
             </button>
             <button
               onClick={() => setHostSettingsOpen(true)}
-              className="relative w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+              className="relative w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
               title="Quản trị phòng (Chủ phòng)"
             >
               <Sliders size={14} className="text-amber-500" />
@@ -182,7 +183,7 @@ export const TableHeader = () => {
 
         <button
           onClick={() => setSoundEnabled(!soundEnabled)}
-          className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+          className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
           aria-label="Toggle sound"
         >
           {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
@@ -190,7 +191,7 @@ export const TableHeader = () => {
 
         <button
           onClick={() => setShowChat(!showChat)}
-          className={`w-9 h-9 rounded-xl border transition-colors flex items-center justify-center ${showChat
+          className={`w-9 h-9 rounded-xl border transition-colors flex items-center justify-center cursor-pointer ${showChat
             ? "bg-emerald-600/10 border-emerald-500/30 text-emerald-400"
             : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
             }`}
@@ -201,7 +202,7 @@ export const TableHeader = () => {
 
         <button
           onClick={() => setShowHistory(!showHistory)}
-          className={`w-9 h-9 rounded-xl border transition-colors flex items-center justify-center ${showHistory
+          className={`w-9 h-9 rounded-xl border transition-colors flex items-center justify-center cursor-pointer ${showHistory
             ? "bg-amber-600/10 border-amber-500/30 text-amber-400"
             : "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
             }`}
@@ -212,7 +213,7 @@ export const TableHeader = () => {
 
         <button
           onClick={handleOpenSettings}
-          className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+          className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
           aria-label="Settings"
         >
           <Settings size={14} />
@@ -220,6 +221,7 @@ export const TableHeader = () => {
       </div>
       <StatsModal isOpen={statsOpen} onClose={() => setStatsOpen(false)} />
       <ProvablyFairModal isOpen={provablyFairOpen} onClose={() => setProvablyFairOpen(false)} />
+      <HostSettingsModal isOpen={hostSettingsOpen} onClose={() => setHostSettingsOpen(false)} />
     </header>
   );
 };

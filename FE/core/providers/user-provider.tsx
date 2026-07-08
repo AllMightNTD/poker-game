@@ -23,7 +23,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const res = await api.get("/api/v1/user/me");
       const user = res.data?.metadata || res.data;
       setCurrentUser(user);
-    } catch (error) {
+    } catch {
       Cookies.remove("accessToken");
       router.push("/login");
     } finally {

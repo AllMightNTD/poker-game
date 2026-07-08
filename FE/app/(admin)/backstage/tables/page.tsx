@@ -2,14 +2,23 @@
 
 import httpClient from "@/core/api/http-client";
 import { CircleDollarSign, PowerOff, Users, Play, Pause, Plus, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQueryClient, useInfiniteQuery, useMutation } from "@tanstack/react-query";
+
+const adminKeys = {
+  all: ["admin"] as const,
+  tables: () => [...adminKeys.all, "tables"] as const,
+};
+
+const fetchTablesPage = async ({ pageParam }: { pageParam: string | null }) => {
+  const res = await httpClient.get("/api/v1/admin/tables", {
+    params: pageParam ? { cursor: pageParam } : {}
+  });
+  return res.data;
+};
 
 export default function AdminTablesPage() {
-  const [tables, setTables] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Form State for creating a table
@@ -27,82 +36,76 @@ export default function AdminTablesPage() {
     allow_rit: false,
   });
 
-  const fetchTables = async (cursor?: string | null) => {
-    try {
-      if (cursor) setLoadingMore(true);
-      else setLoading(true);
+  // Query: Fetch tables with cursor-based pagination
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteQuery({
+    queryKey: adminKeys.tables(),
+    queryFn: fetchTablesPage,
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) =>
+      lastPage?.meta?.has_more ? (lastPage?.meta?.next_cursor || null) : undefined,
+  });
 
-      const res = await httpClient.get("/api/v1/admin/tables", {
-        params: cursor ? { cursor } : {}
-      });
-      if (res.data?.data) {
-        setTables(prev => cursor ? [...prev, ...res.data.data] : res.data.data);
-        setNextCursor(res.data.meta?.next_cursor || null);
-        setHasMore(res.data.meta?.has_more || false);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  };
+  // Flatten pages data into single array
+  const tables = data?.pages.flatMap((page) => page?.data || []) || [];
 
-  useEffect(() => {
-    Promise.resolve().then(() => {
-      fetchTables();
-    });
-  }, []);
-
-  const handleClose = async (id: string) => {
-    if (!confirm("Đóng bàn này? Tất cả người chơi sẽ bị rời khỏi bàn.")) return;
-    try {
-      await httpClient.post(`/api/v1/admin/tables/${id}/close`);
-      setTables(prev => prev.map(t => t.id === id ? { ...t, status: "closed" } : t));
-    } catch {
+  // Mutations
+  const closeMutation = useMutation({
+    mutationFn: (id: string) => httpClient.post(`/api/v1/admin/tables/${id}/close`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.tables() });
+    },
+    onError: () => {
       alert("Đóng bàn thất bại");
     }
-  };
+  });
 
-  const handlePause = async (id: string) => {
-    try {
-      await httpClient.post(`/api/v1/admin/tables/${id}/pause`);
-      setTables(prev => prev.map(t => t.id === id ? { ...t, status: "paused" } : t));
-    } catch {
+  const pauseMutation = useMutation({
+    mutationFn: (id: string) => httpClient.post(`/api/v1/admin/tables/${id}/pause`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.tables() });
+    },
+    onError: () => {
       alert("Tạm dừng bàn thất bại");
     }
-  };
+  });
 
-  const handleResume = async (id: string) => {
-    try {
-      await httpClient.post(`/api/v1/admin/tables/${id}/resume`);
-      setTables(prev => prev.map(t => t.id === id ? { ...t, status: "waiting" } : t));
-    } catch {
+  const resumeMutation = useMutation({
+    mutationFn: (id: string) => httpClient.post(`/api/v1/admin/tables/${id}/resume`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.tables() });
+    },
+    onError: () => {
       alert("Tiếp tục bàn thất bại");
     }
-  };
+  });
 
-  const handleCreateTable = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await httpClient.post("/api/v1/admin/tables", {
-        name: formData.name,
-        game_type: formData.game_type,
-        small_blind: formData.small_blind,
-        ante: formData.ante,
-        max_players: Number(formData.max_players),
-        min_buyin: formData.min_buyin,
-        max_buyin: formData.max_buyin,
-        rake_rate: Number(formData.rake_rate),
-        rake_cap: formData.rake_cap,
+  const createMutation = useMutation({
+    mutationFn: (formDataArg: typeof formData) =>
+      httpClient.post("/api/v1/admin/tables", {
+        name: formDataArg.name,
+        game_type: formDataArg.game_type,
+        small_blind: formDataArg.small_blind,
+        ante: formDataArg.ante,
+        max_players: Number(formDataArg.max_players),
+        min_buyin: formDataArg.min_buyin,
+        max_buyin: formDataArg.max_buyin,
+        rake_rate: Number(formDataArg.rake_rate),
+        rake_cap: formDataArg.rake_cap,
         custom_settings: {
-          allow_bomb_pot: formData.allow_bomb_pot,
-          allow_rit: formData.allow_rit,
+          allow_bomb_pot: formDataArg.allow_bomb_pot,
+          allow_rit: formDataArg.allow_rit,
         }
-      });
+      }),
+    onSuccess: (res) => {
       if (res.data?.success) {
+        queryClient.invalidateQueries({ queryKey: adminKeys.tables() });
         setIsModalOpen(false);
-        fetchTables();
         // Reset form
         setFormData({
           name: "",
@@ -117,10 +120,31 @@ export default function AdminTablesPage() {
           allow_bomb_pot: false,
           allow_rit: false,
         });
+      } else {
+        alert("Tạo bàn chơi thất bại");
       }
-    } catch {
+    },
+    onError: () => {
       alert("Tạo bàn chơi thất bại");
     }
+  });
+
+  const handleClose = (id: string) => {
+    if (!confirm("Đóng bàn này? Tất cả người chơi sẽ bị rời khỏi bàn.")) return;
+    closeMutation.mutate(id);
+  };
+
+  const handlePause = (id: string) => {
+    pauseMutation.mutate(id);
+  };
+
+  const handleResume = (id: string) => {
+    resumeMutation.mutate(id);
+  };
+
+  const handleCreateTable = (e: React.FormEvent) => {
+    e.preventDefault();
+    createMutation.mutate(formData);
   };
 
   return (
@@ -132,19 +156,19 @@ export default function AdminTablesPage() {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-indigo-600/10"
+          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-indigo-600/10 cursor-pointer"
         >
           <Plus size={16} /> Tạo bàn mới
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {loading ? (
+        {isLoading ? (
           <div className="col-span-full p-8 text-center text-slate-500">Đang tải danh sách bàn...</div>
         ) : tables.length === 0 ? (
           <div className="col-span-full p-8 text-center text-slate-500">Không có bàn nào đang hoạt động.</div>
         ) : (
-          tables.map((table) => (
+          tables.map((table: any) => (
             <div key={table.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 relative flex flex-col hover:border-slate-700 transition-colors">
               {table.status === "closed" && (
                 <div className="absolute inset-0 bg-slate-950/90 z-10 flex items-center justify-center rounded-xl">
@@ -197,21 +221,21 @@ export default function AdminTablesPage() {
                 {table.status === "paused" ? (
                   <button
                     onClick={() => handleResume(table.id)}
-                    className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors text-xs border border-emerald-500/20"
+                    className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors text-xs border border-emerald-500/20 cursor-pointer"
                   >
                     <Play size={13} /> Tiếp tục
                   </button>
                 ) : (
                   <button
                     onClick={() => handlePause(table.id)}
-                    className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition-colors text-xs border border-amber-500/20"
+                    className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition-colors text-xs border border-amber-500/20 cursor-pointer"
                   >
                     <Pause size={13} /> Tạm dừng
                   </button>
                 )}
                 <button
                   onClick={() => handleClose(table.id)}
-                  className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 transition-colors text-xs border border-rose-500/20"
+                  className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 transition-colors text-xs border border-rose-500/20 cursor-pointer"
                 >
                   <PowerOff size={13} /> Đóng bàn
                 </button>
@@ -221,14 +245,14 @@ export default function AdminTablesPage() {
         )}
       </div>
 
-      {hasMore && (
+      {hasNextPage && (
         <div className="flex justify-center mt-6">
           <button
-            onClick={() => fetchTables(nextCursor)}
-            disabled={loadingMore}
-            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
           >
-            {loadingMore ? "Đang tải..." : "Tải thêm"}
+            {isFetchingNextPage ? "Đang tải..." : "Tải thêm"}
           </button>
         </div>
       )}
@@ -241,7 +265,7 @@ export default function AdminTablesPage() {
               <h2 className="text-lg font-semibold text-slate-100">Tạo bàn Poker mới</h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-200 transition-colors"
+                className="text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -369,7 +393,7 @@ export default function AdminTablesPage() {
                     type="checkbox"
                     checked={formData.allow_bomb_pot}
                     onChange={(e) => setFormData(prev => ({ ...prev, allow_bomb_pot: e.target.checked }))}
-                    className="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 bg-slate-900 w-4 h-4"
+                    className="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 bg-slate-900 w-4 h-4 cursor-pointer"
                   />
                   <span className="text-xs font-medium text-slate-300">Cho phép Bomb Pot</span>
                 </label>
@@ -379,7 +403,7 @@ export default function AdminTablesPage() {
                     type="checkbox"
                     checked={formData.allow_rit}
                     onChange={(e) => setFormData(prev => ({ ...prev, allow_rit: e.target.checked }))}
-                    className="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 bg-slate-900 w-4 h-4"
+                    className="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 bg-slate-900 w-4 h-4 cursor-pointer"
                   />
                   <span className="text-xs font-medium text-slate-300">Cho phép RIT</span>
                 </label>
@@ -389,15 +413,16 @@ export default function AdminTablesPage() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-sm font-medium rounded-lg transition-colors border border-slate-750"
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-sm font-medium rounded-lg transition-colors border border-slate-750 cursor-pointer"
                 >
                   Hủy bỏ
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-indigo-600/10"
+                  disabled={createMutation.isPending}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-indigo-600/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Tạo ngay
+                  {createMutation.isPending ? "Đang tạo..." : "Tạo ngay"}
                 </button>
               </div>
             </form>

@@ -119,6 +119,7 @@ function FeedPost({ item, isLast }: { item: BlogListItem; isLast: boolean }) {
       <div className="relative w-full h-[45vh] min-h-[340px] rounded-3xl overflow-hidden flex items-end">
         <div className="absolute inset-0 bg-slate-900">
           {post.thumbnail ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={post.thumbnail} alt={post.title} className="w-full h-full object-cover opacity-40" />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-slate-900 to-black" />

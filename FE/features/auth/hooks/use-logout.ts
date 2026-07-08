@@ -1,4 +1,3 @@
-import { useToast } from "@/core/providers/toast-provider";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -8,7 +7,6 @@ const REMEMBER_EMAIL_KEY = "sociala_remembered_email";
 
 export function useLogout() {
   const router = useRouter();
-  const { success: toastSuccess } = useToast();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const logout = useCallback(async () => {
@@ -23,7 +21,7 @@ export function useLogout() {
       router.push("/login");
       setIsLoggingOut(false);
     }
-  }, [router, toastSuccess]);
+  }, [router]);
 
   return { logout, isLoggingOut };
 }

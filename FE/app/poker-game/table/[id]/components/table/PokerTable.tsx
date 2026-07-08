@@ -7,13 +7,11 @@ import { BoardStage } from "./BoardStage";
 import { CommunityCards } from "./CommunityCards";
 import { PotDisplay } from "./PotDisplay";
 import { PokerCard } from "../ui/PokerCard";
-import DealerDeck from "./DealerDeck";
 import Seat from "./Seat";
 
 export const PokerTable = memo(function PokerTable() {
   const {
     tableRef,
-    tableScale,
     tableBackground,
     getFeltStyles,
     players,
@@ -39,28 +37,52 @@ export const PokerTable = memo(function PokerTable() {
       {/* ── The Responsive table canvas ── */}
       <div
         ref={tableRef}
-        className="relative w-full max-w-[1024px] mx-2 md:mx-6 aspect-[1.6/1] sm:aspect-[1.8/1] md:aspect-[2.2/1] shrink-0 rounded-[100px] sm:rounded-[140px] md:rounded-[180px] border-[12px] sm:border-[18px] md:border-[24px] border-[#1a0f08] flex items-center justify-center"
-        style={{
-          boxShadow: '0 40px 100px -20px rgba(0,0,0,1), inset 0 10px 25px rgba(0,0,0,0.9), inset 0 0 15px rgba(255,180,100,0.05)',
-          backgroundImage: 'linear-gradient(to bottom, #301910, #140804)'
-        }}
+        className="relative w-full max-w-[1024px] mx-2 md:mx-6 aspect-[1.6/1] sm:aspect-[1.8/1] md:aspect-[2.2/1] shrink-0 bg-gradient-to-b from-[#1c110b] to-[#0b0604] rounded-[100px] sm:rounded-[140px] md:rounded-[180px] p-[8px] sm:p-[12px] md:p-[16px] shadow-[0_30px_70px_rgba(0,0,0,0.95),_inset_0_4px_6px_rgba(255,255,255,0.1),_inset_0_-4px_6px_rgba(0,0,0,0.8)] flex items-center justify-center"
       >
-        {socket && <AnimationManager socket={socket} />}
-        {/* Inner felt surface */}
-        <div
-          className={`absolute inset-0 sm:inset-1 md:inset-1.5 rounded-[85px] sm:rounded-[120px] md:rounded-[160px] overflow-hidden shadow-[inset_0_10px_40px_rgba(0,0,0,0.9),_inset_0_0_20px_rgba(0,0,0,0.8)] bg-gradient-to-br from-[#0c3321] to-[#062014]`}
-        >
-          {/* Subtle radial light at center for realistic felt texture */}
-          <div className="absolute inset-0 opacity-50 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.1)_0%,_transparent_60%)] pointer-events-none" />
+        {/* Wood ring/race-track */}
+        <div className="w-full h-full bg-gradient-to-b from-[#4d2d18] via-[#331c0e] to-[#1c0f07] rounded-[92px] sm:rounded-[128px] md:rounded-[164px] p-[6px] sm:p-[8px] md:p-[10px] shadow-[0_4px_10px_rgba(0,0,0,0.6),_inset_0_2px_4px_rgba(255,255,255,0.2)] flex items-center justify-center">
+          {/* Inner felt surface */}
+          <div
+            className={`w-full h-full rounded-[86px] sm:rounded-[120px] md:rounded-[154px] relative overflow-hidden shadow-[inset_0_8px_25px_rgba(0,0,0,0.8)] ${felt.gradient}`}
+          >
+            {/* Subtle radial light at center for realistic felt texture */}
+            <div className="absolute inset-0 opacity-50 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.15)_0%,_transparent_60%)] pointer-events-none" />
 
-          {/* Gold trim inner border ring (Betting Line) */}
-          <div className={`absolute inset-8 sm:inset-12 md:inset-16 rounded-[70px] sm:rounded-[100px] md:rounded-[140px] border-2 border-[#F4B942]/30 pointer-events-none opacity-80`} />
+            {/* Gold trim inner border ring (Betting Line) */}
+            <div className={`absolute inset-6 sm:inset-10 md:inset-12 rounded-[70px] sm:rounded-[100px] md:rounded-[140px] border-2 ${felt.line} pointer-events-none opacity-80`} />
+          </div>
+        </div>
+
+        {socket && <AnimationManager socket={socket} />}
+
+        {/* Dealer Illustration */}
+        <div className="absolute -top-[14%] left-1/2 -translate-x-1/2 w-[15%] md:w-[13%] aspect-[216/204] z-10 pointer-events-none drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/dealer_transparent.png" alt="Dealer" className="w-full h-full object-contain" />
+        </div>
+
+        {/* Chips Tray */}
+        <div className="absolute top-[8%] left-1/2 -translate-x-1/2 w-[12%] md:w-[10%] aspect-[174/44] z-20 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/chips_tray_transparent.png" alt="Chips Tray" className="w-full h-full object-contain" />
+        </div>
+
+        {/* Deck Shooter */}
+        <div className="absolute top-[7.5%] left-[41.5%] -translate-x-1/2 w-[3.5%] md:w-[3%] aspect-[54/65] z-20 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/deck_shooter_transparent.png" alt="Deck Shooter" className="w-full h-full object-contain" />
+        </div>
+
+        {/* Discard Shoe */}
+        <div className="absolute top-[7.5%] left-[58.5%] -translate-x-1/2 w-[7.5%] md:w-[6.5%] aspect-[112/85] z-20 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/discard_shoe_transparent.png" alt="Discard Shoe" className="w-full h-full object-contain" />
         </div>
 
         {/* Center HUD: Pot + Community Cards + Stage */}
-        <div className="absolute flex flex-col items-center justify-center text-center space-y-3 z-20 top-[15%]">
+        <div className="absolute flex flex-col items-center justify-center text-center space-y-2 md:space-y-4 z-20 top-[26%] left-1/2 -translate-x-1/2">
           {waitingMessage && (
-            <div className={`px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider backdrop-blur-sm shadow-xl transition-all duration-300 ${waitingMessage.starting ? 'bg-amber-500/90 text-amber-950 animate-pulse' : 'bg-black/60 text-white/80'}`}>
+            <div className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-sm shadow-xl transition-all duration-300 ${waitingMessage.starting ? 'bg-amber-500/90 text-amber-950 animate-pulse' : 'bg-black/60 text-white/80'}`}>
               {waitingMessage.text}
             </div>
           )}
@@ -71,7 +93,7 @@ export const PokerTable = memo(function PokerTable() {
           {gameStage === 'ended' && communityCards.length > 0 && communityCards.length < 5 && !rabbitCards && (
             <button
               onClick={triggerRabbitHunt}
-              className="mt-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-black text-xs font-black tracking-wider uppercase shadow-[0_0_12px_rgba(245,158,11,0.3)] active:scale-95 transition-all flex items-center gap-1.5"
+              className="mt-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-black text-xs font-black tracking-wider uppercase shadow-[0_0_12px_rgba(245,158,11,0.3)] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               🐰 Săn thỏ (Rabbit Hunt)
             </button>
@@ -122,13 +144,13 @@ export const PokerTable = memo(function PokerTable() {
               <div className="flex gap-4 w-full mt-2">
                 <button
                   onClick={() => voteRit(true)}
-                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold shadow-[0_4px_12px_rgba(16,185,129,0.3)] active:scale-95 transition-all"
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold shadow-[0_4px_12px_rgba(16,185,129,0.3)] active:scale-95 transition-all cursor-pointer"
                 >
                   Đồng ý
                 </button>
                 <button
                   onClick={() => voteRit(false)}
-                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-rose-700 to-red-800 hover:from-rose-600 hover:to-red-700 text-white text-sm font-bold shadow-[0_4px_12px_rgba(244,63,94,0.3)] active:scale-95 transition-all"
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-rose-700 to-red-800 hover:from-rose-600 hover:to-red-700 text-white text-sm font-bold shadow-[0_4px_12px_rgba(244,63,94,0.3)] active:scale-95 transition-all cursor-pointer"
                 >
                   Từ chối
                 </button>

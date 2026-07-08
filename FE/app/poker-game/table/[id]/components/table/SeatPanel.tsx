@@ -3,12 +3,11 @@ import React from 'react';
 interface SeatPanelProps {
   children: React.ReactNode;
   isActive: boolean;
-  isHero: boolean;
   isFolded: boolean;
   isSittingOut?: boolean;
 }
 
-const SeatPanel: React.FC<SeatPanelProps> = React.memo(({ children, isActive, isHero, isFolded, isSittingOut }) => {
+const SeatPanel: React.FC<SeatPanelProps> = React.memo(({ children, isActive, isFolded, isSittingOut }) => {
   return (
     <div 
       className={`

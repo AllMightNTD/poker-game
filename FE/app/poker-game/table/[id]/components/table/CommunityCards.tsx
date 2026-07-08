@@ -14,6 +14,7 @@ export const CommunityCards = memo(function CommunityCards() {
       // Play a sound for the newly dealt cards. We only play one sound to avoid overlapping mess.
       audioEngine.playDealCard();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [communityCards.length]);
 
   const TOTAL_SLOTS = 5;

@@ -100,6 +100,7 @@ export function BlogDetail() {
       <div className="relative w-full h-[55vh] min-h-[420px] flex items-end">
         <div className="absolute inset-0 bg-slate-900">
           {blog.thumbnail ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={blog.thumbnail}
               alt={blog.title}

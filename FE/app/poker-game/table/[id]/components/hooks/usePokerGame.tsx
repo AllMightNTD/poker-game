@@ -222,7 +222,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Disconnect & network status
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [isConnecting] = useState(false);
 
   // Timers
   const maxTimerVal = 30;
@@ -242,6 +242,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const ownerIdRef = useRef(ownerId);
   const potRef = useRef(pot);
   const currentTurnSeatRef = useRef(currentTurnSeat);
+  const gameStageRef = useRef(gameStage);
 
   useEffect(() => {
     currentUserRef.current = currentUser;
@@ -279,6 +280,10 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     currentTurnSeatRef.current = currentTurnSeat;
   }, [currentTurnSeat]);
+
+  useEffect(() => {
+    gameStageRef.current = gameStage;
+  }, [gameStage]);
 
   const showToast = (text: any, type: "success" | "error" | "info" | "warning" = "success") => {
     let formattedText = "Đã xảy ra lỗi không xác định.";
@@ -321,8 +326,8 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       case "classic_green":
       default:
         return {
-          gradient: "bg-[radial-gradient(ellipse_at_center,_#047857_0%,_#064e3b_80%,_#022c22_100%)]",
-          line: "border-emerald-400/30 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+          gradient: "bg-[radial-gradient(ellipse_at_center,_#0d5e68_0%,_#0b4c54_50%,_#022428_100%)]",
+          line: "border-cyan-400/20 shadow-[0_0_15px_rgba(34,211,238,0.2)]"
         };
     }
   };
@@ -839,7 +844,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setRoomStatus(data.status);
       if (data.status === 'paused') {
         showToast("Chủ phòng đã tạm dừng trò chơi (sẽ không chia ván tiếp theo).", "warning");
-        if (gameStage === "waiting" || gameStage === "ended") {
+        if (gameStageRef.current === "waiting" || gameStageRef.current === "ended") {
           setWaitingMessage({
             text: `Chủ phòng đã tạm dừng ván mới.`,
             starting: false
@@ -874,10 +879,10 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       showToast((data.message as string) || "Bàn đã được reset do không đủ người chơi.", "info");
     });
 
-    socket.on("table:destroyed", (data: Record<string, unknown>) => {
+    socket.on("table:destroyed", () => {
       showToast("Bàn chơi đã bị giải tán do không có người tham gia trong thời gian dài.", "warning");
       setTimeout(() => {
-        router.push("/en/poker-game");
+        router.push("/poker-game");
       }, 2000);
     });
 
@@ -945,6 +950,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       socket.off("table:client-seed-updated");
       socket.off("error");
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, tableId, isConnected, router]);
 
   // Execute betting actions
@@ -1067,7 +1073,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const togglePause = async (paused: boolean) => {
     try {
-      await httpClient.post(`/v1/rooms/pause`, { room_id: tableId, paused });
+      await httpClient.post(`/api/v1/rooms/${tableId}/pause`, { paused });
       setRoomStatus(paused ? 'paused' : 'waiting');
       showToast(paused ? "Đã tạm dừng phòng chơi." : "Đã mở lại phòng chơi.", "success");
     } catch (error) {
@@ -1078,12 +1084,12 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const leaveTable = async () => {
     try {
-      await httpClient.post('/v1/rooms/leave', { room_id: tableId });
-      socket?.disconnect();
-      router.push('/poker-lobby');
+      await httpClient.post('/api/v1/rooms/leave', { room_id: tableId });
     } catch (error) {
       console.error("Leave table error:", error);
-      showToast("Không thể rời bàn lúc này. Vui lòng thử lại.", "error");
+    } finally {
+      socket?.disconnect();
+      router.push('/poker-game');
     }
   };
 

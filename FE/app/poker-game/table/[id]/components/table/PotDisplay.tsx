@@ -10,8 +10,8 @@ export const PotDisplay = memo(function PotDisplay() {
 
   return (
     <motion.div
-      className="absolute top-[-160px] md:top-[-200px] left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-30"
-      initial={{ y: -50, opacity: 0 }}
+      className="flex flex-col items-center gap-0.5 md:gap-1 z-30"
+      initial={{ y: -15, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ type: "spring", stiffness: 200, damping: 18 }}
     >

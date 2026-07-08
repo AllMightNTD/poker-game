@@ -12,13 +12,12 @@ interface SeatCardsProps {
   cards: Card[];
   isFolded: boolean;
   isHero: boolean;
-  gameStage: string;
   isMobile: boolean;
   flyVector?: { x: number, y: number };
   seatIndex?: number;
 }
 
-const SeatCards: React.FC<SeatCardsProps> = React.memo(({ cards, isFolded, isHero, gameStage, isMobile, flyVector = { x: 0, y: 0 }, seatIndex = 1 }) => {
+const SeatCards: React.FC<SeatCardsProps> = React.memo(({ cards, isFolded, isHero, isMobile, flyVector = { x: 0, y: 0 }, seatIndex = 1 }) => {
   // Play sound when cards are dealt
   useEffect(() => {
     if (cards && cards.length > 0) {

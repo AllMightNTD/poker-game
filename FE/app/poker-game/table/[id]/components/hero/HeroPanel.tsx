@@ -127,6 +127,7 @@ export const HeroPanel: React.FC = () => {
             `}
           >
             {currentUser?.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img src={currentUser.avatar} alt="You" className="w-full h-full object-cover" />
             ) : (
               <span className="text-slate-400 text-lg">👤</span>

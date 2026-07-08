@@ -655,9 +655,17 @@ export class PokerLobbyService {
     }
 
     if (!activeSession) {
-      throw new NotFoundException(
-        'Không tìm thấy phiên chơi của bạn tại bàn này.',
-      );
+      // Check if user is in spectator list in Redis
+      const redis = this.stateService.getRedisClient();
+      const spectatorsKey = `table:${roomId}:spectators`;
+      const isSpectator = await redis.sismember(spectatorsKey, userId);
+      if (isSpectator) {
+        await redis.srem(spectatorsKey, userId);
+      }
+      return {
+        success: true,
+        message: 'Khán giả rời phòng thành công',
+      };
     }
 
     return this.processLeave(userId, roomId, activeSession);

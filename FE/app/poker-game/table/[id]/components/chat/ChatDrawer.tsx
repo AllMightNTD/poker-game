@@ -129,6 +129,7 @@ const ChatContent = ({ onClose }: { onClose?: () => void }) => {
           return (
             <div key={msg.id || idx} className={`flex items-start gap-2 ${isMe ? "flex-row-reverse text-right" : ""}`}>
               {/* Avatar */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={avatarUrl}
                 alt={msg.sender}

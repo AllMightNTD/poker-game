@@ -1,21 +1,20 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import SeatAvatar from './SeatAvatar';
-import SeatTimerRing from './SeatTimerRing';
-import SeatInfo from './SeatInfo';
-import SeatCards from './SeatCards';
+import { useCurrentUser } from '@/core/providers/user-provider';
+import api from '@/lib/axios';
+import { Coins, User, X } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import React, { useEffect, useMemo, useState } from 'react';
+import { getSeatPositions } from '../constants';
+import { usePokerGame } from '../hooks/usePokerGame';
+import { useResponsive } from '../hooks/useResponsive';
+import { Player } from '../types';
 import ActionBubble from './ActionBubble';
 import BetChipStack from './BetChipStack';
 import DealerButton from './DealerButton';
+import SeatAvatar from './SeatAvatar';
+import SeatCards from './SeatCards';
+import SeatInfo from './SeatInfo';
 import SeatPanel from './SeatPanel';
-import { useResponsive } from '../hooks/useResponsive';
-import { usePokerGame } from '../hooks/usePokerGame';
-import { Player } from '../types';
-import { getSeatPositions } from '../constants';
-import { useCurrentUser } from '@/core/providers/user-provider';
-import { useParams } from 'next/navigation';
-import api from '@/lib/axios';
-import { Coins, X, User } from 'lucide-react';
-import { motion } from 'framer-motion';
+import SeatTimerRing from './SeatTimerRing';
 
 // --- BuyInModal Logic ---
 interface BuyInModalProps {
@@ -147,9 +146,9 @@ const Seat: React.FC<SeatProps> = ({
   player = null,
 }) => {
   const { isMobile } = useResponsive();
-  const { gameStage, ownerId, smallBlind, players, sitRequests, maxPlayers } = usePokerGame();
+  const { ownerId, smallBlind, players, sitRequests, maxPlayers } = usePokerGame();
   const { currentUser } = useCurrentUser();
-  
+
   const [isBuyInOpen, setIsBuyInOpen] = useState(false);
 
   const isOwner = currentUser?.id === ownerId;
@@ -176,13 +175,7 @@ const Seat: React.FC<SeatProps> = ({
     return { x: (dx / len) * distance, y: (dy / len) * distance };
   }, [pos.left, pos.top, isMobile]);
 
-  // Compute card deal vector (from deck at 50, 38)
-  const cardVector = useMemo(() => {
-    const dx = 50 - pos.left;
-    const dy = 38 - pos.top;
-    // Approximate pixels (assuming average table width 800px -> 1% = 8px, height 400px -> 1% = 4px)
-    return { x: dx * 8, y: dy * 4 };
-  }, [pos.left, pos.top]);
+
 
   // Size classes for responsive avatar
   const avatarSizeClass = useMemo(() => {
@@ -211,26 +204,31 @@ const Seat: React.FC<SeatProps> = ({
           {isPending ? (
             <div className="animate-pulse flex flex-col items-center gap-2">
               <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-slate-800 border-2 border-dashed border-amber-500/50 flex items-center justify-center overflow-hidden">
-                {pendingReq.avatar ? <img src={pendingReq.avatar} alt="Pending Avatar" className="w-full h-full object-cover opacity-50 grayscale" /> : <User className="w-4 h-4 text-slate-500" />}
+                {pendingReq.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={pendingReq.avatar} alt="Pending Avatar" className="w-full h-full object-cover opacity-50 grayscale" />
+                ) : (
+                  <User className="w-4 h-4 text-slate-500" />
+                )}
               </div>
               <div className="px-2 py-1 bg-slate-900/80 rounded-md border border-amber-500/30 backdrop-blur-sm">
                 <span className="text-[8px] md:text-[10px] text-amber-400 font-bold whitespace-nowrap">Waiting...</span>
               </div>
             </div>
           ) : (
-            <div 
+            <div
               onClick={() => {
                 if (isPendingOrSeated) return;
                 setIsBuyInOpen(true);
               }}
-              className={`w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full border-2 border-dashed border-slate-600 bg-black/40 flex flex-col items-center justify-center transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-md animate-pulse ${isPendingOrSeated ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-[#F4B942] hover:bg-black/60 hover:shadow-[0_0_20px_rgba(244,185,66,0.6)] hover:scale-105 group hover:animate-none'}`}
+              className={`w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full border-2 border-dashed border-[#F4B942]/40 bg-black/60 flex flex-col items-center justify-center transition-all shadow-[0_0_12px_rgba(244,185,66,0.15)] backdrop-blur-md animate-pulse ${isPendingOrSeated ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-[#F4B942] hover:bg-black/75 hover:shadow-[0_0_20px_rgba(244,185,66,0.6)] hover:scale-105 group hover:animate-none'}`}
             >
-              <span className="text-slate-400 group-hover:text-[#F4B942] text-[18px] font-light leading-none mb-0.5">+</span>
-              <span className="text-[7px] md:text-[8px] font-black text-slate-400 group-hover:text-[#F4B942] uppercase tracking-widest text-center leading-none">SIT<br/>HERE</span>
+              <span className="text-[#F4B942]/70 group-hover:text-[#F4B942] text-[18px] font-bold leading-none mb-0.5">+</span>
+              <span className="text-[7px] md:text-[8px] font-black text-[#F4B942]/70 group-hover:text-[#F4B942] uppercase tracking-widest text-center leading-none">SIT<br />HERE</span>
             </div>
           )}
         </div>
-        
+
         {isBuyInOpen && (
           <BuyInModal
             seatNumber={seatNumber}
@@ -246,8 +244,8 @@ const Seat: React.FC<SeatProps> = ({
   }
 
   return (
-    <div 
-      style={positionStyle} 
+    <div
+      style={positionStyle}
       className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center
         w-[110px] sm:w-[160px] md:w-[220px]
         ${player.isActive ? 'z-40' : 'z-20'}`}
@@ -259,46 +257,44 @@ const Seat: React.FC<SeatProps> = ({
       <ActionBubble action={player.lastAction || ''} />
 
       {/* Main Seat Container */}
-      <SeatPanel 
-        isActive={player.isActive} 
-        isHero={player.isHero} 
+      <SeatPanel
+        isActive={player.isActive}
         isFolded={player.isFolded}
         isSittingOut={player.lastAction === 'Sit Out' || player.lastAction === 'Mất mạng'}
       >
-        
+
         {/* Avatar + Timer Ring */}
         <div className="relative shrink-0">
           {player.isActive && <SeatTimerRing endTime={actionEndTime} size={ringSize} maxTime={30000} />}
-          <SeatAvatar 
-            avatarUrl={player.avatar || ''} 
-            isFolded={player.isFolded} 
-            isActive={player.isActive} 
-            isHero={player.isHero} 
-            sizeClass={avatarSizeClass} 
+          <SeatAvatar
+            avatarUrl={player.avatar || ''}
+            isFolded={player.isFolded}
+            isActive={player.isActive}
+            isHero={player.isHero}
+            sizeClass={avatarSizeClass}
           />
           {/* Dealer Button */}
           {player.isDealer && <DealerButton />}
         </div>
 
         {/* Info Box */}
-        <SeatInfo 
-          name={displayName} 
-          chips={parseInt(player.chips || '0')} 
-          isHero={player.isHero} 
-          isMobile={isMobile} 
-          status={player.lastAction || ''} 
-          isBot={!!player.isBot} 
+        <SeatInfo
+          name={displayName}
+          chips={parseInt(player.chips || '0')}
+          isHero={player.isHero}
+          isMobile={isMobile}
+          status={player.lastAction || ''}
+          isBot={!!player.isBot}
         />
 
         {/* Hole Cards */}
-        <SeatCards 
-          cards={player.cards || []} 
-          isFolded={player.isFolded} 
-          isHero={player.isHero} 
-          gameStage={gameStage} 
-          isMobile={isMobile} 
+        <SeatCards
+          cards={player.cards || []}
+          isFolded={player.isFolded}
+          isHero={player.isHero}
+          isMobile={isMobile}
         />
-        
+
       </SeatPanel>
     </div>
   );

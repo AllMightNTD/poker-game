@@ -9,10 +9,9 @@ import { PokerCard } from '../ui/PokerCard';
 
 interface HeroSeatProps {
   player?: Player;
-  seatNumber: number;
 }
 
-const HeroSeat: React.FC<HeroSeatProps> = ({ player, seatNumber }) => {
+const HeroSeat: React.FC<HeroSeatProps> = ({ player }) => {
   if (!player) return null;
 
   return (

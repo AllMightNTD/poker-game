@@ -62,7 +62,11 @@ export const SocketProvider = ({
     });
 
     socketInstance.on("disconnect", (reason) => {
-      console.error(`[${new Date().toISOString()}] Socket disconnected. Reason: ${reason}`);
+      if (reason === "io client disconnect") {
+        console.log(`[${new Date().toISOString()}] Socket disconnected voluntarily (client disconnect).`);
+      } else {
+        console.error(`[${new Date().toISOString()}] Socket disconnected. Reason: ${reason}`);
+      }
       if (reason === "io server disconnect") {
         // the disconnection was initiated by the server, you need to reconnect manually
         socketInstance.connect();
