@@ -197,7 +197,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
                     onChange={(e) => setNewGameType(e.target.value)}
                     className="w-full bg-[#0B3D2E] border border-[#F4B942]/15 rounded-xl py-2.5 px-3 text-sm text-[#F7EFDD] focus:outline-none focus:border-[#F4B942]/60 transition-colors"
                   >
-                    <option value="Texas Hold'em">Texas Hold'em</option>
+                    <option value="Texas Hold'em">Texas Hold&apos;em</option>
                     <option value="Omaha">Omaha</option>
                   </select>
                 </div>

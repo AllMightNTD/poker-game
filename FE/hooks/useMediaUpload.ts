@@ -1,5 +1,5 @@
 import api from "@/lib/axios";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import type { Socket } from "socket.io-client";
 
 // ---------------------------------------------------------------------------
@@ -51,13 +51,14 @@ export function useMediaUpload({ conversationId, socket, replyToId }: UseMediaUp
 
   // Use refs so async callbacks always read the LATEST values (no stale closure)
   const conversationIdRef = useRef(conversationId);
-  conversationIdRef.current = conversationId;
-
   const socketRef = useRef(socket);
-  socketRef.current = socket;
-
   const replyToIdRef = useRef(replyToId);
-  replyToIdRef.current = replyToId;
+
+  useEffect(() => {
+    conversationIdRef.current = conversationId;
+    socketRef.current = socket;
+    replyToIdRef.current = replyToId;
+  }, [conversationId, socket, replyToId]);
 
   // Upload a single item — reads latest values from refs, never stale
   const uploadItem = useCallback(async (item: UploadingFileItem) => {

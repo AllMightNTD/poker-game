@@ -86,7 +86,9 @@ export const SocketProvider = ({
       console.log("Server connected event:", data);
     });
 
-    setSocket(socketInstance);
+    Promise.resolve().then(() => {
+      setSocket(socketInstance);
+    });
 
     return () => {
       console.log("Cleaning socket");

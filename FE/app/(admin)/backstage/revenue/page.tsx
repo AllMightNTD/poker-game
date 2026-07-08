@@ -1,7 +1,7 @@
 "use client";
 
 import httpClient from "@/core/api/http-client";
-import { DollarSign, Landmark, ArrowUpRight, ArrowDownRight, Wallet } from "lucide-react";
+import { DollarSign, ArrowUpRight, ArrowDownRight, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function AdminRevenuePage() {
@@ -24,7 +24,9 @@ export default function AdminRevenuePage() {
   };
 
   useEffect(() => {
-    fetchStats();
+    Promise.resolve().then(() => {
+      fetchStats();
+    });
   }, []);
 
   return (

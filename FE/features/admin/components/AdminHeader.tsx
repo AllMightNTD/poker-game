@@ -10,8 +10,11 @@ export const AdminHeader = () => {
     const info = localStorage.getItem("admin_info");
     if (info) {
       try {
-        setAdmin(JSON.parse(info));
-      } catch (e) { }
+        const parsed = JSON.parse(info);
+        Promise.resolve().then(() => {
+          setAdmin(parsed);
+        });
+      } catch { }
     }
   }, []);
 

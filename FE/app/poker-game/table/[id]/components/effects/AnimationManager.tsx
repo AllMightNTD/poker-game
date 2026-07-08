@@ -99,51 +99,63 @@ const FlyingChips: React.FC<{ winners: WinnerData[]; maxPlayers: number }> = ({
         const targetPos = positions[winner.seatNumber - 1] || { top: 50, left: 50 };
         // Scale number of chips visually (min 5, max 25) based on win amount
         const chipCount = Math.min(25, Math.max(5, Math.floor(winner.amountWon / 500)));
-        return Array.from({ length: chipCount }).map((_, i) => (
-          <motion.div
-            key={`${winner.userId}-${i}`}
-            initial={{ top: "38%", left: "50%", scale: 0.5, opacity: 0 }}
-            animate={{
-              top: `${targetPos.top}%`,
-              left: `${targetPos.left}%`,
-              scale: 1,
-              opacity: [0, 1, 1, 0],
-            }}
-            transition={{
-              duration: 1.0 + (Math.random() * 0.4), // slightly randomize duration
-              delay: i * 0.05,
-              ease: "easeOut",
-            }}
-            className="absolute w-6 h-6 -ml-3 -mt-3 bg-gradient-to-br from-[#F4B942] to-[#C9861C] rounded-full border border-white/20 shadow-md flex items-center justify-center text-[10px] font-black text-slate-900"
-          >
-            $
-          </motion.div>
-        ));
+        return Array.from({ length: chipCount }).map((_, i) => {
+          const pseudoRandomDuration = 1.0 + (((i * 3 + winner.seatNumber * 7) % 5) / 10);
+          return (
+            <motion.div
+              key={`${winner.userId}-${i}`}
+              initial={{ top: "38%", left: "50%", scale: 0.5, opacity: 0 }}
+              animate={{
+                top: `${targetPos.top}%`,
+                left: `${targetPos.left}%`,
+                scale: 1,
+                opacity: [0, 1, 1, 0],
+              }}
+              transition={{
+                duration: pseudoRandomDuration,
+                delay: i * 0.05,
+                ease: "easeOut",
+              }}
+              className="absolute w-6 h-6 -ml-3 -mt-3 bg-gradient-to-br from-[#F4B942] to-[#C9861C] rounded-full border border-white/20 shadow-md flex items-center justify-center text-[10px] font-black text-slate-900"
+            >
+              $
+            </motion.div>
+          );
+        });
       })}
     </div>
   );
 };
 
 // Confetti fallback for big wins
+const getPseudoRand = (seed: number) => {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+};
+
 const Confetti: React.FC = () => {
+  const particles = React.useMemo(() => {
+    return Array.from({ length: 40 }).map((_, i) => {
+      const left = getPseudoRand(i + 1) * 100;
+      const delay = getPseudoRand(i + 2) * 2;
+      const duration = 2 + getPseudoRand(i + 3) * 2;
+      const color = ["#F4B942", "#E23744", "#38BDF8", "#34D399", "#A78BFA"][i % 5];
+      return { left, delay, duration, color };
+    });
+  }, []);
+
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-50">
-      {Array.from({ length: 40 }).map((_, i) => {
-        const left = Math.random() * 100;
-        const delay = Math.random() * 2;
-        const duration = 2 + Math.random() * 2;
-        const color = ["#F4B942", "#E23744", "#38BDF8", "#34D399", "#A78BFA"][i % 5];
-        return (
-          <motion.div
-            key={i}
-            initial={{ y: -20, x: `${left}%`, rotate: 0, opacity: 1 }}
-            animate={{ y: "100%", rotate: 360, opacity: 0 }}
-            transition={{ duration, delay, ease: "linear", repeat: Infinity }}
-            className="absolute w-2.5 h-5 rounded-xs"
-            style={{ backgroundColor: color }}
-          />
-        );
-      })}
+      {particles.map((p, i) => (
+        <motion.div
+          key={i}
+          initial={{ y: -20, x: `${p.left}%`, rotate: 0, opacity: 1 }}
+          animate={{ y: "100%", rotate: 360, opacity: 0 }}
+          transition={{ duration: p.duration, delay: p.delay, ease: "linear", repeat: Infinity }}
+          className="absolute w-2.5 h-5 rounded-xs"
+          style={{ backgroundColor: p.color }}
+        />
+      ))}
     </div>
   );
 };

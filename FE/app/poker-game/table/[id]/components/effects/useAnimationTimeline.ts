@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimationStep, AnimationStepType, WinnerData, WinnerTimelinePayload } from "../types";
 
 const DURATIONS: Record<AnimationStepType, number> = {
@@ -14,6 +14,8 @@ export const useAnimationTimeline = () => {
   const stepQueue = useRef<AnimationStep[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const executeNextStepRef = useRef<() => void>(() => {});
+
   const executeNextStep = useCallback(() => {
     if (stepQueue.current.length === 0) {
       setCurrentStep(null);
@@ -26,9 +28,13 @@ export const useAnimationTimeline = () => {
     setActivePayload(nextStep.payload);
 
     timerRef.current = setTimeout(() => {
-      executeNextStep();
+      executeNextStepRef.current();
     }, nextStep.duration);
   }, []);
+
+  useEffect(() => {
+    executeNextStepRef.current = executeNextStep;
+  }, [executeNextStep]);
 
   const triggerWinnerTimeline = useCallback((winners: WinnerData[], totalPot: number) => {
     if (timerRef.current) clearTimeout(timerRef.current);

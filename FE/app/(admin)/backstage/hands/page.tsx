@@ -1,7 +1,7 @@
 "use client";
 
 import httpClient from "@/core/api/http-client";
-import { CircleDollarSign, Calendar, Eye, X, User } from "lucide-react";
+import { Eye, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function AdminHandsPage() {
@@ -36,7 +36,9 @@ export default function AdminHandsPage() {
   };
 
   useEffect(() => {
-    fetchHands();
+    Promise.resolve().then(() => {
+      fetchHands();
+    });
   }, []);
 
   const handleViewDetail = async (id: string) => {

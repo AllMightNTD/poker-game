@@ -1,0 +1,474 @@
+
+> knowledge-block-fe@0.1.0 lint
+> eslint
+
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/(admin)/backstage/finance/page.tsx
+  36:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/(admin)/backstage/finance/page.tsx:36:5
+  34 |
+  35 |   useEffect(() => {
+> 36 |     fetchTxns();
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  37 |   }, []);
+  38 |
+  39 |   const handleProcess = async (id: string, status: "APPROVED" | "REJECTED") => {  react-hooks/set-state-in-effect
+  48:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/(admin)/backstage/hands/page.tsx
+   4:10  warning  'CircleDollarSign' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+   4:28  warning  'Calendar' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+   4:46  warning  'User' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  39:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/(admin)/backstage/hands/page.tsx:39:5
+  37 |
+  38 |   useEffect(() => {
+> 39 |     fetchHands();
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  40 |   }, []);
+  41 |
+  42 |   const handleViewDetail = async (id: string) => {  react-hooks/set-state-in-effect
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/(admin)/backstage/layout.tsx
+  19:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/(admin)/backstage/layout.tsx:19:7
+  17 |       router.push("/backstage/login");
+  18 |     } else {
+> 19 |       setIsAuthorized(true);
+     |       ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  20 |     }
+  21 |   }, [pathname, router]);
+  22 |  react-hooks/set-state-in-effect
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/(admin)/backstage/revenue/page.tsx
+   4:22  warning  'Landmark' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+  27:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/(admin)/backstage/revenue/page.tsx:27:5
+  25 |
+  26 |   useEffect(() => {
+> 27 |     fetchStats();
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  28 |   }, []);
+  29 |
+  30 |   return (  react-hooks/set-state-in-effect
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/(admin)/backstage/system/page.tsx
+  4:10  warning  'Megaphone' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/(admin)/backstage/tables/page.tsx
+   52:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/(admin)/backstage/tables/page.tsx:52:5
+  50 |
+  51 |   useEffect(() => {
+> 52 |     fetchTables();
+     |     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  53 |   }, []);
+  54 |
+  55 |   const handleClose = async (id: string) => {  react-hooks/set-state-in-effect
+   60:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   69:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   78:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+  119:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+  306:53  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react/no-unescaped-entities
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/(admin)/backstage/users/page.tsx
+  42:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/(admin)/backstage/users/page.tsx:42:5
+  40 |
+  41 |   useEffect(() => {
+> 42 |     fetchUsers();
+     |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  43 |   }, []);
+  44 |
+  45 |   const handleBan = async (id: string) => {  react-hooks/set-state-in-effect
+  56:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+  69:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+  84:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/error.tsx
+  6:3  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/global-error.tsx
+  6:3  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/components/CreateTableModal.tsx
+  200:61  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/components/HeroBanner.tsx
+  43:23  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/chat/ChatDrawer.tsx
+  132:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/constants.ts
+  17:9  error  'left' is never reassigned. Use 'const' instead  prefer-const
+  18:9  error  'top' is never reassigned. Use 'const' instead   prefer-const
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/effects/AnimationManager.tsx
+  132:22  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/effects/AnimationManager.tsx:132:22
+  130 |     <div className="absolute inset-0 pointer-events-none overflow-hidden z-50">
+  131 |       {Array.from({ length: 40 }).map((_, i) => {
+> 132 |         const left = Math.random() * 100;
+      |                      ^^^^^^^^^^^^^ Cannot call impure function
+  133 |         const delay = Math.random() * 2;
+  134 |         const duration = 2 + Math.random() * 2;
+  135 |         const color = ["#F4B942", "#E23744", "#38BDF8", "#34D399", "#A78BFA"][i % 5];  react-hooks/purity
+  133:23  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/effects/AnimationManager.tsx:133:23
+  131 |       {Array.from({ length: 40 }).map((_, i) => {
+  132 |         const left = Math.random() * 100;
+> 133 |         const delay = Math.random() * 2;
+      |                       ^^^^^^^^^^^^^ Cannot call impure function
+  134 |         const duration = 2 + Math.random() * 2;
+  135 |         const color = ["#F4B942", "#E23744", "#38BDF8", "#34D399", "#A78BFA"][i % 5];
+  136 |         return (                                                                react-hooks/purity
+  134:30  error    Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/effects/AnimationManager.tsx:134:30
+  132 |         const left = Math.random() * 100;
+  133 |         const delay = Math.random() * 2;
+> 134 |         const duration = 2 + Math.random() * 2;
+      |                              ^^^^^^^^^^^^^ Cannot call impure function
+  135 |         const color = ["#F4B942", "#E23744", "#38BDF8", "#34D399", "#A78BFA"][i % 5];
+  136 |         return (
+  137 |           <motion.div                                                                                     react-hooks/purity
+  152:7   warning  'NextHandOverlay' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/effects/useAnimationTimeline.ts
+  29:7  error  Error: Cannot access variable before it is declared
+
+`executeNextStep` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/effects/useAnimationTimeline.ts:29:7
+  27 |
+  28 |     timerRef.current = setTimeout(() => {
+> 29 |       executeNextStep();
+     |       ^^^^^^^^^^^^^^^ `executeNextStep` accessed before it is declared
+  30 |     }, nextStep.duration);
+  31 |   }, []);
+  32 |
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/effects/useAnimationTimeline.ts:17:3
+  15 |   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  16 |
+> 17 |   const executeNextStep = useCallback(() => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 18 |     if (stepQueue.current.length === 0) {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 19 |       setCurrentStep(null);
+     …
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 30 |     }, nextStep.duration);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |   }, []);
+     | ^^^^^^^^^^ `executeNextStep` is declared here
+  32 |
+  33 |   const triggerWinnerTimeline = useCallback((winners: WinnerData[], totalPot: number) => {
+  34 |     if (timerRef.current) clearTimeout(timerRef.current);  react-hooks/immutability
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/effects/winner-banner/WinnerRow.tsx
+  12:63  warning  'showHandName' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/hero/HeroPanel.tsx
+  130:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/hero/useRaiseController.ts
+  31:9  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/hero/useRaiseController.ts:31:9
+  29 |
+  30 |     useEffect(() => {
+> 31 |         setInputRaw(fmtFull(raiseAmount));
+     |         ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  32 |     }, [raiseAmount]);
+  33 |
+  34 |     const clamp = useCallback(  react-hooks/set-state-in-effect
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/hooks/usePokerGame.tsx
+  225:24  warning  'setIsConnecting' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+  251:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/hooks/usePokerGame.tsx:251:7
+  249 |       // FIX: re-evaluate isHero khi currentUser load xong
+  250 |       // Không xóa cards của opponent (giữ nguyên), chỉ cập nhật isHero flag
+> 251 |       setPlayers((prev) =>
+      |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  252 |         prev.map((p) => {
+  253 |           const isHero = String(p.id) === String(currentUser.id);
+  254 |           return {  react-hooks/set-state-in-effect
+  875:35  warning  'data' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+  946:6   warning  React Hook useEffect has missing dependencies: 'gameStage' and 'playActionSound'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react-hooks/exhaustive-deps
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/layout/MobileDrawer.tsx
+  3:8  warning  'React' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/layout/TableHeader.tsx
+   4:8   warning  'Link' is defined but never used                       @typescript-eslint/no-unused-vars
+  61:10  warning  'hostSettingsOpen' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/settings/HostSettingsModal.tsx
+  16:5   warning  'bigBlind' is assigned a value but never used            @typescript-eslint/no-unused-vars
+  21:5   warning  'sitRequests' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  22:5   warning  'respondSitRequest' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  27:17  warning  'setNewSb' is assigned a value but never used            @typescript-eslint/no-unused-vars
+  33:9   warning  'handleUpdateBlinds' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  41:9   warning  'handleKick' is assigned a value but never used          @typescript-eslint/no-unused-vars
+  51:9   warning  'handleForceSitout' is assigned a value but never used   @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/settings/SettingsModal.tsx
+  35:5  warning  'tableBackground' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  37:5  warning  'cardDeckStyle' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  39:5  warning  'dealerVoiceVol' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  41:5  warning  'soundEffectsVol' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  43:5  warning  'muteAllVoice' is assigned a value but never used     @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/settings/SitRequestModal.tsx
+  44:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/table/CommunityCards.tsx
+  17:6  warning  React Hook useEffect has a missing dependency: 'communityCards'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/table/HeroSeat.tsx
+  15:54  warning  'seatNumber' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/table/PokerTable.tsx
+  10:8  warning  'DealerDeck' is defined but never used           @typescript-eslint/no-unused-vars
+  16:5  warning  'tableScale' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  33:9  warning  'felt' is assigned a value but never used        @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/table/Seat.tsx
+   18:10  warning  'motion' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+   42:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/table/Seat.tsx:42:5
+  40 |
+  41 |   useEffect(() => {
+> 42 |     setAmount(Math.min(maxBuyIn, Math.max(minBuyIn, smallBlind * 100)));
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  43 |   }, [minBuyin, maxBuyin, smallBlind, minBuyIn, maxBuyIn]);
+  44 |
+  45 |   const handleAmountChange = (val: number) => {  react-hooks/set-state-in-effect
+  178:9   warning  'cardVector' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+  212:38  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @next/next/no-img-element
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/table/SeatAvatar.tsx
+  22:9  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/table/SeatCards.tsx
+  21:84  warning  'gameStage' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/table/SeatPanel.tsx
+  11:79  warning  'isHero' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/app/poker-game/table/[id]/components/ui/Avatar.tsx
+  58:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/core/providers/SocketProvider.tsx
+  89:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/core/providers/SocketProvider.tsx:89:5
+  87 |     });
+  88 |
+> 89 |     setSocket(socketInstance);
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  90 |
+  91 |     return () => {
+  92 |       console.log("Cleaning socket");  react-hooks/set-state-in-effect
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/core/providers/user-provider.tsx
+  26:14  warning  'error' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+  35:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/core/providers/user-provider.tsx:35:5
+  33 |
+  34 |   useEffect(() => {
+> 35 |     fetchMe();
+     |     ^^^^^^^ Avoid calling setState() directly within an effect
+  36 |   }, [router]);
+  37 |
+  38 |   return (  react-hooks/set-state-in-effect
+  36:6   warning  React Hook useEffect has a missing dependency: 'fetchMe'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           react-hooks/exhaustive-deps
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/features/admin/components/AdminHeader.tsx
+  13:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/features/admin/components/AdminHeader.tsx:13:9
+  11 |     if (info) {
+  12 |       try {
+> 13 |         setAdmin(JSON.parse(info));
+     |         ^^^^^^^^ Avoid calling setState() directly within an effect
+  14 |       } catch (e) { }
+  15 |     }
+  16 |   }, []);  react-hooks/set-state-in-effect
+  14:16  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/features/admin/components/AdminLoginForm.tsx
+  45:9  error  Error: This value cannot be modified
+
+Modifying a variable defined outside a component or hook is not allowed. Consider using an effect.
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/features/admin/components/AdminLoginForm.tsx:45:9
+  43 |         localStorage.setItem("admin_token", res.data.access_token);
+  44 |         localStorage.setItem("admin_info", JSON.stringify(res.data.admin));
+> 45 |         document.cookie = `admin_token=${res.data.access_token}; path=/; max-age=86400;`; // 1 day expire
+     |         ^^^^^^^^ value cannot be modified
+  46 |         router.push("/backstage/dashboard");
+  47 |       }
+  48 |     } catch (err: any) {  react-hooks/immutability
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/features/auth/hooks/use-login.ts
+  28:39  warning  'toastSuccess' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+  43:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/features/auth/hooks/use-login.ts:43:7
+  41 |     if (savedEmail) {
+  42 |       setValue("email", savedEmail);
+> 43 |       setRememberMe(true);
+     |       ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  44 |     }
+  45 |   }, [setValue]);
+  46 |  react-hooks/set-state-in-effect
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/features/auth/hooks/use-logout.ts
+  26:6  warning  React Hook useCallback has an unnecessary dependency: 'toastSuccess'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/features/blogs/components/BlogDetail.tsx
+  103:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/features/blogs/components/BlogList.tsx
+  122:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/hooks/useMediaUpload.ts
+  54:3  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/hooks/useMediaUpload.ts:54:3
+  52 |   // Use refs so async callbacks always read the LATEST values (no stale closure)
+  53 |   const conversationIdRef = useRef(conversationId);
+> 54 |   conversationIdRef.current = conversationId;
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot update ref during render
+  55 |
+  56 |   const socketRef = useRef(socket);
+  57 |   socketRef.current = socket;  react-hooks/refs
+  57:3  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/hooks/useMediaUpload.ts:57:3
+  55 |
+  56 |   const socketRef = useRef(socket);
+> 57 |   socketRef.current = socket;
+     |   ^^^^^^^^^^^^^^^^^ Cannot update ref during render
+  58 |
+  59 |   const replyToIdRef = useRef(replyToId);
+  60 |   replyToIdRef.current = replyToId;                                                                                                                react-hooks/refs
+  60:3  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/home/dev_ntd/Know_Block/Know_Ledge_Block/FE/hooks/useMediaUpload.ts:60:3
+  58 |
+  59 |   const replyToIdRef = useRef(replyToId);
+> 60 |   replyToIdRef.current = replyToId;
+     |   ^^^^^^^^^^^^^^^^^^^^ Cannot update ref during render
+  61 |
+  62 |   // Upload a single item — reads latest values from refs, never stale
+  63 |   const uploadItem = useCallback(async (item: UploadingFileItem) => {                                  react-hooks/refs
+
+✖ 83 problems (26 errors, 57 warnings)
+  2 errors and 0 warnings potentially fixable with the `--fix` option.
+

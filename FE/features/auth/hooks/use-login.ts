@@ -25,7 +25,7 @@ export function useLogin(t: any) {
   const router = useRouter();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [rememberMe, setRememberMe] = useState(false);
-  const { error: toastError, success: toastSuccess } = useToast();
+  const { error: toastError } = useToast();
 
   const {
     register,
@@ -40,7 +40,9 @@ export function useLogin(t: any) {
     const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY);
     if (savedEmail) {
       setValue("email", savedEmail);
-      setRememberMe(true);
+      Promise.resolve().then(() => {
+        setRememberMe(true);
+      });
     }
   }, [setValue]);
 

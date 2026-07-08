@@ -40,7 +40,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             className="text-4xl md:text-5xl font-black tracking-tight text-[#F7EFDD]"
             style={{ fontFamily: "'Fraunces', Georgia, serif" }}
           >
-            Texas Hold'em Club
+            Texas Hold&apos;em Club
           </h1>
           <p className="text-[#F7EFDD]/70 text-sm md:text-base max-w-md leading-relaxed">
             Ngồi vào bàn, rút bài, và để may mắn dẫn lối. Âm thanh sống động, đối thủ thứ thiệt, chiến thắng chờ bạn.

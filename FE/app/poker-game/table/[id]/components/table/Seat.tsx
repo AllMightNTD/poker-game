@@ -39,7 +39,9 @@ const BuyInModal: React.FC<BuyInModalProps> = ({ seatNumber, smallBlind, default
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    setAmount(Math.min(maxBuyIn, Math.max(minBuyIn, smallBlind * 100)));
+    Promise.resolve().then(() => {
+      setAmount(Math.min(maxBuyIn, Math.max(minBuyIn, smallBlind * 100)));
+    });
   }, [minBuyin, maxBuyin, smallBlind, minBuyIn, maxBuyIn]);
 
   const handleAmountChange = (val: number) => {

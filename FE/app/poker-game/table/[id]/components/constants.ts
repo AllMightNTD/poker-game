@@ -14,8 +14,8 @@ export const getSeatPositions = (maxPlayers: number, heroSeatNumber?: number) =>
     const visualIndex = (i + offset + maxPlayers) % maxPlayers;
     const angle = -Math.PI / 2 + (visualIndex * 2 * Math.PI) / maxPlayers;
 
-    let left = 50 + 56 * Math.cos(angle);
-    let top = 50 + 64 * Math.sin(angle);
+    const left = 50 + 56 * Math.cos(angle);
+    const top = 50 + 64 * Math.sin(angle);
 
     positions.push({ top, left });
   }

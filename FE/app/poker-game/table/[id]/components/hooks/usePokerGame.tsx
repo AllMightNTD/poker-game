@@ -248,17 +248,19 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (currentUser) {
       // FIX: re-evaluate isHero khi currentUser load xong
       // Không xóa cards của opponent (giữ nguyên), chỉ cập nhật isHero flag
-      setPlayers((prev) =>
-        prev.map((p) => {
-          const isHero = String(p.id) === String(currentUser.id);
-          return {
-            ...p,
-            isHero,
-            // Hero: giữ bài hiện có (hoặc [] nếu chưa có); Opponent: giữ nguyên bài
-            cards: isHero ? (p.cards?.length ? p.cards : []) : p.cards,
-          };
-        })
-      );
+      Promise.resolve().then(() => {
+        setPlayers((prev) =>
+          prev.map((p) => {
+            const isHero = String(p.id) === String(currentUser.id);
+            return {
+              ...p,
+              isHero,
+              // Hero: giữ bài hiện có (hoặc [] nếu chưa có); Opponent: giữ nguyên bài
+              cards: isHero ? (p.cards?.length ? p.cards : []) : p.cards,
+            };
+          })
+        );
+      });
     }
   }, [currentUser]);
 

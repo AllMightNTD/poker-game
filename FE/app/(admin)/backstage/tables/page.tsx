@@ -49,7 +49,9 @@ export default function AdminTablesPage() {
   };
 
   useEffect(() => {
-    fetchTables();
+    Promise.resolve().then(() => {
+      fetchTables();
+    });
   }, []);
 
   const handleClose = async (id: string) => {
@@ -57,7 +59,7 @@ export default function AdminTablesPage() {
     try {
       await httpClient.post(`/api/v1/admin/tables/${id}/close`);
       setTables(prev => prev.map(t => t.id === id ? { ...t, status: "closed" } : t));
-    } catch (e) {
+    } catch {
       alert("Đóng bàn thất bại");
     }
   };
@@ -66,7 +68,7 @@ export default function AdminTablesPage() {
     try {
       await httpClient.post(`/api/v1/admin/tables/${id}/pause`);
       setTables(prev => prev.map(t => t.id === id ? { ...t, status: "paused" } : t));
-    } catch (e) {
+    } catch {
       alert("Tạm dừng bàn thất bại");
     }
   };
@@ -75,7 +77,7 @@ export default function AdminTablesPage() {
     try {
       await httpClient.post(`/api/v1/admin/tables/${id}/resume`);
       setTables(prev => prev.map(t => t.id === id ? { ...t, status: "waiting" } : t));
-    } catch (e) {
+    } catch {
       alert("Tiếp tục bàn thất bại");
     }
   };
@@ -116,7 +118,7 @@ export default function AdminTablesPage() {
           allow_rit: false,
         });
       }
-    } catch (e) {
+    } catch {
       alert("Tạo bàn chơi thất bại");
     }
   };
@@ -303,7 +305,7 @@ export default function AdminTablesPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, game_type: e.target.value }))}
                     className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
                   >
-                    <option value="TEXAS">Texas Hold'em</option>
+                    <option value="TEXAS">Texas Hold&apos;em</option>
                     <option value="OMAHA">Omaha (PLO)</option>
                   </select>
                 </div>

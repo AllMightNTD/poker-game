@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import api from "@/lib/axios";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
@@ -17,7 +17,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const router = useRouter();
 
-  const fetchMe = async () => {
+  const fetchMe = useCallback(async () => {
     setIsLoadingUser(true);
     try {
       const res = await api.get("/api/v1/user/me");
@@ -29,11 +29,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoadingUser(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
-    fetchMe();
-  }, [router]);
+    Promise.resolve().then(() => {
+      fetchMe();
+    });
+  }, [fetchMe]);
 
   return (
     <UserContext.Provider value={{ currentUser, isLoadingUser, refetchUser: fetchMe }}>

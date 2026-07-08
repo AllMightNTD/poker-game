@@ -33,7 +33,9 @@ export default function AdminFinancePage() {
   };
 
   useEffect(() => {
-    fetchTxns();
+    Promise.resolve().then(() => {
+      fetchTxns();
+    });
   }, []);
 
   const handleProcess = async (id: string, status: "APPROVED" | "REJECTED") => {
@@ -45,7 +47,7 @@ export default function AdminFinancePage() {
         { status, notes: "Processed by Admin" }
       );
       setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, status } : tx));
-    } catch (e) {
+    } catch {
       alert("Xử lý giao dịch thất bại");
     }
   };

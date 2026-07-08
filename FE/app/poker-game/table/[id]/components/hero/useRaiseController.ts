@@ -28,7 +28,9 @@ export function useRaiseController({
     const step = Math.max(1, minRaise);
 
     useEffect(() => {
-        setInputRaw(fmtFull(raiseAmount));
+        Promise.resolve().then(() => {
+            setInputRaw(fmtFull(raiseAmount));
+        });
     }, [raiseAmount]);
 
     const clamp = useCallback(

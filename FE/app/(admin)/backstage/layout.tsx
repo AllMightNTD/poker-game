@@ -16,7 +16,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (!token && !pathname.includes("/backstage/login")) {
       router.push("/backstage/login");
     } else {
-      setIsAuthorized(true);
+      Promise.resolve().then(() => {
+        setIsAuthorized(true);
+      });
     }
   }, [pathname, router]);
 

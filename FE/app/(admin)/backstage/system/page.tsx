@@ -1,7 +1,7 @@
 "use client";
 
 import httpClient from "@/core/api/http-client";
-import { Megaphone, AlertCircle, Send } from "lucide-react";
+import { AlertCircle, Send } from "lucide-react";
 import { useState } from "react";
 
 export default function AdminSystemPage() {

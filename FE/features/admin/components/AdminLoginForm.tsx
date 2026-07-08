@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import Cookies from "js-cookie";
 
 const adminLoginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
@@ -42,7 +43,7 @@ export const AdminLoginForm = () => {
         // TODO: chuyển sang HTTP-only cookie khi lên production
         localStorage.setItem("admin_token", res.data.access_token);
         localStorage.setItem("admin_info", JSON.stringify(res.data.admin));
-        document.cookie = `admin_token=${res.data.access_token}; path=/; max-age=86400;`; // 1 day expire
+        Cookies.set("admin_token", res.data.access_token, { expires: 1, path: "/" });
         router.push("/backstage/dashboard");
       }
     } catch (err: any) {

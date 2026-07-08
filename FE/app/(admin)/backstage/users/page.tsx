@@ -39,7 +39,9 @@ export default function AdminUsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
+    Promise.resolve().then(() => {
+      fetchUsers();
+    });
   }, []);
 
   const handleBan = async (id: string) => {
@@ -53,7 +55,7 @@ export default function AdminUsersPage() {
       if (selectedUser?.id === id) {
         setSelectedUser({ ...selectedUser, status: "BANNED" });
       }
-    } catch (e) {
+    } catch {
       alert("Khóa tài khoản thất bại");
     }
   };
@@ -66,7 +68,7 @@ export default function AdminUsersPage() {
       if (selectedUser?.id === id) {
         setSelectedUser({ ...selectedUser, status: "ACTIVE" });
       }
-    } catch (e) {
+    } catch {
       alert("Mở khóa tài khoản thất bại");
     }
   };
@@ -81,7 +83,7 @@ export default function AdminUsersPage() {
       await httpClient.post(`/api/v1/users/${id}/kick`, { roomId: kickRoomId });
       alert("Đã gửi yêu cầu trục xuất người chơi thành công");
       setKickRoomId("");
-    } catch (e) {
+    } catch {
       alert("Trục xuất người chơi thất bại");
     }
   };
