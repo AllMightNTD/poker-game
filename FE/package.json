@@ -27,7 +27,8 @@
     "socket.io-client": "^4.8.3",
     "tailwind-merge": "^3.5.0",
     "wavesurfer.js": "^7.12.8",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

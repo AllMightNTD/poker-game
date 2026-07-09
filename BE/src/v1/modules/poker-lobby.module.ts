@@ -12,6 +12,9 @@ import { PokerLobbyService } from '../services/poker-lobby.service';
 import { PokerLobbyGateway } from '../gateways/poker-lobby.gateway';
 import { PokerStateService } from '../services/poker-state.service';
 import { PokerGameService } from '../services/poker-game.service';
+import { WalletService } from '../services/wallet.service';
+import { AuditService } from '../services/audit.service';
+import { TournamentService } from '../services/tournament.service';
 import { ConfigModule } from '@nestjs/config';
 
 @Module({
@@ -30,12 +33,18 @@ import { ConfigModule } from '@nestjs/config';
     PokerLobbyGateway,
     PokerStateService,
     PokerGameService,
+    WalletService,
+    AuditService,
+    TournamentService,
   ],
   exports: [
     PokerLobbyService,
     PokerLobbyGateway,
     PokerStateService,
     PokerGameService,
+    WalletService,
+    AuditService,
+    TournamentService,
   ],
 })
 export class PokerLobbyModule {}

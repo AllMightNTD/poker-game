@@ -227,6 +227,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Timers
   const maxTimerVal = 30;
   const [timerVal, setTimerVal] = useState(0);
+  const [expiresAt, setExpiresAt] = useState<number>(0);
 
   // Toast State
   const [toastMsg, setToastMsg] = useState<{ text: string; type: "success" | "error" | "info" | "warning" } | null>(null);
@@ -373,14 +374,23 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  // Local turn countdown timer
+  // Local turn countdown timer (Deterministic Clock using expiresAt)
   useEffect(() => {
-    if (timerVal <= 0) return;
+    if (expiresAt <= 0) {
+      const tId = setTimeout(() => {
+        setTimerVal(0);
+      }, 0);
+      return () => clearTimeout(tId);
+    }
+
     const interval = setInterval(() => {
-      setTimerVal((t) => Math.max(0, t - 1));
-    }, 1000);
+      const now = Date.now();
+      const diff = Math.max(0, Math.floor((expiresAt - now) / 1000));
+      setTimerVal(diff);
+    }, 200);
+
     return () => clearInterval(interval);
-  }, [timerVal]);
+  }, [expiresAt]);
 
   // Responsive scaling
   useEffect(() => {
@@ -422,7 +432,15 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setSmallBlindSeat(data.small_blind_seat);
       setBigBlindSeat(data.big_blind_seat);
       setCurrentTurnSeat(data.current_turn_seat);
-      setTimerVal(data.remaining_time ?? 0);
+      if (data.expires_at) {
+        setExpiresAt(data.expires_at);
+        const diff = Math.max(0, Math.floor((data.expires_at - Date.now()) / 1000));
+        setTimerVal(diff);
+      } else {
+        const initialTimer = data.remaining_time ?? 0;
+        setExpiresAt(initialTimer ? (Date.now() + initialTimer * 1000) : 0);
+        setTimerVal(initialTimer);
+      }
       setOwnerId(data.owner_id || "");
       setRoomStatus(data.status || "waiting");
       setMinBuyin(data.min_buyin || 0);
@@ -567,7 +585,15 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     socket.on("table:turn-change", (data: SocketTypes.TurnChangePayload) => {
       setCurrentTurnSeat(data.seat_number ?? 0);
-      setTimerVal(data.time_limit ?? 30);
+      if (data.expires_at) {
+        setExpiresAt(data.expires_at);
+        const diff = Math.max(0, Math.floor((data.expires_at - Date.now()) / 1000));
+        setTimerVal(diff);
+      } else {
+        const limit = data.time_limit ?? 30;
+        setExpiresAt(Date.now() + limit * 1000);
+        setTimerVal(limit);
+      }
       // FIX: sync isActive trên players array để ActionBar và SeatV2 hiển thị đúng
       setPlayers((prev) =>
         prev.map((p) => ({
@@ -904,7 +930,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     socket.on("table:chat-history-loaded", (data: { room_id: string; history: any[]; offset: number; limit: number; hasMore: boolean }) => {
       setIsLoadingHistory(false);
       setHasMoreChats(data.hasMore);
-      
+
       const newMsgs = data.history.map(item => ({
         id: `${item.user_id}-${item.timestamp}`,
         sender: item.username,

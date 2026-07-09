@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   MinLength,
+  Length,
 } from 'class-validator';
 
 export class RegisterDto {
@@ -70,4 +71,32 @@ export class RefreshTokenDto {
   @IsString()
   @IsNotEmpty()
   refreshToken: string;
+}
+
+export class VerifyOtpDto {
+  @ApiProperty({
+    example: '123456',
+    description: 'Mã xác thực OTP (6 chữ số)',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Length(6, 6)
+  otp: string;
+
+  @ApiProperty({
+    description: 'JWT Token dùng để định danh email xác thực',
+  })
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+}
+
+export class ResendOtpDto {
+  @ApiProperty({
+    example: 'player1@poker.com',
+    description: 'Email của tài khoản cần gửi lại mã',
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
 }

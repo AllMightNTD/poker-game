@@ -12,6 +12,8 @@ const NO_AUTH_ENDPOINTS = [
   "/api/v1/auth/register",
   "/api/v1/auth/forgot-password",
   "/api/v1/auth/reset-password",
+  "/api/v1/auth/verify-otp",
+  "/api/v1/auth/resend-otp",
   "/api/v1/admin/login",
 ];
 
@@ -80,11 +82,11 @@ httpClient.interceptors.response.use(
         const newRefreshToken = refreshResponse.data.refresh_token || refreshResponse.data.refreshToken;
 
         if (newAccessToken) {
-          Cookies.set("accessToken", newAccessToken, { expires: 2 / 24 }); // 2 hours
+          Cookies.set("accessToken", newAccessToken, { expires: 15 / 1440 }); // 15 minutes
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         }
         if (newRefreshToken) {
-          Cookies.set("refreshToken", newRefreshToken, { expires: 7 }); // 7 days
+          Cookies.set("refreshToken", newRefreshToken, { expires: 30 }); // 30 days
         }
 
         return httpClient(originalRequest);

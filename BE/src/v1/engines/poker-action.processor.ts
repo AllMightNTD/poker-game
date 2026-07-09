@@ -264,6 +264,7 @@ export class PokerActionProcessor {
           .emit('table:turn-change', {
             seat_number: nextSeatNum,
             time_limit: 30,
+            expires_at: Date.now() + 30 * 1000,
           });
         this.gameService.startActionTimer(roomId, nextSeatNum, 30);
         await this.gameService.broadcastTableState(roomId);
@@ -444,6 +445,7 @@ export class PokerActionProcessor {
           .emit('table:turn-change', {
             seat_number: firstActSeat,
             time_limit: 30,
+            expires_at: Date.now() + 30 * 1000,
           });
         this.gameService.startActionTimer(roomId, firstActSeat, 30);
         this.gameService.checkAndTriggerBotAction(roomId);

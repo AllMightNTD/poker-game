@@ -1,6 +1,6 @@
 "use client";
 
-import { Gamepad2, LayoutDashboard, LogOut, Settings, ShieldAlert, Users, WalletCards, History, BarChart3, Megaphone } from "lucide-react";
+import { Gamepad2, LayoutDashboard, LogOut, Settings, ShieldAlert, Users, WalletCards, History, BarChart3, Megaphone, Trophy } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -12,6 +12,7 @@ const SIDEBAR_ITEMS = [
   { name: "Lịch sử ván bài", href: "/backstage/hands", icon: History },
   { name: "Báo cáo doanh thu", href: "/backstage/revenue", icon: BarChart3 },
   { name: "Thông điệp hệ thống", href: "/backstage/system", icon: Megaphone },
+  { name: "Quản lý sự kiện", href: "/backstage/events", icon: Trophy },
   { name: "Nhật ký hệ thống", href: "/backstage/audit", icon: ShieldAlert },
   { name: "Cài đặt hệ thống", href: "/backstage/settings", icon: Settings },
 ];

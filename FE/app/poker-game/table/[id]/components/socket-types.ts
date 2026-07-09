@@ -23,6 +23,7 @@ export interface TableStatePayload {
   last_full_raise_size?: number | string;
   is_bomb_pot?: boolean | string;
   rit_board2_cards?: string[] | string;
+  expires_at?: number;
   seats: Array<{
     id: string;
     seatIndex: number;
@@ -55,6 +56,7 @@ export interface TurnChangePayload {
   action_time_allowed?: number;
   seat_number?: number;
   time_limit?: number;
+  expires_at?: number;
 }
 
 export interface StreetAdvancedPayload {

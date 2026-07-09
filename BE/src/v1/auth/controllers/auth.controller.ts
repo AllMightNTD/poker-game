@@ -15,7 +15,13 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AuthGuard } from '../../guards/auth.guard';
-import { LoginDto, RefreshTokenDto, RegisterDto } from '../dto/auth.dto';
+import {
+  LoginDto,
+  RefreshTokenDto,
+  RegisterDto,
+  VerifyOtpDto,
+  ResendOtpDto,
+} from '../dto/auth.dto';
 import { RequestPasswordResetDto } from '../dto/request-reset-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { AuthService } from '../services/auth/auth.service';
@@ -30,15 +36,16 @@ export class AuthController {
   @ApiOperation({
     summary: 'Đăng ký tài khoản mới',
     description:
-      'Tạo tài khoản người chơi mới. Tự động khởi tạo ví với 50M chips.',
+      'Tạo tài khoản người chơi mới. Tài khoản ban đầu có trạng thái INACTIVE và cần xác thực OTP gửi qua email.',
   })
   @ApiBody({ type: RegisterDto })
   @ApiResponse({
     status: 201,
-    description: 'Đăng ký thành công',
+    description: 'Đăng ký thành công, mã OTP đã gửi qua email',
     schema: {
       example: {
-        message: 'User registered successfully',
+        message:
+          'Đăng ký tài khoản thành công. Vui lòng xác thực mã OTP gửi tới email của bạn.',
         user: {
           id: 'uuid',
           email: 'player1@poker.com',
@@ -53,6 +60,46 @@ export class AuthController {
   })
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
+  }
+
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Xác thực mã OTP',
+    description: 'Xác thực tài khoản người dùng bằng token và mã OTP.',
+  })
+  @ApiBody({ type: VerifyOtpDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Xác thực thành công và kích hoạt tài khoản',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Token/OTP không chính xác hoặc hết hạn',
+  })
+  async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
+    return this.authService.verifyOtp(verifyOtpDto);
+  }
+
+  @Post('resend-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Gửi lại mã OTP',
+    description:
+      'Yêu cầu gửi lại mã OTP mới (giới hạn thời gian cool-down 60 giây).',
+  })
+  @ApiBody({ type: ResendOtpDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Đã gửi lại mã OTP mới qua email',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Email không tồn tại hoặc tài khoản đã kích hoạt / Cooldown active',
+  })
+  async resendOtp(@Body() resendOtpDto: ResendOtpDto) {
+    return this.authService.resendOtp(resendOtpDto);
   }
 
   @Post('login')

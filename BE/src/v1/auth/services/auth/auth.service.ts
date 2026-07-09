@@ -12,9 +12,18 @@ import { DataSource, Repository } from 'typeorm';
 import { RefreshToken } from '../../../entities/refresh_token.entity';
 import { User } from '../../../entities/user.entity';
 import { Wallet } from '../../../entities/wallet.entity';
-import { LoginDto, RefreshTokenDto, RegisterDto } from '../../dto/auth.dto';
+import {
+  LoginDto,
+  RefreshTokenDto,
+  RegisterDto,
+  VerifyOtpDto,
+  ResendOtpDto,
+} from '../../dto/auth.dto';
 import { RequestPasswordResetDto } from '../../dto/request-reset-password.dto';
 import { ResetPasswordDto } from '../../dto/reset-password.dto';
+import { MailService } from 'src/mail/services/mail.service';
+import { PokerStateService } from '../../../services/poker-state.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
@@ -25,7 +34,53 @@ export class AuthService {
     private readonly refreshTokenRepository: Repository<RefreshToken>,
     private readonly jwtService: JwtService,
     private readonly dataSource: DataSource,
+    private readonly mailService: MailService,
+    private readonly pokerStateService: PokerStateService,
+    private readonly configService: ConfigService,
   ) {}
+
+  async generateAndSendOtp(user: User): Promise<void> {
+    const redis = this.pokerStateService.getRedisClient();
+
+    // Check if email is currently blocked
+    const isBlocked = await redis.get(`otp:block:${user.email}`);
+    if (isBlocked) {
+      throw new BadRequestException(
+        'Tài khoản bị tạm khóa 15 phút do nhập sai OTP quá 5 lần.',
+      );
+    }
+
+    // Check if cooldown is active (60 seconds)
+    const cooldown = await redis.get(`otp:cooldown:${user.email}`);
+    if (cooldown) {
+      throw new BadRequestException(
+        'Vui lòng đợi 60 giây trước khi yêu cầu gửi lại OTP.',
+      );
+    }
+
+    // Generate random 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Generate JWT token containing the email (expires in 15m)
+    const token = this.jwtService.sign(
+      { email: user.email },
+      { expiresIn: '15m' },
+    );
+
+    // Save state in Redis
+    await redis.set(`otp:code:${user.email}`, otp, 'EX', 900); // 15m expiration
+    await redis.set(`otp:token:${user.email}`, token, 'EX', 900); // 15m expiration
+    await redis.set(`otp:cooldown:${user.email}`, '1', 'EX', 60); // 60s cooldown
+    await redis.del(`otp:attempts:${user.email}`); // Reset attempts
+
+    // Queue registration email
+    await this.mailService.queueRegisterMail({
+      email: user.email,
+      otp,
+      token,
+      username: user.user_name,
+    });
+  }
 
   async register(registerDto: RegisterDto) {
     const { email, password, user_name } = registerDto;
@@ -35,18 +90,37 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new BadRequestException('Email or username already exists');
+      if (existingUser.status === 'ACTIVE') {
+        throw new BadRequestException('Email or username already exists');
+      }
+
+      // For INACTIVE user, update credentials and send new OTP
+      existingUser.password = await bcrypt.hash(password, 10);
+      existingUser.user_name = user_name;
+      await this.userRepository.save(existingUser);
+
+      await this.generateAndSendOtp(existingUser);
+
+      return {
+        message:
+          'Tài khoản chưa được kích hoạt. Mã xác thực mới đã được gửi tới email của bạn.',
+        user: {
+          id: existingUser.id,
+          email: existingUser.email,
+          user_name: existingUser.user_name,
+        },
+      };
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Wrap in transaction: User + Wallet created atomically.
-    // If wallet creation fails, user row is rolled back (no orphaned users).
     const user = await withTransaction(this.dataSource, async (qr) => {
       const newUser = qr.manager.create(User, {
         email,
         user_name,
         password: hashedPassword,
+        status: 'INACTIVE', // default status
       });
       await qr.manager.save(newUser);
 
@@ -59,8 +133,11 @@ export class AuthService {
       return newUser;
     });
 
+    await this.generateAndSendOtp(user);
+
     return {
-      message: 'User registered successfully',
+      message:
+        'Đăng ký tài khoản thành công. Vui lòng xác thực mã OTP gửi tới email của bạn.',
       user: {
         id: user.id,
         email: user.email,
@@ -69,16 +146,145 @@ export class AuthService {
     };
   }
 
+  async verifyOtp(verifyOtpDto: VerifyOtpDto) {
+    const { token, otp } = verifyOtpDto;
+
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(token);
+    } catch {
+      throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn.');
+    }
+
+    const email = payload.email;
+    if (!email) {
+      throw new BadRequestException('Token không hợp lệ.');
+    }
+
+    const redis = this.pokerStateService.getRedisClient();
+
+    // Check if email is currently blocked
+    const isBlocked = await redis.get(`otp:block:${email}`);
+    if (isBlocked) {
+      throw new BadRequestException(
+        'Tài khoản bị tạm khóa 15 phút do nhập sai OTP quá 5 lần.',
+      );
+    }
+
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new BadRequestException('Người dùng không tồn tại.');
+    }
+
+    if (user.status === 'ACTIVE') {
+      return {
+        message: 'Tài khoản đã được xác thực trước đó. Vui lòng đăng nhập.',
+        alreadyVerified: true,
+      };
+    }
+
+    // Verify token matches current active token in Redis
+    const activeToken = await redis.get(`otp:token:${email}`);
+    if (activeToken !== token) {
+      throw new BadRequestException(
+        'Token xác thực đã hết hạn hoặc đã bị hủy do yêu cầu mới.',
+      );
+    }
+
+    const activeOtp = await redis.get(`otp:code:${email}`);
+    if (!activeOtp) {
+      throw new BadRequestException(
+        'Mã OTP đã hết hạn hoặc không tồn tại. Vui lòng gửi lại yêu cầu.',
+      );
+    }
+
+    if (otp === activeOtp) {
+      // Correct OTP
+      user.status = 'ACTIVE';
+      await this.userRepository.save(user);
+
+      // Clean up Redis keys
+      await redis.del(`otp:code:${email}`);
+      await redis.del(`otp:token:${email}`);
+      await redis.del(`otp:attempts:${email}`);
+
+      return {
+        message: 'Xác thực tài khoản thành công! Chúc bạn chơi game vui vẻ.',
+      };
+    } else {
+      // Incorrect OTP: atomic increment
+      const attempts = await redis.incr(`otp:attempts:${email}`);
+      await redis.expire(`otp:attempts:${email}`, 900); // 15m expiration
+
+      if (attempts >= 5) {
+        await redis.set(`otp:block:${email}`, '1', 'EX', 900); // block for 15m
+        await redis.del(`otp:code:${email}`);
+        await redis.del(`otp:token:${email}`);
+        await redis.del(`otp:attempts:${email}`);
+        throw new BadRequestException(
+          'Bạn đã nhập sai OTP quá 5 lần. Tài khoản bị tạm khóa 15 phút.',
+        );
+      }
+
+      throw new BadRequestException(
+        `Mã OTP không chính xác. Bạn còn ${5 - attempts} lần nhập.`,
+      );
+    }
+  }
+
+  async resendOtp(resendOtpDto: ResendOtpDto) {
+    const { email } = resendOtpDto;
+
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new BadRequestException('Người dùng không tồn tại.');
+    }
+
+    if (user.status === 'ACTIVE') {
+      throw new BadRequestException('Tài khoản đã được xác thực trước đó.');
+    }
+
+    const redis = this.pokerStateService.getRedisClient();
+
+    // Check if email is currently blocked
+    const isBlocked = await redis.get(`otp:block:${email}`);
+    if (isBlocked) {
+      throw new BadRequestException(
+        'Tài khoản đang bị khóa 15 phút do nhập sai OTP quá 5 lần.',
+      );
+    }
+
+    // Check cooldown
+    const cooldown = await redis.get(`otp:cooldown:${email}`);
+    if (cooldown) {
+      throw new BadRequestException(
+        'Vui lòng đợi 60 giây trước khi yêu cầu gửi lại OTP.',
+      );
+    }
+
+    await this.generateAndSendOtp(user);
+
+    return {
+      message: 'Mã OTP mới đã được gửi tới email của bạn.',
+    };
+  }
+
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
     const user = await this.userRepository.findOne({
       where: { email },
-      select: ['id', 'email', 'user_name', 'password'],
+      select: ['id', 'email', 'user_name', 'password', 'status'],
     });
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (user.status !== 'ACTIVE') {
+      throw new UnauthorizedException(
+        'Tài khoản chưa được kích hoạt. Vui lòng xác thực OTP.',
+      );
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -88,13 +294,13 @@ export class AuthService {
     }
 
     const payload = { sub: user.id, username: user.user_name };
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '2h' });
+    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
 
     // Generate Refresh Token
     const plainRefreshToken = crypto.randomBytes(64).toString('hex');
     const tokenHash = await bcrypt.hash(plainRefreshToken, 10);
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiration
+    expiresAt.setDate(expiresAt.getDate() + 30); // 30 days expiration
 
     const refreshTokenEntity = this.refreshTokenRepository.create({
       user_id: user.id,
@@ -147,13 +353,13 @@ export class AuthService {
 
     const user = tokenEntity.user;
     const payload = { sub: user.id, username: user.user_name };
-    const newAccessToken = this.jwtService.sign(payload, { expiresIn: '2h' });
+    const newAccessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
 
     // Optional: Token Rotation
     const newPlainRefreshToken = crypto.randomBytes(64).toString('hex');
     const newTokenHash = await bcrypt.hash(newPlainRefreshToken, 10);
     const newExpiresAt = new Date();
-    newExpiresAt.setDate(newExpiresAt.getDate() + 7);
+    newExpiresAt.setDate(newExpiresAt.getDate() + 30);
 
     // Update existing token or create new one and revoke old (for now we update it for simplicity)
     tokenEntity.token_hash = newTokenHash;
@@ -175,15 +381,94 @@ export class AuthService {
     return { message: 'Logged out successfully' };
   }
 
-  async forgotPassword(_requestPasswordResetDto: RequestPasswordResetDto) {
-    // Basic stub, implement full logic if needed
-    console.log('_requestPasswordResetDto', _requestPasswordResetDto);
-    return { message: 'Reset password link sent to email' };
+  async forgotPassword(requestPasswordResetDto: RequestPasswordResetDto) {
+    const { email } = requestPasswordResetDto;
+    const redis = this.pokerStateService.getRedisClient();
+
+    // Cooldown check: 60s
+    const cooldown = await redis.get(`reset:cooldown:${email}`);
+    if (cooldown) {
+      throw new BadRequestException(
+        'Vui lòng đợi 60 giây trước khi yêu cầu liên kết mới.',
+      );
+    }
+
+    const user = await this.userRepository.findOne({ where: { email } });
+
+    // Set cooldown
+    await redis.set(`reset:cooldown:${email}`, '1', 'EX', 60);
+
+    if (!user) {
+      // Return success to avoid email enumeration (OWASP)
+      return {
+        message:
+          'Nếu địa chỉ email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi.',
+      };
+    }
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString('hex');
+    const resetExpire = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+    // Store in Redis
+    const metadata = JSON.stringify({ email: user.email, userId: user.id });
+    await redis.set(`reset:token:${token}`, metadata, 'EX', 900); // 15m
+
+    // Enqueue mail
+    await this.mailService.enqueueResetPasswordMail({
+      email: user.email,
+      resetToken: token,
+      name: user.user_name,
+      resetExpire,
+    });
+
+    return {
+      message:
+        'Nếu địa chỉ email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi.',
+    };
   }
 
-  async resetPassword(_resetPasswordDto: ResetPasswordDto) {
-    // Basic stub, implement full logic if needed
-    console.log('_resetPasswordDto', _resetPasswordDto);
-    return { message: 'Password reset successfully' };
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const { token, password } = resetPasswordDto;
+    const redis = this.pokerStateService.getRedisClient();
+
+    // Fetch token from Redis
+    const tokenDataStr = await redis.get(`reset:token:${token}`);
+    if (!tokenDataStr) {
+      throw new BadRequestException(
+        'Liên kết đặt lại mật khẩu đã hết hạn hoặc không hợp lệ.',
+      );
+    }
+
+    let tokenData: { email: string; userId: string };
+    try {
+      tokenData = JSON.parse(tokenDataStr);
+    } catch {
+      throw new BadRequestException(
+        'Liên kết đặt lại mật khẩu đã hết hạn hoặc không hợp lệ.',
+      );
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: tokenData.userId },
+    });
+    if (!user) {
+      throw new BadRequestException('Người dùng không tồn tại.');
+    }
+
+    // Update password
+    user.password = await bcrypt.hash(password, 10);
+    await this.userRepository.save(user);
+
+    // Invalidate all active sessions (revoked_at refresh tokens)
+    await this.refreshTokenRepository.update(
+      { user_id: user.id, revoked_at: null },
+      { revoked_at: new Date() },
+    );
+
+    // Clean up Redis token
+    await redis.del(`reset:token:${token}`);
+
+    return { message: 'Mật khẩu đã được đặt lại thành công.' };
   }
 }

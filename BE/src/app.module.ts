@@ -6,15 +6,18 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import databaseConfig from './config/database';
+import mailConfig from './config/mail.config';
 import { SeedModule } from './database/seed/seed.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { MailModule } from './mail/mail.module';
 import { AppV1Module } from './v1/modules/app-v1.module';
 @Module({
   imports: [
+    EventEmitterModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-      load: [databaseConfig],
+      load: [databaseConfig, mailConfig],
     }),
     /**Queue Config */
     BullModule.forRootAsync({

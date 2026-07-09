@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { Response } from 'express';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { withTransaction } from 'src/common/helpers/transaction.helper';
 import { UserStatus } from 'src/constants/user-status';
 import { DataSource } from 'typeorm';
@@ -18,6 +19,7 @@ import { SystemRevenue } from '../entities/system_revenue.entity';
 import { TableSession } from '../entities/table_session.entity';
 import { User } from '../entities/user.entity';
 import { Wallet } from '../entities/wallet.entity';
+import { PromoEvent } from '../entities/event.entity';
 import { PokerStateService } from './poker-state.service';
 
 @Injectable()
@@ -28,6 +30,7 @@ export class PokerLobbyService {
   constructor(
     private readonly stateService: PokerStateService,
     private readonly dataSource: DataSource,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // Tracks active socket connections at lobby level
@@ -41,6 +44,25 @@ export class PokerLobbyService {
 
   getLobbySubscriberCount(): number {
     return this.activeLobbySubscribers.size;
+  }
+
+  async getActiveEvents(): Promise<PromoEvent[]> {
+    const now = new Date();
+    const query = PromoEvent.createQueryBuilder('event').where(
+      'event.is_active = :isActive',
+      { isActive: true },
+    );
+
+    query.andWhere('(event.start_date IS NULL OR event.start_date <= :now)', {
+      now,
+    });
+    query.andWhere('(event.end_date IS NULL OR event.end_date >= :now)', {
+      now,
+    });
+
+    query.orderBy('event.created_at', 'DESC');
+
+    return query.getMany();
   }
 
   /**
@@ -139,6 +161,14 @@ export class PokerLobbyService {
       targetWallet.chips_balance = (currentChips + freeChips).toString();
       await qr.manager.save(targetWallet);
 
+      // Emit wallet adjustment event
+      this.eventEmitter.emit('poker.wallet.adjust', {
+        userId,
+        amount: 5000000,
+        type: 'free_chips',
+        referenceId: idempotencyKey,
+      });
+
       return {
         success: true,
         chips_balance: targetWallet.chips_balance,
@@ -157,6 +187,7 @@ export class PokerLobbyService {
     status?: string;
     page?: number;
     limit?: number;
+    show_private?: string;
   }) {
     const searchName = query.search_name || '';
     const blindCategory = query.blind_category || 'all';
@@ -166,6 +197,7 @@ export class PokerLobbyService {
         : null;
     const page = Math.max(1, Number(query.page || 1));
     const limit = Math.max(1, Number(query.limit || 20));
+    const showPrivate = query.show_private === 'true';
 
     // Xây dựng query builder
     const queryBuilder = PokerTable.createQueryBuilder('table');
@@ -188,10 +220,12 @@ export class PokerLobbyService {
       });
     }
 
-    // Filter out PRIVATE rooms from the public lobby
-    queryBuilder.andWhere(
-      `(JSON_EXTRACT(table.custom_settings, '$.table_visibility') IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(table.custom_settings, '$.table_visibility')) != 'PRIVATE')`,
-    );
+    if (!showPrivate) {
+      // Filter out PRIVATE rooms from the public lobby
+      queryBuilder.andWhere(
+        `(JSON_EXTRACT(table.custom_settings, '$.table_visibility') IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(table.custom_settings, '$.table_visibility')) != 'PRIVATE')`,
+      );
+    }
 
     // Lọc theo Big Blind Category
     if (blindCategory === 'micro') {
@@ -240,6 +274,8 @@ export class PokerLobbyService {
         return {
           room_id: parseInt(t.id),
           room_name: t.name,
+          game_type: t.game_type,
+          table_visibility: t.custom_settings?.table_visibility || 'PUBLIC',
           max_players: t.max_players,
           current_players_count: playersCount,
           small_blind: parseInt(t.small_blind),
@@ -537,6 +573,14 @@ export class PokerLobbyService {
 
       await queryRunner.commitTransaction();
 
+      // Emit wallet adjustment event
+      this.eventEmitter.emit('poker.wallet.adjust', {
+        userId,
+        amount: -Number(amt),
+        type: 'buyin',
+        referenceId: session.id,
+      });
+
       // Lấy username & avatar của user
       const user = await queryRunner.manager.findOne(User, {
         where: { id: userId },
@@ -787,6 +831,14 @@ export class PokerLobbyService {
         await queryRunner.manager.save(session);
 
         await queryRunner.commitTransaction();
+
+        // Emit wallet adjustment event
+        this.eventEmitter.emit('poker.wallet.adjust', {
+          userId,
+          amount: Number(finalStack),
+          type: 'refund',
+          referenceId: session.id,
+        });
 
         // Cập nhật lũy kế cashout và dọn dẹp Redis
         const redis = this.stateService.getRedisClient();
@@ -1407,5 +1459,76 @@ export class PokerLobbyService {
 
     await this.stateService.deleteSeat(roomId, seatIndex);
     return { success: true };
+  }
+
+  async getRecentRooms(userId: string) {
+    const sessions = await TableSession.createQueryBuilder('session')
+      .leftJoinAndSelect('session.table', 'table')
+      .where('session.user_id = :userId', { userId })
+      .orderBy('session.created_at', 'DESC')
+      .limit(10)
+      .getMany();
+
+    const roomsMap = new Map();
+    for (const session of sessions) {
+      const table = session.table;
+      if (!table || !table.is_active || roomsMap.has(table.id)) continue;
+
+      const playersCount = await TableSession.count({
+        where: {
+          table_id: table.id,
+          member_status: 'active',
+        },
+      });
+
+      roomsMap.set(table.id, {
+        room_id: parseInt(table.id),
+        room_name: table.name,
+        max_players: table.max_players,
+        current_players_count: playersCount,
+        small_blind: parseInt(table.small_blind),
+        big_blind: parseInt(table.big_blind),
+        min_buy_in: parseInt(table.min_buyin),
+        max_buy_in: parseInt(table.max_buyin),
+        status: (table.status || 'waiting').toUpperCase(),
+        played_at: session.created_at,
+      });
+    }
+
+    return Array.from(roomsMap.values());
+  }
+
+  async getLeaderboard() {
+    const wallets = await Wallet.createQueryBuilder('wallet')
+      .leftJoinAndSelect('wallet.user', 'user')
+      .orderBy('CAST(wallet.chips_balance AS DECIMAL)', 'DESC')
+      .limit(10)
+      .getMany();
+
+    return wallets.map((w, index) => ({
+      rank: index + 1,
+      username: w.user?.user_name || w.user?.email?.split('@')[0] || 'Guest',
+      avatar: w.user?.avatar_url || '',
+      chips: w.chips_balance,
+    }));
+  }
+
+  async getActivePlayers(userId: string) {
+    const sessions = await TableSession.createQueryBuilder('session')
+      .leftJoinAndSelect('session.user', 'user')
+      .leftJoinAndSelect('session.table', 'table')
+      .where('session.member_status = :status', { status: 'active' })
+      .andWhere('session.user_id != :userId', { userId })
+      .orderBy('session.joined_at', 'DESC')
+      .limit(10)
+      .getMany();
+
+    return sessions.map((s) => ({
+      user_id: s.user_id,
+      username: s.user?.user_name || s.user?.email?.split('@')[0] || 'Player',
+      avatar: s.user?.avatar_url || '',
+      table_id: s.table_id,
+      table_name: s.table?.name || 'Vegas Room',
+    }));
   }
 }

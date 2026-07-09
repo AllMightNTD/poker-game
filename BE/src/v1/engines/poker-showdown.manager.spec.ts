@@ -100,13 +100,8 @@ describe('PokerShowdownManager - Unit Tests', () => {
     // Giả lập Evaluate Hand
     jest
       .spyOn(PokerGameEngine, 'evaluate7CardHand')
-      .mockImplementation((_cards) => {
-        console.log('_cards', _cards);
-
-        // Dựa vào context mock, ta có thể hardcode hoặc phân biệt
-        // Vì evaluate7CardHand nhận array cards (gồm pocket + board), ta sẽ mock theo tuần tự gọi
-        return { score: 5000, name: 'Straight' } as any;
-      });
+      .mockReturnValueOnce({ score: 5000, name: 'Straight' } as any) // Seat 1
+      .mockReturnValueOnce({ score: 3000, name: 'Two Pairs' } as any); // Seat 2
     // Spy finalizeAndBroadcastHand
     const finalizeSpy = jest
       .spyOn(showdownManager, 'finalizeAndBroadcastHand')

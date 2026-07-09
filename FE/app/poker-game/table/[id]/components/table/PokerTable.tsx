@@ -1,5 +1,5 @@
 import { useSocket } from "@/core/providers/SocketProvider";
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 import { AnimationManager } from "../effects/AnimationManager";
 import { ActionBar } from "../hero/ActionBar";
 import { usePokerGame } from "../hooks/usePokerGame";
@@ -8,8 +8,10 @@ import { CommunityCards } from "./CommunityCards";
 import { PotDisplay } from "./PotDisplay";
 import { PokerCard } from "../ui/PokerCard";
 import Seat from "./Seat";
+import { AnimationRegistryProvider, useAnimationRegistry } from "../effects/AnimationRegistryContext";
+import { useGameAnimation } from "../effects/useGameAnimation";
 
-export const PokerTable = memo(function PokerTable() {
+const PokerTableInner = memo(function PokerTableInner() {
   const {
     tableRef,
     tableBackground,
@@ -30,6 +32,16 @@ export const PokerTable = memo(function PokerTable() {
 
   const felt = getFeltStyles(tableBackground);
   const { socket } = useSocket();
+  const { registerTableContainer, registerCenter } = useAnimationRegistry();
+  const { setAnimationContainer } = useGameAnimation();
+  const animContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Hook registry coordinates
+  useEffect(() => {
+    if (tableRef.current) {
+      registerTableContainer(tableRef.current);
+    }
+  }, [tableRef, registerTableContainer]);
 
   return (
     /* Environment layer - Dark Casino Room */
@@ -50,8 +62,20 @@ export const PokerTable = memo(function PokerTable() {
 
             {/* Gold trim inner border ring (Betting Line) */}
             <div className={`absolute inset-6 sm:inset-10 md:inset-12 rounded-[70px] sm:rounded-[100px] md:rounded-[140px] border-2 ${felt.line} pointer-events-none opacity-80`} />
+            
+            {/* Table visual center registration point */}
+            <div ref={registerCenter} className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none opacity-0" />
           </div>
         </div>
+
+        {/* Overlay container for running WAAPI animations */}
+        <div 
+          ref={(el) => {
+            animContainerRef.current = el;
+            setAnimationContainer(el);
+          }} 
+          className="absolute inset-0 pointer-events-none z-50 overflow-hidden rounded-[100px] sm:rounded-[140px] md:rounded-[180px]" 
+        />
 
         {socket && <AnimationManager socket={socket} />}
 
@@ -167,3 +191,12 @@ export const PokerTable = memo(function PokerTable() {
     </div>
   );
 });
+
+export const PokerTable = memo(function PokerTable() {
+  return (
+    <AnimationRegistryProvider>
+      <PokerTableInner />
+    </AnimationRegistryProvider>
+  );
+});
+

@@ -34,28 +34,29 @@ export class MailProcessor extends WorkerHost {
   }
 
   private async sendRegisterMail(job: Job<any>) {
-    const user = job.data;
+    const data = job.data;
     const webUrl = this.configService.get<string>(
       'WEB_URL',
       'http://localhost:3000',
     );
-    const url = `${webUrl}/login`;
+    const verificationUrl = `${webUrl}/verify-otp?token=${data.token}&otp=${data.otp}`;
 
     try {
       await this.mailerService.sendMail({
-        to: user.email,
-        subject: 'Welcome to Our Service',
+        to: data.email,
+        subject: '♠️ CG Poker - Xác Thực Tài Khoản Người Chơi Mới',
         template: 'register',
         context: {
-          loginUrl: url,
-          appName: 'Your App Name',
+          username: data.username,
+          otp: data.otp,
+          verificationUrl,
         },
       });
 
-      this.logger.log(`Registration email sent to ${user.email}`);
+      this.logger.log(`Registration email sent to ${data.email}`);
     } catch (error) {
       this.logger.error(
-        `Failed to send registration email to ${user.email}`,
+        `Failed to send registration email to ${data.email}`,
         error,
       );
       throw error;

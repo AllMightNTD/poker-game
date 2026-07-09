@@ -62,11 +62,11 @@ export function useLogin(t: any) {
       const refreshToken = result?.metadata?.refresh_token || result?.refresh_token || result?.refreshToken;
 
       if (token) {
-        Cookies.set("accessToken", token, { expires: 2 / 24 }); // 2 hours
+        Cookies.set("accessToken", token, { expires: 15 / 1440 }); // 15 minutes
       }
 
       if (refreshToken) {
-        Cookies.set("refreshToken", refreshToken, { expires: 7 }); // 7 days
+        Cookies.set("refreshToken", refreshToken, { expires: 30 }); // 30 days
       }
 
       if (rememberMe) {

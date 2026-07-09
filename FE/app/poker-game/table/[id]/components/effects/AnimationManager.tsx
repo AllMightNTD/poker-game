@@ -5,6 +5,7 @@ import { usePokerGame } from "../hooks/usePokerGame";
 import { WinnerData } from "../types";
 import { useAnimationTimeline } from "./useAnimationTimeline";
 import WinnerBanner from "./winner-banner/WinnerBanner";
+import { useGameAnimation } from "./useGameAnimation";
 
 interface AnimationManagerProps {
   socket: any;
@@ -59,74 +60,6 @@ const WinnerHighlight: React.FC<{ winners: WinnerData[]; maxPlayers: number; her
   );
 };
 
-// 2. Collect Pot to Center
-const PotCollector: React.FC<{ winners: WinnerData[]; maxPlayers: number }> = ({
-  winners,
-  maxPlayers,
-}) => {
-  console.log('winners', winners);
-
-  const positions = getSeatPositions(maxPlayers);
-  return (
-    <div className="absolute inset-0 pointer-events-none z-40">
-      {winners.map((winner) => {
-        const startPos = positions[winner.seatNumber - 1] || { top: 50, left: 50 };
-        return (
-          <motion.div
-            key={winner.userId}
-            initial={{ top: `${startPos.top}%`, left: `${startPos.left}%`, scale: 1, opacity: 1 }}
-            animate={{ top: "38%", left: "50%", scale: 0.8, opacity: 0 }}
-            transition={{ duration: 0.8, ease: "easeInOut" }}
-            className="absolute w-8 h-8 -ml-4 -mt-4 bg-gradient-to-br from-[#F4B942] to-[#E0942A] rounded-full border-2 border-white/40 shadow-lg flex items-center justify-center text-xs font-black text-slate-950"
-          >
-            $
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-};
-
-// 3. Fly Chips from Center to Winners
-const FlyingChips: React.FC<{ winners: WinnerData[]; maxPlayers: number }> = ({
-  winners,
-  maxPlayers,
-}) => {
-  const positions = getSeatPositions(maxPlayers);
-  return (
-    <div className="absolute inset-0 pointer-events-none z-40">
-      {winners.map((winner) => {
-        const targetPos = positions[winner.seatNumber - 1] || { top: 50, left: 50 };
-        // Scale number of chips visually (min 5, max 25) based on win amount
-        const chipCount = Math.min(25, Math.max(5, Math.floor(winner.amountWon / 500)));
-        return Array.from({ length: chipCount }).map((_, i) => {
-          const pseudoRandomDuration = 1.0 + (((i * 3 + winner.seatNumber * 7) % 5) / 10);
-          return (
-            <motion.div
-              key={`${winner.userId}-${i}`}
-              initial={{ top: "38%", left: "50%", scale: 0.5, opacity: 0 }}
-              animate={{
-                top: `${targetPos.top}%`,
-                left: `${targetPos.left}%`,
-                scale: 1,
-                opacity: [0, 1, 1, 0],
-              }}
-              transition={{
-                duration: pseudoRandomDuration,
-                delay: i * 0.05,
-                ease: "easeOut",
-              }}
-              className="absolute w-6 h-6 -ml-3 -mt-3 bg-gradient-to-br from-[#F4B942] to-[#C9861C] rounded-full border border-white/20 shadow-md flex items-center justify-center text-[10px] font-black text-slate-900"
-            >
-              $
-            </motion.div>
-          );
-        });
-      })}
-    </div>
-  );
-};
-
 // Confetti fallback for big wins
 const getPseudoRand = (seed: number) => {
   const x = Math.sin(seed) * 10000;
@@ -165,12 +98,74 @@ const Confetti: React.FC = () => {
 export const AnimationManager: React.FC<AnimationManagerProps> = ({ socket }) => {
   const { currentStep, activePayload, triggerWinnerTimeline } = useAnimationTimeline();
   const { maxPlayers, players } = usePokerGame();
+  const { animateDealing, animateBetting, animateFold, animatePotCollect, animatePotDistribute } = useGameAnimation();
 
   const maxPlayersVal = maxPlayers || 9;
   const heroSeatNumber = players.find(p => p.isHero)?.seatIndex;
 
+  // Trigger WAAPI animations when step transitions
+  useEffect(() => {
+    if (!activePayload) return;
+
+    if (currentStep === "COLLECT_POT_TO_CENTER") {
+      activePayload.winners.forEach((winner) => {
+        animatePotCollect(winner.seatNumber);
+      });
+    } else if (currentStep === "FLY_CHIPS_TO_WINNERS") {
+      activePayload.winners.forEach((winner) => {
+        const chipCount = Math.min(15, Math.max(3, Math.floor(winner.amountWon / 1000)));
+        for (let i = 0; i < chipCount; i++) {
+          animatePotDistribute(winner.seatNumber, i * 60);
+        }
+      });
+    }
+  }, [currentStep, activePayload, animatePotCollect, animatePotDistribute]);
+
   useEffect(() => {
     if (!socket) return;
+
+    // 1. Listen for new hand start to animate dealing cards
+    const handleHandStarted = (data: { seats?: any[] }) => {
+      // Find active players that will receive cards
+      const activeSeats = data.seats 
+        ? data.seats.filter(s => s.status === "active").map(s => s.seatIndex)
+        : players.filter(p => !p.isFolded && p.chips !== "0").map(p => p.seatIndex);
+      
+      if (activeSeats.length === 0) return;
+
+      // Deal 2 cards to each player sequentially (Round 1 then Round 2)
+      let cardCounter = 0;
+      for (let round = 0; round < 2; round++) {
+        activeSeats.forEach((seatNum) => {
+          const delay = cardCounter * 120; // 120ms between each card deal
+          const isHero = players.find(p => p.seatIndex === seatNum)?.isHero || false;
+          animateDealing(seatNum, delay, isHero);
+          cardCounter++;
+        });
+      }
+    };
+
+    // 2. Listen for actions to animate betting and folding
+    const handleActionRecorded = (data: { seat_number: number; action_type?: string; action?: string; amount?: number }) => {
+      const action = (data.action_type || data.action || "").toLowerCase();
+      
+      if (action === "fold") {
+        animateFold(data.seat_number);
+      } else if (["bet", "call", "raise", "allin"].includes(action) && (data.amount || 0) > 0) {
+        animateBetting(data.seat_number);
+      }
+    };
+
+    // 3. Listen for street advanced to collect current bets into center pot
+    const handleStreetAdvanced = () => {
+      // Collect chips from any player who has made a bet in this street
+      players.forEach((p) => {
+        const betAmount = parseInt(p.current_bet || "0", 10);
+        if (betAmount > 0) {
+          animatePotCollect(p.seatIndex);
+        }
+      });
+    };
 
     const handleHandEnded = (data: { winners: any[]; total_pot: number }) => {
       const formattedWinners: WinnerData[] = [];
@@ -208,35 +203,31 @@ export const AnimationManager: React.FC<AnimationManagerProps> = ({ socket }) =>
 
       console.log('formattedWinners', formattedWinners);
 
-
       triggerWinnerTimeline(formattedWinners, data.total_pot || 0);
     };
 
+    socket.on("table:hand-started", handleHandStarted);
+    socket.on("table:action-recorded", handleActionRecorded);
+    socket.on("table:street-advanced", handleStreetAdvanced);
     socket.on("table:hand-ended", handleHandEnded);
 
     return () => {
+      socket.off("table:hand-started", handleHandStarted);
+      socket.off("table:action-recorded", handleActionRecorded);
+      socket.off("table:street-advanced", handleStreetAdvanced);
       socket.off("table:hand-ended", handleHandEnded);
     };
-  }, [socket, triggerWinnerTimeline]);
+  }, [socket, players, triggerWinnerTimeline, animateDealing, animateBetting, animateFold, animatePotCollect]);
 
   if (!activePayload) return null;
 
   const hasBigWin = activePayload.winners.some((w: WinnerData) => w.isBigWin);
-
 
   return (
     <>
       <AnimatePresence>
         {currentStep === "HIGHLIGHT_WINNERS" && (
           <WinnerHighlight winners={activePayload.winners} maxPlayers={maxPlayersVal} heroSeatNumber={heroSeatNumber} />
-        )}
-
-        {currentStep === "COLLECT_POT_TO_CENTER" && (
-          <PotCollector winners={activePayload.winners} maxPlayers={maxPlayersVal} />
-        )}
-
-        {currentStep === "FLY_CHIPS_TO_WINNERS" && (
-          <FlyingChips winners={activePayload.winners} maxPlayers={maxPlayersVal} />
         )}
 
         {currentStep === "SHOW_BANNER" && (

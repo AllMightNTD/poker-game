@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import { Server } from 'socket.io';
 import { GameHand } from '../entities/game_hand.entity';
@@ -44,6 +45,7 @@ export class PokerGameService implements OnModuleDestroy {
   constructor(
     readonly lobbyService: PokerLobbyService,
     readonly stateService: PokerStateService,
+    readonly eventEmitter: EventEmitter2,
   ) {
     this.startIdleCleanupInterval();
   }
@@ -458,6 +460,7 @@ export class PokerGameService implements OnModuleDestroy {
       big_blind_seat: parseInt(tableState.big_blind_seat || '0'),
       current_turn_seat: parseInt(tableState.current_turn_seat || '0'),
       remaining_time: remainingTimer,
+      expires_at: timer ? timer.expiresAt : 0,
       seats: sanitizedSeats,
     };
 

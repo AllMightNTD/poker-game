@@ -43,9 +43,9 @@ export function useRegister(t: any) {
       const response = await httpClient.post("/api/v1/auth/register", data);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any, variables: any) => {
       toastSuccess(t("api.registerSuccess"));
-      router.push("/login");
+      router.push(`/verify-otp?email=${encodeURIComponent(variables.email)}`);
     },
     onError: (error: any) => {
       const errorCode = error.response?.data?.errorCode;

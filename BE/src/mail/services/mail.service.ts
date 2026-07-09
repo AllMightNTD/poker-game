@@ -30,7 +30,12 @@ export class MailService {
     this.logger.log(`Enqueued reset-password mail for ${data.email}`);
   }
 
-  async queueRegisterMail(data: { email: string }) {
+  async queueRegisterMail(data: {
+    email: string;
+    otp: string;
+    token: string;
+    username: string;
+  }) {
     await this.mailQueue.add('register', data, {
       attempts: 5,
       backoff: {

@@ -1,16 +1,27 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { UserProvider } from "@/core/providers/user-provider";
-import { ChatDrawer } from "./components/chat/ChatDrawer";
-import { HistoryDrawer } from "./components/chat/HistoryDrawer";
 import { HeroPanel } from "./components/hero/HeroPanel";
 import { PokerGameProvider } from "./components/hooks/usePokerGame";
 import { TableBackground } from "./components/layout/TableBackground";
 import { TableHeader } from "./components/layout/TableHeader";
-import { SettingsModal } from "./components/settings/SettingsModal";
-import { SitRequestModal } from "./components/settings/SitRequestModal";
 import { PokerTable } from "./components/table/PokerTable";
 import { Toast } from "./components/ui/Toast";
+
+// Lazily load large components/modals only when client-side environment is ready to reduce initial bundle size and speed up FCP
+const ChatDrawer = dynamic(() => import("./components/chat/ChatDrawer").then(mod => mod.ChatDrawer), {
+  ssr: false,
+});
+const HistoryDrawer = dynamic(() => import("./components/chat/HistoryDrawer").then(mod => mod.HistoryDrawer), {
+  ssr: false,
+});
+const SettingsModal = dynamic(() => import("./components/settings/SettingsModal").then(mod => mod.SettingsModal), {
+  ssr: false,
+});
+const SitRequestModal = dynamic(() => import("./components/settings/SitRequestModal").then(mod => mod.SitRequestModal), {
+  ssr: false,
+});
 
 function PokerTableRoom() {
   return (

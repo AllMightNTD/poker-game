@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Request } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -38,5 +38,59 @@ export class LobbyController {
   })
   async getStats() {
     return this.lobbyService.getLobbyStats();
+  }
+
+  @Get('recent')
+  @ApiOperation({
+    summary: 'Danh sách bàn chơi gần đây',
+    description: 'Trả về các phòng/bàn chơi mà người chơi đã tham gia gần đây.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lấy danh sách bàn chơi gần đây thành công',
+  })
+  async getRecentRooms(@Request() req) {
+    return this.lobbyService.getRecentRooms(req.user.sub);
+  }
+
+  @Get('leaderboard')
+  @ApiOperation({
+    summary: 'Bảng xếp hạng cao thủ',
+    description: 'Trả về top 10 người chơi sở hữu nhiều chip nhất.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lấy bảng xếp hạng thành công',
+  })
+  async getLeaderboard() {
+    return this.lobbyService.getLeaderboard();
+  }
+
+  @Get('active-players')
+  @ApiOperation({
+    summary: 'Danh sách người chơi online/active',
+    description:
+      'Mô phỏng danh sách bạn bè hoặc người chơi khác đang chơi tại các bàn.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lấy danh sách người chơi online thành công',
+  })
+  async getActivePlayers(@Request() req) {
+    return this.lobbyService.getActivePlayers(req.user.sub);
+  }
+
+  @Get('events/active')
+  @ApiOperation({
+    summary: 'Danh sách sự kiện đang hoạt động',
+    description:
+      'Trả về các sự kiện quảng cáo / giải đấu đang hoạt động trên Banner sảnh.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lấy danh sách sự kiện thành công',
+  })
+  async getActiveEvents() {
+    return this.lobbyService.getActiveEvents();
   }
 }

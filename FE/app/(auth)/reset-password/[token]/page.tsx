@@ -1,6 +1,6 @@
 "use client";
 
-import api from "@/lib/axios";
+import { AuthService } from "@/features/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Lock, Eye, EyeOff, CheckCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      await api.post("/api/v1/user/auth/reset-password", {
+      await AuthService.resetPassword({
         token,
         password: data.password,
       });

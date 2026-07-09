@@ -2,7 +2,8 @@ import { useCurrentUser } from '@/core/providers/user-provider';
 import api from '@/lib/axios';
 import { Coins, User, X } from 'lucide-react';
 import { useParams } from 'next/navigation';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { useAnimationRegistry } from '../effects/AnimationRegistryContext';
 import { getSeatPositions } from '../constants';
 import { usePokerGame } from '../hooks/usePokerGame';
 import { useResponsive } from '../hooks/useResponsive';
@@ -191,6 +192,18 @@ const Seat: React.FC<SeatProps> = ({
     return player?.isHero ? 82 : 74;
   }, [isMobile, player?.isHero]);
 
+  const { registerSeat } = useAnimationRegistry();
+  const seatRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (seatRef.current) {
+      registerSeat(seatNumber, seatRef.current);
+    }
+    return () => {
+      registerSeat(seatNumber, null);
+    };
+  }, [seatNumber, registerSeat]);
+
   if (!player) {
     const isSeated = players.some((p) => p.id === currentUser?.id);
     const pendingReq = sitRequests?.find((r) => Number(r.seat_number) === seatNumber);
@@ -200,7 +213,7 @@ const Seat: React.FC<SeatProps> = ({
 
     return (
       <>
-        <div style={positionStyle} className="absolute z-10 -translate-x-1/2 -translate-y-1/2 w-[95px] sm:w-[150px] md:w-[220px]">
+        <div ref={seatRef} style={positionStyle} className="absolute z-10 -translate-x-1/2 -translate-y-1/2 w-[95px] sm:w-[150px] md:w-[220px]">
           {isPending ? (
             <div className="animate-pulse flex flex-col items-center gap-2">
               <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-slate-800 border-2 border-dashed border-amber-500/50 flex items-center justify-center overflow-hidden">
@@ -245,6 +258,7 @@ const Seat: React.FC<SeatProps> = ({
 
   return (
     <div
+      ref={seatRef}
       style={positionStyle}
       className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center
         w-[110px] sm:w-[160px] md:w-[220px]
@@ -299,5 +313,46 @@ const Seat: React.FC<SeatProps> = ({
     </div>
   );
 };
+
+const areSeatsEqual = (prevProps: SeatProps, nextProps: SeatProps) => {
+  if (prevProps.seatNumber !== nextProps.seatNumber) return false;
+
+  const p1 = prevProps.player;
+  const p2 = nextProps.player;
+
+  if (!p1 && !p2) return true;
+  if (!p1 || !p2) return false;
+
+  if (
+    p1.id !== p2.id ||
+    p1.name !== p2.name ||
+    p1.avatar !== p2.avatar ||
+    p1.chips !== p2.chips ||
+    p1.current_bet !== p2.current_bet ||
+    p1.isActive !== p2.isActive ||
+    p1.isDealer !== p2.isDealer ||
+    p1.isSmallBlind !== p2.isSmallBlind ||
+    p1.isBigBlind !== p2.isBigBlind ||
+    p1.lastAction !== p2.lastAction ||
+    p1.isFolded !== p2.isFolded ||
+    p1.hasAllIn !== p2.hasAllIn ||
+    p1.isHero !== p2.isHero ||
+    p1.isBot !== p2.isBot
+  ) {
+    return false;
+  }
+
+  const c1 = p1.cards || [];
+  const c2 = p2.cards || [];
+  if (c1.length !== c2.length) return false;
+  for (let i = 0; i < c1.length; i++) {
+    if (c1[i].suit !== c2[i].suit || c1[i].rank !== c2[i].rank) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 Seat.displayName = 'Seat';
-export default React.memo(Seat);
+export default React.memo(Seat, areSeatsEqual);

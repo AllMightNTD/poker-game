@@ -480,6 +480,9 @@ export class PokerShowdownManager {
     await Promise.all(winnerPromises);
 
     // 1.B. Reconciliation đối soát số phỉnh (Audit Trail & Anti-Money Exploit)
+    let reconciliationSuccess = true;
+    const reconciliationDetails = [];
+
     for (const seat of seats) {
       if (seat.start_stack) {
         const startStack = parseInt(seat.start_stack, 10);
@@ -493,7 +496,23 @@ export class PokerShowdownManager {
         const expectedNewStack = startStack + netGainLoss;
         const actualNewStack = parseInt(seat.stack, 10);
 
-        if (expectedNewStack !== actualNewStack) {
+        const seatSuccess = expectedNewStack === actualNewStack;
+        if (!seatSuccess) {
+          reconciliationSuccess = false;
+        }
+
+        reconciliationDetails.push({
+          user_id: seat.user_id,
+          seat_number: seat.seat_number,
+          start_stack: startStack,
+          total_bet: totalChipsBetEarly,
+          won_amount: wonAmount,
+          expected_stack: expectedNewStack,
+          actual_stack: actualNewStack,
+          success: seatSuccess,
+        });
+
+        if (!seatSuccess) {
           this.gameService.logger.error(
             `[RECONCILIATION ERROR] Money Exploit Detected! User ${seat.user_id} on seat ${seat.seat_number} of table ${roomId}. ` +
               `Start stack: ${startStack}, Bet: ${totalChipsBetEarly}, Won: ${wonAmount}, Expected: ${expectedNewStack}, Actual: ${actualNewStack}`,
@@ -532,6 +551,23 @@ export class PokerShowdownManager {
     hand.shuffled_deck = tableState.shuffled_deck || null;
     hand.ended_at = new Date();
     await hand.save();
+
+    // Emit event
+    this.gameService.eventEmitter.emit('poker.hand.completed', {
+      roomId,
+      handId: hand.id,
+      totalPot: totalPotAmount,
+      rakeAmount: rakeCalculated.toString(),
+      winners: winnersLog.map((w) => ({
+        user_id: w.user_id,
+        seat_number: w.seat_number,
+        username: w.username,
+        win_amount: w.win_amount,
+        hand_name: w.hand_name || '',
+      })),
+      reconciliationSuccess,
+      reconciliationDetails,
+    });
 
     // 4. Lưu System Revenue
     if (rakeCalculated > BigInt(0)) {

@@ -1,0 +1,466 @@
+"use client";
+
+import httpClient from "@/core/api/http-client";
+import {
+  Coins,
+  Edit,
+  Megaphone,
+  Plus,
+  Sparkles,
+  Trash2,
+  Trophy,
+  X,
+  Zap,
+} from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+
+interface PromoEvent {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  badge: string;
+  color_gradient: string;
+  icon_type: string;
+  link_url?: string;
+  is_active: boolean;
+  start_date?: string;
+  end_date?: string;
+}
+
+const GRADIENT_PRESETS = [
+  { name: "Cúp Vàng (Gold)", class: "from-amber-500/20 via-orange-600/10 to-[#0b141d]" },
+  { name: "Lấp Lánh (Blue)", class: "from-blue-500/20 via-[#0a2540]/10 to-[#0b141d]" },
+  { name: "Thắng Lớn (Emerald)", class: "from-emerald-500/20 via-teal-900/10 to-[#0b141d]" },
+  { name: "Kịch Tính (Rose)", class: "from-rose-500/20 via-purple-900/10 to-[#0b141d]" },
+];
+
+const ICON_PRESETS = [
+  { type: "Trophy", label: "Cúp Vàng", component: <Trophy className="text-amber-400 w-5 h-5" /> },
+  { type: "Sparkles", label: "Sao Lấp Lánh", component: <Sparkles className="text-blue-400 w-5 h-5" /> },
+  { type: "Coins", label: "Đồng Xu Vàng", component: <Coins className="text-emerald-400 w-5 h-5" /> },
+  { type: "Zap", label: "Tia Chớp Đỏ", component: <Zap className="text-rose-400 w-5 h-5" /> },
+];
+
+export default function AdminEventsPage() {
+  const [events, setEvents] = useState<PromoEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<PromoEvent | null>(null);
+
+  // Form states
+  const [title, setTitle] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [badge, setBadge] = useState("");
+  const [colorGradient, setColorGradient] = useState(GRADIENT_PRESETS[0].class);
+  const [iconType, setIconType] = useState("Trophy");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const fetchEvents = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await httpClient.get("/api/v1/admin/events", {
+        params: search ? { search } : {},
+      });
+      setEvents(res.data || []);
+    } catch (e) {
+      console.error("Lỗi lấy danh sách sự kiện:", e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [search]);
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      fetchEvents();
+    });
+  }, [fetchEvents]);
+
+  const openAddModal = () => {
+    setEditingEvent(null);
+    setTitle("");
+    setSubtitle("");
+    setDescription("");
+    setBadge("Sự Kiện Hot");
+    setColorGradient(GRADIENT_PRESETS[0].class);
+    setIconType("Trophy");
+    setLinkUrl("");
+    setIsActive(true);
+    setStartDate("");
+    setEndDate("");
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (event: PromoEvent) => {
+    setEditingEvent(event);
+    setTitle(event.title);
+    setSubtitle(event.subtitle);
+    setDescription(event.description);
+    setBadge(event.badge);
+    setColorGradient(event.color_gradient);
+    setIconType(event.icon_type);
+    setLinkUrl(event.link_url || "");
+    setIsActive(event.is_active);
+    setStartDate(event.start_date ? event.start_date.substring(0, 16) : "");
+    setEndDate(event.end_date ? event.end_date.substring(0, 16) : "");
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = {
+      title,
+      subtitle,
+      description,
+      badge,
+      color_gradient: colorGradient,
+      icon_type: iconType,
+      link_url: linkUrl || undefined,
+      is_active: isActive,
+      start_date: startDate ? new Date(startDate).toISOString() : undefined,
+      end_date: endDate ? new Date(endDate).toISOString() : undefined,
+    };
+
+    try {
+      if (editingEvent) {
+        await httpClient.put(`/api/v1/admin/events/${editingEvent.id}`, payload);
+      } else {
+        await httpClient.post("/api/v1/admin/events", payload);
+      }
+      setIsModalOpen(false);
+      fetchEvents();
+    } catch (e) {
+      console.error("Lỗi lưu sự kiện:", e);
+      alert("Không thể lưu sự kiện. Vui lòng kiểm tra lại dữ liệu.");
+    }
+  };
+
+  const handleToggleActive = async (id: string) => {
+    try {
+      await httpClient.patch(`/api/v1/admin/events/${id}/toggle`);
+      fetchEvents();
+    } catch (e) {
+      console.error("Lỗi bật tắt trạng thái:", e);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa sự kiện này? Hành động này không thể hoàn tác.")) {
+      return;
+    }
+    try {
+      await httpClient.delete(`/api/v1/admin/events/${id}`);
+      fetchEvents();
+    } catch (e) {
+      console.error("Lỗi xóa sự kiện:", e);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-100 flex items-center gap-2.5">
+            <Megaphone className="text-indigo-400" size={24} /> Quản lý Sự kiện & Khuyến mãi
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">
+            Cấu hình danh sách banner hiển thị tại sảnh chính của CG Poker.
+          </p>
+        </div>
+        <button
+          onClick={openAddModal}
+          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-indigo-600/10 cursor-pointer"
+        >
+          <Plus size={16} /> Thêm sự kiện mới
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-4">
+        <input
+          type="text"
+          placeholder="Tìm tên sự kiện, nhãn..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-80"
+        />
+      </div>
+
+      {/* Events Table */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+        {isLoading ? (
+          <div className="p-12 text-center text-slate-500">Đang tải danh sách sự kiện...</div>
+        ) : events.length === 0 ? (
+          <div className="p-12 text-center text-slate-500">
+            Không tìm thấy sự kiện nào. Hãy click nút ở trên để tạo.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800 bg-slate-900/50 text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                  <th className="px-6 py-4">Nhãn & Icon</th>
+                  <th className="px-6 py-4">Thông tin sự kiện</th>
+                  <th className="px-6 py-4">Thời gian áp dụng</th>
+                  <th className="px-6 py-4">Trạng thái</th>
+                  <th className="px-6 py-4 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {events.map((event) => {
+                  const matchedIcon = ICON_PRESETS.find((i) => i.type === event.icon_type);
+                  return (
+                    <tr key={event.id} className="hover:bg-slate-800/20 transition-colors text-sm">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs rounded-full font-medium">
+                            {event.badge}
+                          </span>
+                          <span className="w-8 h-8 rounded-lg bg-slate-950 flex items-center justify-center border border-slate-850">
+                            {matchedIcon?.component || <Megaphone className="w-4 h-4 text-slate-400" />}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 max-w-sm">
+                        <div>
+                          <div className="font-semibold text-slate-200">{event.title}</div>
+                          <div className="text-xs text-slate-400 font-bold mt-0.5">{event.subtitle}</div>
+                          <div className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                            {event.description}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="space-y-1 text-xs text-slate-400">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-slate-500 w-8">Từ:</span>
+                            <span>
+                              {event.start_date
+                                ? new Date(event.start_date).toLocaleString("vi-VN")
+                                : "Bất đầu lập tức"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-slate-500 w-8">Đến:</span>
+                            <span>
+                              {event.end_date
+                                ? new Date(event.end_date).toLocaleString("vi-VN")
+                                : "Vô thời hạn"}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => handleToggleActive(event.id)}
+                          className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                            event.is_active
+                              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                              : "bg-slate-800 text-slate-500 border border-slate-700"
+                          }`}
+                        >
+                          {event.is_active ? "Hoạt động" : "Tạm ẩn"}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openEditModal(event)}
+                            className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-850 rounded-lg transition-colors cursor-pointer"
+                            title="Sửa"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(event.id)}
+                            className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-850 rounded-lg transition-colors cursor-pointer"
+                            title="Xóa"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Add / Edit Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl relative">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-800">
+              <h2 className="text-lg font-semibold text-slate-100">
+                {editingEvent ? "Chỉnh sửa sự kiện" : "Thêm sự kiện mới"}
+              </h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-xs font-semibold text-slate-400">Tiêu đề chính (Title)</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Weekly Freeroll $5,000 GTD"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-xs font-semibold text-slate-400">Tiêu đề phụ (Subtitle)</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Giải đấu miễn phí mỗi Chủ Nhật"
+                    value={subtitle}
+                    onChange={(e) => setSubtitle(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-xs font-semibold text-slate-400">Mô tả sự kiện</label>
+                  <textarea
+                    required
+                    rows={3}
+                    placeholder="Nhập thông tin mô tả chi tiết giải thưởng, điều kiện..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 resize-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-400">Nhãn (Badge)</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Sự Kiện Hot, Khuyến Mãi"
+                    value={badge}
+                    onChange={(e) => setBadge(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-400">Icon đại diện</label>
+                  <select
+                    value={iconType}
+                    onChange={(e) => setIconType(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                  >
+                    {ICON_PRESETS.map((i) => (
+                      <option key={i.type} value={i.type}>
+                        {i.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-xs font-semibold text-slate-400">Template màu nền banner</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {GRADIENT_PRESETS.map((p) => (
+                      <button
+                        key={p.name}
+                        type="button"
+                        onClick={() => setColorGradient(p.class)}
+                        className={`p-3 rounded-lg text-left text-xs font-semibold transition-all border ${
+                          colorGradient === p.class
+                            ? "border-indigo-500 bg-slate-850/50"
+                            : "border-slate-850 bg-slate-950 hover:bg-slate-850/20"
+                        }`}
+                      >
+                        <div className="font-medium text-slate-300">{p.name}</div>
+                        <div className={`h-2 rounded mt-1 bg-gradient-to-r ${p.class}`} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 col-span-2">
+                  <label className="text-xs font-semibold text-slate-400">Đường dẫn hành động (Action Link - Tùy chọn)</label>
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: /poker-game hoặc https://..."
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-400">Thời gian bắt đầu</label>
+                  <input
+                    type="datetime-local"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-400">Thời gian kết thúc</label>
+                  <input
+                    type="datetime-local"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="col-span-2 pt-2">
+                  <label className="flex items-center gap-2 cursor-pointer bg-slate-950 px-4 py-2.5 rounded-lg border border-slate-850/60 select-none">
+                    <input
+                      type="checkbox"
+                      checked={isActive}
+                      onChange={(e) => setIsActive(e.target.checked)}
+                      className="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 bg-slate-900 w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-xs font-semibold text-slate-300">
+                      Kích hoạt ngay (Hiển thị lên sảnh)
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="pt-4 flex gap-3 border-t border-slate-800 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-sm font-medium rounded-lg transition-colors border border-slate-750 cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-indigo-600/10 cursor-pointer"
+                >
+                  {editingEvent ? "Lưu thay đổi" : "Tạo sự kiện"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

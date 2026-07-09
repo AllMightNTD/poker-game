@@ -7,6 +7,7 @@ import { RefreshToken } from '../entities/refresh_token.entity';
 import { User } from '../entities/user.entity';
 import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth/auth.service';
+import { PokerLobbyModule } from '../modules/poker-lobby.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AuthService } from './services/auth/auth.service';
     TypeOrmModule.forFeature([User, RefreshToken]),
     PassportModule.register({ defaultStrategy: 'facebook' }),
     MailModule,
+    PokerLobbyModule,
   ],
   providers: [AuthService],
   controllers: [AuthController],

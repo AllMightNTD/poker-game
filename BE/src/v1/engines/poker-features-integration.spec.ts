@@ -158,6 +158,7 @@ class MockPokerStateService {
 
 import { JwtService } from '@nestjs/jwt';
 import { PokerLobbyGateway } from '../gateways/poker-lobby.gateway';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('Poker Integrated Advanced Features', () => {
   let gameService: PokerGameService;
@@ -175,6 +176,7 @@ describe('Poker Integrated Advanced Features', () => {
         { provide: PokerStateService, useClass: MockPokerStateService },
         { provide: PokerLobbyService, useValue: { leaveRoom: jest.fn() } },
         { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 

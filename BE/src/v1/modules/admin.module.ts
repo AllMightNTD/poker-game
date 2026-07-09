@@ -8,6 +8,7 @@ import { AdminController } from '../admin/controllers/admin.controller';
 import { AdminHandsController } from '../admin/controllers/admin-hands.controller';
 import { AdminRevenueController } from '../admin/controllers/admin-revenue.controller';
 import { AdminSystemController } from '../admin/controllers/admin-system.controller';
+import { AdminEventsController } from '../admin/controllers/admin-events.controller';
 import { AdminAuditLogsService } from '../admin/services/admin-audit-logs.service';
 import { AdminTablesService } from '../admin/services/admin-tables.service';
 import { AdminTransactionsService } from '../admin/services/admin-transactions.service';
@@ -16,6 +17,7 @@ import { AdminWalletsService } from '../admin/services/admin-wallets.service';
 import { AdminHandsService } from '../admin/services/admin-hands.service';
 import { AdminRevenueService } from '../admin/services/admin-revenue.service';
 import { AdminService } from '../admin/services/admin.service';
+import { AdminEventsService } from '../admin/services/admin-events.service';
 import { PokerLobbyModule } from './poker-lobby.module';
 
 @Module({
@@ -30,6 +32,7 @@ import { PokerLobbyModule } from './poker-lobby.module';
     AdminHandsController,
     AdminRevenueController,
     AdminSystemController,
+    AdminEventsController,
   ],
   providers: [
     AdminService,
@@ -40,6 +43,7 @@ import { PokerLobbyModule } from './poker-lobby.module';
     AdminAuditLogsService,
     AdminHandsService,
     AdminRevenueService,
+    AdminEventsService,
   ],
 })
 export class AdminModule {}
