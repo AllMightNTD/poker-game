@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { gamificationApi, LeaderboardEntry } from "@/features/gamification/api/gamification-api";
-import { useCurrentUser } from "@/core/providers/user-provider";
-import { Trophy, Medal, Crown } from "lucide-react";
-import { motion } from "framer-motion";
+"use client";
 
-export default function LeaderboardPage() {
+import { useCurrentUser, UserProvider } from "@/core/providers/user-provider";
+import { gamificationApi, LeaderboardEntry } from "@/features/gamification/api/gamification-api";
+import { motion } from "framer-motion";
+import { Crown, Medal, Trophy } from "lucide-react";
+import { useEffect, useState } from "react";
+
+function LeaderboardContent() {
   const { currentUser } = useCurrentUser();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +41,7 @@ export default function LeaderboardPage() {
   return (
     <div className="min-h-screen bg-[#0F172A] text-slate-200 py-12 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto space-y-8">
-        
+
         <div className="text-center space-y-4">
           <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500 flex items-center justify-center gap-4">
             <Trophy className="text-amber-400 w-10 h-10" />
@@ -47,7 +49,7 @@ export default function LeaderboardPage() {
             <Trophy className="text-amber-400 w-10 h-10" />
           </h1>
           <p className="text-slate-400">Top players by total chips won.</p>
-          
+
           <div className="inline-flex bg-slate-900 rounded-lg p-1 border border-slate-800">
             <button
               onClick={() => setType('weekly')}
@@ -81,7 +83,7 @@ export default function LeaderboardPage() {
               </thead>
               <tbody>
                 {entries.map((entry, idx) => (
-                  <motion.tr 
+                  <motion.tr
                     key={entry.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -94,6 +96,7 @@ export default function LeaderboardPage() {
                     <td className="py-4 px-6 font-bold text-white flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-800 flex-shrink-0">
                         {entry.user?.avatar ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
                           <img src={entry.user.avatar} alt="Avatar" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-xs">👤</div>
@@ -123,5 +126,13 @@ export default function LeaderboardPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LeaderboardPage() {
+  return (
+    <UserProvider>
+      <LeaderboardContent />
+    </UserProvider>
   );
 }

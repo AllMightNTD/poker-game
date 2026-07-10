@@ -8,7 +8,7 @@ import { PlayerStatsService } from '../services/player-stats.service';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class GamificationController {
-  constructor(private readonly statsService: PlayerStatsService) { }
+  constructor(private readonly statsService: PlayerStatsService) {}
 
   @Get('me/stats')
   async getMyStats(@Req() req) {

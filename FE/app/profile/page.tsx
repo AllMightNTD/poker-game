@@ -1,11 +1,13 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import { gamificationApi, PlayerStats, Achievement } from "@/features/gamification/api/gamification-api";
-import { useCurrentUser } from "@/core/providers/user-provider";
+import { UserProvider, useCurrentUser } from "@/core/providers/user-provider";
 import { LevelBadge } from "../poker-game/table/[id]/components/ui/LevelBadge";
 import { Coins, Trophy, Swords, Zap, Star } from "lucide-react";
 import { motion } from "framer-motion";
 
-export default function ProfilePage() {
+function ProfileContent() {
   const { currentUser } = useCurrentUser();
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -170,3 +172,11 @@ const StatCard = ({ icon, label, value }: { icon: React.ReactNode, label: string
     </div>
   </div>
 );
+
+export default function ProfilePage() {
+  return (
+    <UserProvider>
+      <ProfileContent />
+    </UserProvider>
+  );
+}

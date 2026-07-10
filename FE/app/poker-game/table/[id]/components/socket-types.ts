@@ -35,6 +35,8 @@ export interface TableStatePayload {
     current_bet: number | string;
     has_used_extra_time?: boolean;
     isBot?: boolean;
+    gamification_level?: string;
+    gamification_xp?: number;
   }>;
 }
 

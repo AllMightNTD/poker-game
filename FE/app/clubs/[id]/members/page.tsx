@@ -36,9 +36,10 @@ export default function ClubMembersPage() {
 
   useEffect(() => {
     if (id) {
-      // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleRoleChange = async (userId: string, newRole: 'AGENT' | 'MEMBER') => {

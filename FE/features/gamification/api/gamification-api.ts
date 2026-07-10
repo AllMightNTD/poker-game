@@ -35,13 +35,16 @@ export interface LeaderboardEntry {
 }
 
 export const gamificationApi = {
-  getMyStats: () => {
-    return httpClient<PlayerStats>("/gamification/me/stats");
+  getMyStats: async () => {
+    const res = await httpClient.get<PlayerStats>("/api/gamification/me/stats");
+    return res.data;
   },
-  getMyAchievements: () => {
-    return httpClient<Achievement[]>("/gamification/me/achievements");
+  getMyAchievements: async () => {
+    const res = await httpClient.get<Achievement[]>("/api/gamification/me/achievements");
+    return res.data;
   },
-  getLeaderboard: (type: 'weekly' | 'monthly') => {
-    return httpClient<LeaderboardEntry[]>(`/gamification/leaderboard?type=${type}`);
+  getLeaderboard: async (type: 'weekly' | 'monthly') => {
+    const res = await httpClient.get<LeaderboardEntry[]>(`/api/gamification/leaderboard?type=${type}`);
+    return res.data;
   }
 };
