@@ -1,13 +1,30 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
-  ApiTags,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
   ApiOperation,
-  ApiQuery,
   ApiParam,
+  ApiQuery,
   ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
+import { AdminGuard } from '../admin/guards/admin.guard';
 import { BlogsService } from './blogs.service';
+import { CreateBlogDto, UpdateBlogDto } from './dto/blog.dto';
 
+// ---------------------------------------------------------------------------
+// Public endpoints — no authentication required
+// ---------------------------------------------------------------------------
 @ApiTags('📰 Blogs')
 @Controller('blogs')
 export class BlogsController {
@@ -15,7 +32,7 @@ export class BlogsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Danh sách bài viết',
+    summary: 'Danh sách bài viết (public)',
     description: `Lấy danh sách bài viết bằng **Cursor Pagination** hiệu suất cao.
 - Lần đầu gọi: không cần truyền \`cursor\`.
 - Lần tiếp: truyền \`next_cursor\` từ response trước vào param \`cursor\`.
@@ -25,9 +42,7 @@ export class BlogsController {
     name: 'cursor',
     required: false,
     type: String,
-    description:
-      'Cursor opaque token từ response trước (meta.next_cursor). Bỏ trống để bắt đầu từ đầu.',
-    example: 'MjAyNi0wNy0wNlQwNTowMDowMC4wMDBaX191dWlkNDU2',
+    description: 'Cursor opaque token từ response trước (meta.next_cursor).',
   })
   @ApiQuery({
     name: 'limit',
@@ -40,33 +55,6 @@ export class BlogsController {
     name: 'category',
     required: false,
     enum: ['Strategy', 'Tournament', 'News', 'Lifestyle'],
-    description: 'Lọc theo thể loại bài viết',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Danh sách bài viết + cursor cho trang tiếp theo',
-    schema: {
-      example: {
-        data: [
-          {
-            id: 'uuid',
-            title: 'Master the River Bet',
-            slug: 'master-the-river-bet',
-            thumbnail: 'https://images.unsplash.com/photo-xxx',
-            excerpt: 'The river is where fortunes are made...',
-            category: 'Strategy',
-            tags: ['bluff', 'river', 'advanced'],
-            views_count: 4231,
-            created_at: '2026-07-06T05:00:00.000Z',
-          },
-        ],
-        meta: {
-          limit: 12,
-          has_next_page: true,
-          next_cursor: 'MjAyNi0wNy0wNlQwNTowMDowMC4wMDBaX191dWlkNDU2',
-        },
-      },
-    },
   })
   async findAll(
     @Query('cursor') cursor?: string,
@@ -76,37 +64,92 @@ export class BlogsController {
     return this.blogsService.findAll({ cursor, limit, category });
   }
 
+  // ---------------------------------------------------------------------------
+  // Admin CRUD endpoints — AdminGuard required
+  // ---------------------------------------------------------------------------
+  @Get('admin/all')
+  @UseGuards(AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '[Admin] Danh sách tất cả bài viết (kể cả chưa xuất bản)',
+  })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'category', required: false, type: String })
+  async adminFindAll(
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+    @Query('category') category?: string,
+  ) {
+    return this.blogsService.adminFindAll({ cursor, limit, category });
+  }
+
+  @Post('admin')
+  @UseGuards(AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '[Admin] Tạo bài viết mới' })
+  @ApiResponse({ status: 201, description: 'Bài viết đã được tạo thành công' })
+  async create(@Body() dto: CreateBlogDto, @Request() req) {
+    const adminId = req.admin?.sub ?? 'system';
+    return this.blogsService.create(dto, adminId);
+  }
+
+  @Put('admin/:id')
+  @UseGuards(AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '[Admin] Cập nhật bài viết theo ID' })
+  @ApiParam({ name: 'id', type: String, description: 'Blog UUID' })
+  async update(@Param('id') id: string, @Body() dto: UpdateBlogDto) {
+    return this.blogsService.update(id, dto);
+  }
+
+  @Delete('admin/:id')
+  @UseGuards(AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '[Admin] Xóa bài viết theo ID' })
+  @ApiParam({ name: 'id', type: String, description: 'Blog UUID' })
+  async delete(@Param('id') id: string) {
+    return this.blogsService.delete(id);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Hand History endpoints (public GET, POST ai-coach requires nothing extra)
+  // ---------------------------------------------------------------------------
+  @Get('hands/:id')
+  @ApiOperation({
+    summary: 'Chi tiết ván bài (Hand History Export)',
+    description:
+      'Trả về toàn bộ thông tin ván bài: community cards, danh sách người chơi, lịch sử hành động. Dùng cho Hand Replayer trên Blog.',
+  })
+  @ApiParam({ name: 'id', type: String, description: 'GameHand ID' })
+  async getHandDetail(@Param('id') id: string) {
+    return this.blogsService.getHandDetail(id);
+  }
+
+  @Post('hands/:id/ai-coach')
+  @ApiOperation({
+    summary: 'AI Coach – Phân tích chiến thuật ván bài bằng Gemini',
+    description:
+      'Gọi Gemini API để bình luận từng vòng cược và đưa ra nhận xét chiến thuật.',
+  })
+  @ApiParam({ name: 'id', type: String, description: 'GameHand ID' })
+  async getAiCoach(@Param('id') id: string) {
+    return this.blogsService.getAiCoachAnalysis(id);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public — by slug (MUST be last to avoid "admin" being captured as a slug)
+  // ---------------------------------------------------------------------------
   @Get(':slug')
   @ApiOperation({
-    summary: 'Chi tiết bài viết',
+    summary: 'Chi tiết bài viết (public)',
     description:
       'Lấy nội dung đầy đủ của một bài viết theo slug. Tự động tăng `views_count` mỗi lần gọi.',
   })
   @ApiParam({
     name: 'slug',
     type: String,
-    description: 'URL-friendly identifier của bài viết',
     example: 'master-the-river-bet-1720234567890',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Chi tiết bài viết đầy đủ',
-    schema: {
-      example: {
-        id: 'uuid',
-        title: 'Master the River Bet',
-        slug: 'master-the-river-bet',
-        thumbnail: 'https://images.unsplash.com/photo-xxx',
-        content: '<h2>Introduction</h2><p>The river...</p>',
-        excerpt: 'The river is where fortunes are made...',
-        category: 'Strategy',
-        tags: ['bluff', 'river', 'advanced'],
-        author_id: 'user-uuid',
-        views_count: 4232,
-        created_at: '2026-07-06T05:00:00.000Z',
-        updated_at: '2026-07-06T05:00:00.000Z',
-      },
-    },
   })
   @ApiResponse({
     status: 404,

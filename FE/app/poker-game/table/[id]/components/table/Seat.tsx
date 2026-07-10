@@ -12,10 +12,12 @@ import ActionBubble from './ActionBubble';
 import BetChipStack from './BetChipStack';
 import DealerButton from './DealerButton';
 import SeatAvatar from './SeatAvatar';
+import { LevelBadge } from '../ui/LevelBadge';
 import SeatCards from './SeatCards';
 import SeatInfo from './SeatInfo';
 import SeatPanel from './SeatPanel';
 import SeatTimerRing from './SeatTimerRing';
+import { PlayerHudPopup } from '../hud/PlayerHudPopup';
 
 // --- BuyInModal Logic ---
 interface BuyInModalProps {
@@ -151,6 +153,7 @@ const Seat: React.FC<SeatProps> = ({
   const { currentUser } = useCurrentUser();
 
   const [isBuyInOpen, setIsBuyInOpen] = useState(false);
+  const [isHudOpen, setIsHudOpen] = useState(false);
 
   const isOwner = currentUser?.id === ownerId;
   const heroSeatNumber = useMemo(() => players.find(p => p.isHero)?.seatIndex, [players]);
@@ -278,7 +281,10 @@ const Seat: React.FC<SeatProps> = ({
       >
 
         {/* Avatar + Timer Ring */}
-        <div className="relative shrink-0">
+        <div
+          onClick={() => setIsHudOpen(true)}
+          className="relative shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-200"
+        >
           {player.isActive && <SeatTimerRing endTime={actionEndTime} size={ringSize} maxTime={30000} />}
           <SeatAvatar
             avatarUrl={player.avatar || ''}
@@ -289,6 +295,18 @@ const Seat: React.FC<SeatProps> = ({
           />
           {/* Dealer Button */}
           {player.isDealer && <DealerButton />}
+          
+          {/* Gamification Level Badge */}
+          {(!player.isActive) && (
+            <div className="absolute -bottom-1 -right-2 scale-[0.5] origin-bottom-right z-30 pointer-events-none">
+              <LevelBadge 
+                level={player.gamification_level || 'bronze'} 
+                xp={player.gamification_xp || 0} 
+                showProgress={false} 
+                size="sm" 
+              />
+            </div>
+          )}
         </div>
 
         {/* Info Box */}
@@ -310,6 +328,13 @@ const Seat: React.FC<SeatProps> = ({
         />
 
       </SeatPanel>
+
+      {isHudOpen && (
+        <PlayerHudPopup
+          player={player}
+          onClose={() => setIsHudOpen(false)}
+        />
+      )}
     </div>
   );
 };

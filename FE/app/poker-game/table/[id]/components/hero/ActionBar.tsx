@@ -30,6 +30,9 @@ export const ActionBar: React.FC = () => {
     gameStage,
     muckOption,
     setMuckOption,
+    communityCards,
+    rabbitCards,
+    triggerRabbitHunt,
   } = usePokerGame();
 
   const allPlayers = players as PokerPlayer[];
@@ -84,17 +87,39 @@ export const ActionBar: React.FC = () => {
     </div>
   );
 
+  const canRabbitHunt = gameStage === "ended" && communityCards.length > 0 && communityCards.length < 5 && !rabbitCards;
+
   if (hero.isFolded) return (
-    <div className="w-full flex flex-col">
-      {muckOptionBar}
+    <div className="w-full flex flex-col gap-2">
+      <div className="flex justify-between items-center px-2">
+        {canRabbitHunt ? (
+          <button
+            onClick={triggerRabbitHunt}
+            className="px-3 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/50 rounded hover:bg-amber-500 hover:text-black transition text-xs font-bold"
+          >
+            🐇 Săn Thỏ (Rabbit Hunt)
+          </button>
+        ) : <div />}
+        {muckOptionBar}
+      </div>
       <TableStatusBanner variant="folded" />
     </div>
   );
   if (!hero.isActive) {
     const activePlayer = allPlayers.find((p) => p.isActive);
     return (
-      <div className="w-full flex flex-col">
-        {muckOptionBar}
+      <div className="w-full flex flex-col gap-2">
+        <div className="flex justify-between items-center px-2">
+          {canRabbitHunt ? (
+            <button
+              onClick={triggerRabbitHunt}
+              className="px-3 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/50 rounded hover:bg-amber-500 hover:text-black transition text-xs font-bold"
+            >
+              🐇 Săn Thỏ (Rabbit Hunt)
+            </button>
+          ) : <div />}
+          {muckOptionBar}
+        </div>
         <TableStatusBanner variant="waiting-turn" activePlayerName={activePlayer?.name} />
       </div>
     );

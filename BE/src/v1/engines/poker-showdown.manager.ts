@@ -413,9 +413,14 @@ export class PokerShowdownManager {
     }
 
     // 1. Khấu trừ Rake (mặc định 0 cho Home Game)
-    const dbTable = await PokerTable.findOne({ where: { id: roomId } });
+    const dbTable = await PokerTable.findOne({
+      where: { id: roomId },
+      relations: ['club'],
+    });
     const rakeRate =
-      dbTable && dbTable.rake_rate !== undefined ? dbTable.rake_rate : 0;
+      dbTable?.club?.club_rake_rate !== undefined
+        ? Number(dbTable.club.club_rake_rate)
+        : (dbTable?.rake_rate ?? 0);
     const rakeCap =
       dbTable && dbTable.rake_cap !== undefined
         ? BigInt(dbTable.rake_cap)
@@ -434,6 +439,8 @@ export class PokerShowdownManager {
 
     // 2. Trừ Rake từ số tiền thắng của người chơi
     const totalWinAmount = winnersLog.reduce((acc, w) => acc + w.win_amount, 0);
+    const userRakeShares: { userId: string; rakePaid: string }[] = [];
+
     if (rakeCalculated > BigInt(0) && totalWinAmount > 0) {
       const rakeNum = Number(rakeCalculated);
       let remainingRake = rakeNum;
@@ -443,6 +450,10 @@ export class PokerShowdownManager {
         if (i === winnersLog.length - 1) {
           w.win_amount -= remainingRake;
           w.pots[w.pots.length - 1].amount -= remainingRake; // Update the last pot amount for UI
+          userRakeShares.push({
+            userId: w.user_id,
+            rakePaid: remainingRake.toString(),
+          });
         } else {
           const rakeShare = Math.floor(
             (w.win_amount / totalWinAmount) * rakeNum,
@@ -450,6 +461,10 @@ export class PokerShowdownManager {
           w.win_amount -= rakeShare;
           w.pots[w.pots.length - 1].amount -= rakeShare;
           remainingRake -= rakeShare;
+          userRakeShares.push({
+            userId: w.user_id,
+            rakePaid: rakeShare.toString(),
+          });
         }
       }
     }
@@ -565,6 +580,7 @@ export class PokerShowdownManager {
         win_amount: w.win_amount,
         hand_name: w.hand_name || '',
       })),
+      userRakeShares,
       reconciliationSuccess,
       reconciliationDetails,
     });

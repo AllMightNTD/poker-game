@@ -219,4 +219,12 @@ export class CreateRoomDto {
   @Type(() => TournamentSettingsDto)
   @IsOptional()
   tournament_settings?: TournamentSettingsDto;
+
+  @ApiProperty({
+    description: 'ID của Club nếu tạo bàn trong Club',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  club_id?: string;
 }

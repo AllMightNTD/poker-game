@@ -7,7 +7,7 @@ import { PokerCard } from "../ui/PokerCard";
 import { audioEngine } from "../utils/audio";
 
 export const CommunityCards = memo(function CommunityCards() {
-  const { communityCards, ritBoard2Cards, cardDeckStyle, isBombPot } = usePokerGame();
+  const { communityCards, ritBoard2Cards, cardDeckStyle, isBombPot, rabbitCards } = usePokerGame();
 
   useEffect(() => {
     if (communityCards && communityCards.length > 0) {
@@ -57,8 +57,41 @@ export const CommunityCards = memo(function CommunityCards() {
               </motion.div>
             ))}
 
+            {/* Rabbit placeholders/cards */}
+            {rabbitCards && rabbitCards.length > 0 && Array.from({ length: emptyCount }).map((_, i) => {
+              const rabbitCard = rabbitCards[i];
+              if (rabbitCard) {
+                return (
+                  <motion.div
+                    key={`rabbit-${rabbitCard.rank}-${rabbitCard.suit}-${i}`}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.15 + 0.3 }}
+                    className="relative shadow-lg rounded-lg opacity-60 grayscale hover:grayscale-0 transition-all duration-300"
+                  >
+                    <PokerCard
+                      suit={rabbitCard.suit}
+                      rank={rabbitCard.rank}
+                      isFaceUp={true}
+                      size="lg"
+                      deckStyle={cardDeckStyle}
+                    />
+                    <div className="absolute -top-3 -right-3 text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded-full border border-slate-700 shadow shadow-black">
+                      🐇
+                    </div>
+                  </motion.div>
+                );
+              }
+              return (
+                <div
+                  key={`empty-${i}`}
+                  className="w-[48px] h-[68px] sm:w-[56px] sm:h-[80px] md:w-[72px] md:h-[102px] rounded-lg border border-[#FDF1BA]/20 bg-black/25 flex items-center justify-center backdrop-blur-sm transition-all"
+                />
+              );
+            })}
+
             {/* Empty placeholders */}
-            {Array.from({ length: emptyCount }).map((_, i) => (
+            {(!rabbitCards || rabbitCards.length === 0) && Array.from({ length: emptyCount }).map((_, i) => (
               <div
                 key={`empty-${i}`}
                 className="w-[48px] h-[68px] sm:w-[56px] sm:h-[80px] md:w-[72px] md:h-[102px] rounded-lg border border-[#FDF1BA]/20 bg-black/25 shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] flex items-center justify-center backdrop-blur-sm transition-all"

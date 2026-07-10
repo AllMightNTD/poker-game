@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { RouterModule, Routes } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { BlogsModule } from './blogs/blogs.module';
+import { ClubsModule } from './clubs/clubs.module';
 import { AdminModule } from './modules/admin.module';
 import { PokerLobbyModule } from './modules/poker-lobby.module';
 import { UserModule } from './user/user.module';
@@ -25,6 +26,10 @@ const routes: Routes = [
   {
     path: 'v1',
     module: AdminModule,
+  },
+  {
+    path: 'v1',
+    module: ClubsModule,
   },
 ];
 

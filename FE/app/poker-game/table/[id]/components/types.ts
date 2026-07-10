@@ -21,10 +21,13 @@ export interface Player {
   current_bet?: string;
   has_used_extra_time?: boolean;
   isBot?: boolean;
+  gamification_level?: string;
+  gamification_xp?: number;
 }
 
 export interface ChatMessage {
   id?: string;
+  senderId?: string;
   sender: string;
   text: string;
   isSystem?: boolean;
@@ -53,6 +56,8 @@ export interface PokerPlayer {
    * every consumer of `usePokerGame` populates it, but when present it is
    * used to correctly cap call/raise amounts to a real all-in. */
   stack?: string | number;
+  gamification_level?: string;
+  gamification_xp?: number;
 }
 
 export type GameStage = "waiting" | "preflop" | "flop" | "turn" | "river" | "showdown" | string;

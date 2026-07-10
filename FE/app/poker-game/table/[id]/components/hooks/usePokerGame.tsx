@@ -503,6 +503,8 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               isHero,
               isBot: s.isBot,
               cards: defaultCards,
+              gamification_level: s.gamification_level,
+              gamification_xp: s.gamification_xp,
             };
           });
         });
@@ -917,6 +919,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         ...prev,
         {
           id: `${data.user_id}-${data.timestamp}`,
+          senderId: data.user_id,
           sender: data.username,
           text: data.message,
           avatar: data.avatar,
@@ -933,6 +936,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       const newMsgs = data.history.map(item => ({
         id: `${item.user_id}-${item.timestamp}`,
+        senderId: item.user_id,
         sender: item.username,
         text: item.message,
         avatar: item.avatar,

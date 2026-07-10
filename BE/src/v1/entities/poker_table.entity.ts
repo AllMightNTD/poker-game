@@ -3,11 +3,14 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { AuditLog } from './audit_log.entity';
+import { Club } from './club.entity';
 
 @Entity('tables')
 export class PokerTable extends BaseEntity {
@@ -72,6 +75,10 @@ export class PokerTable extends BaseEntity {
   @Column({ type: 'boolean', default: false })
   auto_approve: boolean;
 
+  /** null = public table, set = club-only table */
+  @Column({ type: 'uuid', nullable: true })
+  club_id: string | null;
+
   @CreateDateColumn()
   created_at: Date;
 
@@ -79,5 +86,9 @@ export class PokerTable extends BaseEntity {
   updated_at: Date;
 
   @OneToMany(() => AuditLog, (auditLog) => auditLog.room)
-  auditLog: AuditLog;
+  auditLog: AuditLog[];
+
+  @ManyToOne(() => Club, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'club_id' })
+  club: Club | null;
 }

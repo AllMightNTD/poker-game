@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import httpClient from "@/core/api/http-client";
+import { PokerHandReplayer } from "./PokerHandReplayer";
 
 interface BlogPost {
   id: string;
@@ -94,6 +95,59 @@ export function BlogDetail() {
 
   const readingTime = Math.ceil((blog.content?.replace(/<[^>]+>/g, "").length ?? 0) / 1000);
 
+  // Parse [hand-replayer id="xxx"] shortcodes from content
+  function renderContent(raw: string): React.ReactNode[] {
+    const SHORTCODE_RE = /\[hand-replayer id="([^"]+)"\]/g;
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = SHORTCODE_RE.exec(raw)) !== null) {
+      // HTML chunk before this shortcode
+      const before = raw.slice(lastIndex, match.index);
+      if (before) {
+        parts.push(
+          <div
+            key={`html-${lastIndex}`}
+            className="prose prose-invert prose-lg max-w-none
+              prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-headings:text-white
+              prose-a:text-yellow-400 hover:prose-a:text-yellow-300
+              prose-p:text-slate-300 prose-p:leading-relaxed
+              prose-strong:text-white
+              prose-li:text-slate-300
+              prose-blockquote:border-yellow-500 prose-blockquote:text-slate-300 prose-blockquote:bg-white/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4
+              prose-code:bg-white/10 prose-code:text-yellow-300 prose-code:rounded prose-code:px-1 prose-code:text-sm"
+            dangerouslySetInnerHTML={{ __html: before }}
+          />
+        );
+      }
+      // Replayer embed
+      parts.push(<PokerHandReplayer key={`replayer-${match[1]}`} handId={match[1]} />);
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Remaining HTML after last shortcode
+    const tail = raw.slice(lastIndex);
+    if (tail) {
+      parts.push(
+        <div
+          key="html-tail"
+          className="prose prose-invert prose-lg max-w-none
+            prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-headings:text-white
+            prose-a:text-yellow-400 hover:prose-a:text-yellow-300
+            prose-p:text-slate-300 prose-p:leading-relaxed
+            prose-strong:text-white
+            prose-li:text-slate-300
+            prose-blockquote:border-yellow-500 prose-blockquote:text-slate-300 prose-blockquote:bg-white/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4
+            prose-code:bg-white/10 prose-code:text-yellow-300 prose-code:rounded prose-code:px-1 prose-code:text-sm"
+          dangerouslySetInnerHTML={{ __html: tail }}
+        />
+      );
+    }
+
+    return parts;
+  }
+
   return (
     <div className="min-h-screen bg-[#050B14] text-white">
       {/* Cinematic Hero */}
@@ -175,18 +229,9 @@ export function BlogDetail() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.15 }}
-          className="prose prose-invert prose-lg max-w-none
-            prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-headings:text-white
-            prose-a:text-yellow-400 hover:prose-a:text-yellow-300
-            prose-p:text-slate-300 prose-p:leading-relaxed
-            prose-strong:text-white
-            prose-li:text-slate-300
-            prose-blockquote:border-yellow-500 prose-blockquote:text-slate-300 prose-blockquote:bg-white/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4
-            prose-code:bg-white/10 prose-code:text-yellow-300 prose-code:rounded prose-code:px-1 prose-code:text-sm"
-          dangerouslySetInnerHTML={{
-            __html: blog.content || "<p>Content not available.</p>",
-          }}
-        />
+        >
+          {renderContent(blog.content || "<p>Content not available.</p>")}
+        </motion.div>
 
         {/* Tags section */}
         {blog.tags && blog.tags.length > 0 && (

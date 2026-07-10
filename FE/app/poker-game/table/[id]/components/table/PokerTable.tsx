@@ -10,6 +10,7 @@ import { PokerCard } from "../ui/PokerCard";
 import Seat from "./Seat";
 import { AnimationRegistryProvider, useAnimationRegistry } from "../effects/AnimationRegistryContext";
 import { useGameAnimation } from "../effects/useGameAnimation";
+import { ThrowableOverlay } from "../effects/ThrowableOverlay";
 
 const PokerTableInner = memo(function PokerTableInner() {
   const {
@@ -78,6 +79,7 @@ const PokerTableInner = memo(function PokerTableInner() {
         />
 
         {socket && <AnimationManager socket={socket} />}
+        <ThrowableOverlay />
 
         {/* Dealer Illustration */}
         <div className="absolute -top-[14%] left-1/2 -translate-x-1/2 w-[15%] md:w-[13%] aspect-[216/204] z-10 pointer-events-none drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)]">

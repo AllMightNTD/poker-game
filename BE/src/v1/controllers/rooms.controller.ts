@@ -102,6 +102,7 @@ export class RoomsController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('show_private') showPrivate?: string,
+    @Query('club_id') clubId?: string,
   ) {
     return this.lobbyService.getRooms({
       search_name: searchName,
@@ -110,6 +111,7 @@ export class RoomsController {
       page,
       limit,
       show_private: showPrivate,
+      club_id: clubId,
     });
   }
 

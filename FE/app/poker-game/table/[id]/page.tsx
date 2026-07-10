@@ -8,6 +8,7 @@ import { TableBackground } from "./components/layout/TableBackground";
 import { TableHeader } from "./components/layout/TableHeader";
 import { PokerTable } from "./components/table/PokerTable";
 import { Toast } from "./components/ui/Toast";
+import { RitVoteModal } from "./components/ui/RitVoteModal";
 
 // Lazily load large components/modals only when client-side environment is ready to reduce initial bundle size and speed up FCP
 const ChatDrawer = dynamic(() => import("./components/chat/ChatDrawer").then(mod => mod.ChatDrawer), {
@@ -28,6 +29,9 @@ function PokerTableRoom() {
     <div className="h-[100dvh] bg-slate-950 text-slate-100 flex flex-col overflow-hidden select-none font-sans">
       {/* 🔔 Toast */}
       <Toast />
+
+      {/* 🗳️ RIT Vote Modal */}
+      <RitVoteModal />
 
       {/* 🏆 Header */}
       <TableHeader />

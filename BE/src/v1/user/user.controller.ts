@@ -1,4 +1,4 @@
-import { Controller, Get, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Request, UseGuards } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -78,5 +78,18 @@ export class UserController {
       await wallet.save();
     }
     return { chips_balance: wallet.chips_balance };
+  }
+
+  @Get('/:id/stats')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Thống kê chỉ số Poker của người chơi',
+    description:
+      'Lấy các chỉ số Poker bao gồm VPIP, PFR, số ván và trận thắng lớn nhất.',
+  })
+  @ApiResponse({ status: 200, description: 'Chỉ số Poker' })
+  async getUserStats(@Param('id') userId: string) {
+    return this.userService.getUserPokerStats(userId);
   }
 }

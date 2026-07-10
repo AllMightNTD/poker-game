@@ -5,21 +5,22 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as crypto from 'crypto';
 import { Response } from 'express';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { withTransaction } from 'src/common/helpers/transaction.helper';
 import { UserStatus } from 'src/constants/user-status';
 import { DataSource } from 'typeorm';
 import { CreateRoomDto } from '../dto/create-room.dto';
 import { AuditLog } from '../entities/audit_log.entity';
+import { PromoEvent } from '../entities/event.entity';
 import { PokerTable } from '../entities/poker_table.entity';
 import { RoomAdminLog } from '../entities/room_admin_log.entity';
 import { SystemRevenue } from '../entities/system_revenue.entity';
 import { TableSession } from '../entities/table_session.entity';
 import { User } from '../entities/user.entity';
 import { Wallet } from '../entities/wallet.entity';
-import { PromoEvent } from '../entities/event.entity';
+import { PlayerStats } from '../gamification/entities/player-stats.entity';
 import { PokerStateService } from './poker-state.service';
 
 @Injectable()
@@ -188,6 +189,7 @@ export class PokerLobbyService {
     page?: number;
     limit?: number;
     show_private?: string;
+    club_id?: string;
   }) {
     const searchName = query.search_name || '';
     const blindCategory = query.blind_category || 'all';
@@ -197,7 +199,6 @@ export class PokerLobbyService {
         : null;
     const page = Math.max(1, Number(query.page || 1));
     const limit = Math.max(1, Number(query.limit || 20));
-    const showPrivate = query.show_private === 'true';
 
     // Xây dựng query builder
     const queryBuilder = PokerTable.createQueryBuilder('table');
@@ -220,11 +221,16 @@ export class PokerLobbyService {
       });
     }
 
-    if (!showPrivate) {
-      // Filter out PRIVATE rooms from the public lobby
+    // Filter out PRIVATE rooms from the public lobby, unless explicitly filtered by club_id
+    if (!query.club_id) {
       queryBuilder.andWhere(
         `(JSON_EXTRACT(table.custom_settings, '$.table_visibility') IS NULL OR JSON_UNQUOTE(JSON_EXTRACT(table.custom_settings, '$.table_visibility')) != 'PRIVATE')`,
       );
+    }
+    if (query.club_id) {
+      queryBuilder.andWhere('table.club_id = :clubId', {
+        clubId: query.club_id,
+      });
     }
 
     // Lọc theo Big Blind Category
@@ -446,6 +452,7 @@ export class PokerLobbyService {
         tournament_settings: tournamentSettings,
         status: 'waiting',
         is_active: true,
+        club_id: body.club_id || null,
       });
       await qr.manager.save(newTable);
 
@@ -586,6 +593,10 @@ export class PokerLobbyService {
         where: { id: userId },
       });
 
+      const playerStats = await queryRunner.manager.findOne(PlayerStats, {
+        where: { user_id: userId },
+      });
+
       await this.stateService.setSeat(body.room_id, body.seat_number, {
         user_id: userId,
         username:
@@ -600,6 +611,8 @@ export class PokerLobbyService {
         disconnected_at: '0',
         has_used_extra_time: '0',
         ip: body.ip || '127.0.0.1',
+        gamification_level: playerStats?.level || 'bronze',
+        gamification_xp: playerStats?.current_xp || 0,
       });
 
       // Tăng số lượng chip nạp lũy kế trên Redis

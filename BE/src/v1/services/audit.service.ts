@@ -14,6 +14,11 @@ export interface PokerHandCompletedEvent {
     win_amount: number;
     hand_name: string;
   }[];
+  userRakeShares?: {
+    amount: number;
+    userId: string;
+    rakePaid: string;
+  }[];
   reconciliationSuccess: boolean;
   reconciliationDetails?: any;
 }

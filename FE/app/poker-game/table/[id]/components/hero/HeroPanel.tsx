@@ -9,6 +9,7 @@ import { useCurrentUser } from "@/core/providers/user-provider";
 import { useResponsive } from "../hooks/useResponsive";
 import { PokerCard } from "../ui/PokerCard";
 import { CircularTimer } from "../ui/Timer";
+import { LevelBadge } from "../ui/LevelBadge";
 
 /* ── Simple hand evaluator ── */
 const RANK_VAL: Record<string, number> = {
@@ -136,6 +137,16 @@ export const HeroPanel: React.FC = () => {
           {isHeroActive && (
             <div className="absolute -bottom-2.5 -right-2.5">
               <CircularTimer value={timerVal} max={maxTimerVal} size="sm" />
+            </div>
+          )}
+          {!isHeroActive && (
+            <div className="absolute -bottom-1 -right-1 scale-[0.6]">
+              <LevelBadge 
+                level={hero.gamification_level || 'bronze'} 
+                xp={hero.gamification_xp || 0} 
+                showProgress={false} 
+                size="sm" 
+              />
             </div>
           )}
         </div>

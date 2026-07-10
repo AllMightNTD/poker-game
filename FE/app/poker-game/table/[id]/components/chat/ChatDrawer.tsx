@@ -27,10 +27,51 @@ const ChatContent = ({ onClose }: { onClose?: () => void }) => {
   const isLiftingScroll = React.useRef(false);
   const prevScrollHeightRef = React.useRef<number>(0);
 
-  // Sắp xếp tin nhắn theo created_at / timestamp tăng dần
+  const [mutedUserIds, setMutedUserIds] = React.useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    const loaded = localStorage.getItem("poker_muted_users");
+    if (loaded) {
+      try {
+        return JSON.parse(loaded);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  const loadMutedUsers = React.useCallback(() => {
+    if (typeof window === "undefined") return;
+    const loaded = localStorage.getItem("poker_muted_users");
+    if (loaded) {
+      try {
+        setMutedUserIds(JSON.parse(loaded));
+      } catch {
+        setMutedUserIds([]);
+      }
+    } else {
+      setMutedUserIds([]);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const handleMuteToggle = () => {
+      loadMutedUsers();
+    };
+    window.addEventListener("poker_mute_toggle", handleMuteToggle);
+    window.addEventListener("storage", handleMuteToggle);
+    return () => {
+      window.removeEventListener("poker_mute_toggle", handleMuteToggle);
+      window.removeEventListener("storage", handleMuteToggle);
+    };
+  }, [loadMutedUsers]);
+
+  // Sắp xếp tin nhắn theo created_at / timestamp tăng dần và lọc người chơi bị chặn
   const sortedMessages = React.useMemo(() => {
-    return [...chatMessages].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-  }, [chatMessages]);
+    return [...chatMessages]
+      .filter((msg) => !msg.senderId || !mutedUserIds.includes(msg.senderId))
+      .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+  }, [chatMessages, mutedUserIds]);
 
   // Xử lý sự kiện scroll lên đỉnh để load history
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {

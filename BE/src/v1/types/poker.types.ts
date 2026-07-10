@@ -39,6 +39,8 @@ export interface PokerSeatState {
   avatar_url?: string;
   rit_opt?: string; // 'always' | 'never' | 'ask'
   muck_cards?: string; // '1' or '0'
+  gamification_level?: string;
+  gamification_xp?: number;
   [key: string]: string | number | undefined;
 }
 

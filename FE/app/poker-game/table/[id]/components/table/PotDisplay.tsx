@@ -6,7 +6,7 @@ import { Coins } from "lucide-react";
 import { usePokerGame } from "../hooks/usePokerGame";
 
 export const PotDisplay = memo(function PotDisplay() {
-  const { pot, formatChipsVal, smallBlind, bigBlind } = usePokerGame();
+  const { pot, formatChipsVal, smallBlind, bigBlind, isBombPot } = usePokerGame();
 
   return (
     <motion.div
@@ -18,8 +18,9 @@ export const PotDisplay = memo(function PotDisplay() {
       {/* Golden Plaque */}
       <div className="relative w-[180px] md:w-[220px] bg-gradient-to-b from-[#E7C678] via-[#C99C3D] to-[#996D1D] rounded-lg border border-[#FDF1BA] p-[2px] shadow-[0_15px_30px_rgba(0,0,0,0.8),_inset_0_2px_4px_rgba(255,255,255,0.6)]">
         <div className="bg-gradient-to-b from-[#302010] to-[#1a1005] rounded-md border border-[#996D1D] flex flex-col items-center py-2 md:py-3 px-4 shadow-[inset_0_5px_15px_rgba(0,0,0,0.8)]">
-          <span className="text-[10px] md:text-xs font-black text-[#E7C678] uppercase tracking-[0.2em] mb-1 drop-shadow-md">
+          <span className="text-[10px] md:text-xs font-black text-[#E7C678] uppercase tracking-[0.2em] mb-1 drop-shadow-md flex items-center gap-2">
             Total Pot
+            {isBombPot && <span className="px-1.5 py-0.5 bg-red-600 rounded text-white text-[8px] animate-pulse">BOMB POT</span>}
           </span>
           <div className="flex items-center gap-2">
             <Coins size={14} className="text-[#FDF1BA]" />
