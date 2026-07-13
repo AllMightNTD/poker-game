@@ -8,7 +8,7 @@ dotenv.config({ path: '.env' });
 const config = {
   type: 'mysql',
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
+  port: parseInt(process.env.DB_PORT, 10) || 3306,
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
@@ -20,6 +20,7 @@ const config = {
   migrations: [__dirname + '/../database/migrations/**/*{.ts,.js}'],
   charset: 'utf8mb4',
   logging: false,
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
 };
 
 export default registerAs('database', () => config);
