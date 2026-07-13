@@ -36,7 +36,11 @@ import { AppV1Module } from './v1/modules/app-v1.module';
             port: configService.get<number>('REDIS_PORT', 6379),
             password: configService.get<string>('REDIS_PASSWORD'),
             tls: isUpstash ? {} : undefined,
+            // Upstash Free does not support noeviction policy — skip BullMQ check
+            enableReadyCheck: false,
+            maxRetriesPerRequest: null,
           },
+          defaultJobOptions: { removeOnComplete: true, removeOnFail: true },
         };
       },
     }),
