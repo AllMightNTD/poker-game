@@ -1,12 +1,14 @@
 "use client";
 
-import { BookOpen, Gamepad2, LayoutDashboard, LogOut, Settings, ShieldAlert, Users, WalletCards, History, BarChart3, Megaphone, Trophy } from "lucide-react";
+import { BookOpen, Gamepad2, LayoutDashboard, LogOut, Settings, ShieldAlert, Users, WalletCards, History, BarChart3, Megaphone, Trophy, Activity, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const SIDEBAR_ITEMS = [
   { name: "Tổng quan", href: "/backstage/dashboard", icon: LayoutDashboard },
   { name: "Người dùng & Bảo mật", href: "/backstage/users", icon: Users },
+  { name: "Cảnh báo gian lận", href: "/backstage/collusion", icon: ShieldAlert },
+  { name: "Kiểm toán bơm chip", href: "/backstage/finance/audit", icon: AlertTriangle },
   { name: "Tài chính & Giao dịch", href: "/backstage/finance", icon: WalletCards },
   { name: "Bàn Poker", href: "/backstage/tables", icon: Gamepad2 },
   { name: "Lịch sử ván bài", href: "/backstage/hands", icon: History },
@@ -14,7 +16,7 @@ const SIDEBAR_ITEMS = [
   { name: "Báo cáo doanh thu", href: "/backstage/revenue", icon: BarChart3 },
   { name: "Thông điệp hệ thống", href: "/backstage/system", icon: Megaphone },
   { name: "Quản lý sự kiện", href: "/backstage/events", icon: Trophy },
-  { name: "Nhật ký hệ thống", href: "/backstage/audit", icon: ShieldAlert },
+  { name: "Nhật ký hệ thống", href: "/backstage/audit", icon: Activity },
   { name: "Cài đặt hệ thống", href: "/backstage/settings", icon: Settings },
 ];
 
