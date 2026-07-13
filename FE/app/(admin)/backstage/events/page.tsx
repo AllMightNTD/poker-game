@@ -13,6 +13,10 @@ import {
   Zap,
 } from "lucide-react";
 import React, { useState, useEffect, useCallback } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { DateTimePicker } from "@/components/ui/DateTimePicker";
 
 interface PromoEvent {
   id: string;
@@ -42,6 +46,32 @@ const ICON_PRESETS = [
   { type: "Zap", label: "Tia Chớp Đỏ", component: <Zap className="text-rose-400 w-5 h-5" /> },
 ];
 
+const eventSchema = z.object({
+  title: z.string().min(1, "Tiêu đề không được để trống"),
+  subtitle: z.string().min(1, "Tiêu đề phụ không được để trống"),
+  description: z.string().min(1, "Mô tả không được để trống"),
+  badge: z.string().min(1, "Nhãn không được để trống"),
+  colorGradient: z.string(),
+  iconType: z.string(),
+  linkUrl: z.string().optional(),
+  isActive: z.boolean(),
+  startDate: z.string().optional().or(z.literal("")),
+  endDate: z.string().optional().or(z.literal("")),
+}).refine(
+  (data) => {
+    if (data.startDate && data.endDate) {
+      return new Date(data.endDate) > new Date(data.startDate);
+    }
+    return true;
+  },
+  {
+    message: "Thời gian kết thúc phải sau thời gian bắt đầu",
+    path: ["endDate"],
+  }
+);
+
+type EventFormValues = z.infer<typeof eventSchema>;
+
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<PromoEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,17 +79,30 @@ export default function AdminEventsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<PromoEvent | null>(null);
 
-  // Form states
-  const [title, setTitle] = useState("");
-  const [subtitle, setSubtitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [badge, setBadge] = useState("");
-  const [colorGradient, setColorGradient] = useState(GRADIENT_PRESETS[0].class);
-  const [iconType, setIconType] = useState("Trophy");
-  const [linkUrl, setLinkUrl] = useState("");
-  const [isActive, setIsActive] = useState(true);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<EventFormValues>({
+    resolver: zodResolver(eventSchema),
+    defaultValues: {
+      title: "",
+      subtitle: "",
+      description: "",
+      badge: "Sự Kiện Hot",
+      colorGradient: GRADIENT_PRESETS[0].class,
+      iconType: "Trophy",
+      linkUrl: "",
+      isActive: true,
+      startDate: "",
+      endDate: "",
+    },
+  });
+
+  const currentColorGradient = watch("colorGradient");
 
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
@@ -83,47 +126,50 @@ export default function AdminEventsPage() {
 
   const openAddModal = () => {
     setEditingEvent(null);
-    setTitle("");
-    setSubtitle("");
-    setDescription("");
-    setBadge("Sự Kiện Hot");
-    setColorGradient(GRADIENT_PRESETS[0].class);
-    setIconType("Trophy");
-    setLinkUrl("");
-    setIsActive(true);
-    setStartDate("");
-    setEndDate("");
+    reset({
+      title: "",
+      subtitle: "",
+      description: "",
+      badge: "Sự Kiện Hot",
+      colorGradient: GRADIENT_PRESETS[0].class,
+      iconType: "Trophy",
+      linkUrl: "",
+      isActive: true,
+      startDate: "",
+      endDate: "",
+    });
     setIsModalOpen(true);
   };
 
   const openEditModal = (event: PromoEvent) => {
     setEditingEvent(event);
-    setTitle(event.title);
-    setSubtitle(event.subtitle);
-    setDescription(event.description);
-    setBadge(event.badge);
-    setColorGradient(event.color_gradient);
-    setIconType(event.icon_type);
-    setLinkUrl(event.link_url || "");
-    setIsActive(event.is_active);
-    setStartDate(event.start_date ? event.start_date.substring(0, 16) : "");
-    setEndDate(event.end_date ? event.end_date.substring(0, 16) : "");
+    reset({
+      title: event.title,
+      subtitle: event.subtitle,
+      description: event.description,
+      badge: event.badge,
+      colorGradient: event.color_gradient,
+      iconType: event.icon_type,
+      linkUrl: event.link_url || "",
+      isActive: event.is_active,
+      startDate: event.start_date ? event.start_date.substring(0, 16) : "",
+      endDate: event.end_date ? event.end_date.substring(0, 16) : "",
+    });
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: EventFormValues) => {
     const payload = {
-      title,
-      subtitle,
-      description,
-      badge,
-      color_gradient: colorGradient,
-      icon_type: iconType,
-      link_url: linkUrl || undefined,
-      is_active: isActive,
-      start_date: startDate ? new Date(startDate).toISOString() : undefined,
-      end_date: endDate ? new Date(endDate).toISOString() : undefined,
+      title: data.title,
+      subtitle: data.subtitle,
+      description: data.description,
+      badge: data.badge,
+      color_gradient: data.colorGradient,
+      icon_type: data.iconType,
+      link_url: data.linkUrl || undefined,
+      is_active: data.isActive,
+      start_date: data.startDate ? new Date(data.startDate).toISOString() : undefined,
+      end_date: data.endDate ? new Date(data.endDate).toISOString() : undefined,
     };
 
     try {
@@ -310,61 +356,64 @@ export default function AdminEventsPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5 col-span-2">
                   <label className="text-xs font-semibold text-slate-400">Tiêu đề chính (Title)</label>
                   <input
                     type="text"
-                    required
                     placeholder="Ví dụ: Weekly Freeroll $5,000 GTD"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                    {...register("title")}
+                    className={`w-full bg-slate-950 border rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 ${
+                      errors.title ? "border-red-500" : "border-slate-850"
+                    }`}
                   />
+                  {errors.title && <p className="text-xs text-red-500">{errors.title.message}</p>}
                 </div>
 
                 <div className="space-y-1.5 col-span-2">
                   <label className="text-xs font-semibold text-slate-400">Tiêu đề phụ (Subtitle)</label>
                   <input
                     type="text"
-                    required
                     placeholder="Ví dụ: Giải đấu miễn phí mỗi Chủ Nhật"
-                    value={subtitle}
-                    onChange={(e) => setSubtitle(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                    {...register("subtitle")}
+                    className={`w-full bg-slate-950 border rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 ${
+                      errors.subtitle ? "border-red-500" : "border-slate-850"
+                    }`}
                   />
+                  {errors.subtitle && <p className="text-xs text-red-500">{errors.subtitle.message}</p>}
                 </div>
 
                 <div className="space-y-1.5 col-span-2">
                   <label className="text-xs font-semibold text-slate-400">Mô tả sự kiện</label>
                   <textarea
-                    required
                     rows={3}
                     placeholder="Nhập thông tin mô tả chi tiết giải thưởng, điều kiện..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 resize-none"
+                    {...register("description")}
+                    className={`w-full bg-slate-950 border rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 resize-none ${
+                      errors.description ? "border-red-500" : "border-slate-850"
+                    }`}
                   />
+                  {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-400">Nhãn (Badge)</label>
                   <input
                     type="text"
-                    required
                     placeholder="Ví dụ: Sự Kiện Hot, Khuyến Mãi"
-                    value={badge}
-                    onChange={(e) => setBadge(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                    {...register("badge")}
+                    className={`w-full bg-slate-950 border rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 ${
+                      errors.badge ? "border-red-500" : "border-slate-850"
+                    }`}
                   />
+                  {errors.badge && <p className="text-xs text-red-500">{errors.badge.message}</p>}
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-400">Icon đại diện</label>
                   <select
-                    value={iconType}
-                    onChange={(e) => setIconType(e.target.value)}
+                    {...register("iconType")}
                     className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
                   >
                     {ICON_PRESETS.map((i) => (
@@ -382,9 +431,9 @@ export default function AdminEventsPage() {
                       <button
                         key={p.name}
                         type="button"
-                        onClick={() => setColorGradient(p.class)}
+                        onClick={() => setValue("colorGradient", p.class)}
                         className={`p-3 rounded-lg text-left text-xs font-semibold transition-all border ${
-                          colorGradient === p.class
+                          currentColorGradient === p.class
                             ? "border-indigo-500 bg-slate-850/50"
                             : "border-slate-850 bg-slate-950 hover:bg-slate-850/20"
                         }`}
@@ -401,38 +450,28 @@ export default function AdminEventsPage() {
                   <input
                     type="text"
                     placeholder="Ví dụ: /poker-game hoặc https://..."
-                    value={linkUrl}
-                    onChange={(e) => setLinkUrl(e.target.value)}
+                    {...register("linkUrl")}
                     className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-400">Thời gian bắt đầu</label>
-                  <input
-                    type="datetime-local"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
+                <DateTimePicker
+                  label="Thời gian bắt đầu"
+                  {...register("startDate")}
+                  error={errors.startDate?.message}
+                />
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-400">Thời gian kết thúc</label>
-                  <input
-                    type="datetime-local"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
+                <DateTimePicker
+                  label="Thời gian kết thúc"
+                  {...register("endDate")}
+                  error={errors.endDate?.message}
+                />
 
                 <div className="col-span-2 pt-2">
                   <label className="flex items-center gap-2 cursor-pointer bg-slate-950 px-4 py-2.5 rounded-lg border border-slate-850/60 select-none">
                     <input
                       type="checkbox"
-                      checked={isActive}
-                      onChange={(e) => setIsActive(e.target.checked)}
+                      {...register("isActive")}
                       className="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 bg-slate-900 w-4 h-4 cursor-pointer"
                     />
                     <span className="text-xs font-semibold text-slate-300">
