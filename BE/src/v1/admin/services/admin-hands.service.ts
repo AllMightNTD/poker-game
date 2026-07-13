@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { GameHand } from '../../entities/game_hand.entity';
 import { HandPlayer } from '../../entities/hand_player.entity';
 import { HandAction } from '../../entities/hand_action.entity';
+import { ProvablyFairAudit } from '../../entities/provably_fair_audit.entity';
 import {
   decodeCursor,
   buildCursorPaginationResponse,
@@ -73,6 +74,10 @@ export class AdminHandsService {
       order: { action_order: 'ASC' },
     });
 
+    const provablyFair = await ProvablyFairAudit.findOne({
+      where: { hand_id: id },
+    });
+
     return {
       hand: {
         id: hand.id,
@@ -86,7 +91,23 @@ export class AdminHandsService {
         community_cards: hand.community_cards,
         started_at: hand.started_at,
         ended_at: hand.ended_at,
+        server_seed: hand.server_seed,
+        client_seed: hand.client_seed,
+        shuffled_deck: hand.shuffled_deck,
       },
+      provably_fair: provablyFair
+        ? {
+            id: provablyFair.id,
+            server_seed_hash: provablyFair.server_seed_hash,
+            encrypted_server_seed: provablyFair.encrypted_server_seed,
+            auth_tag: provablyFair.auth_tag,
+            client_seed: provablyFair.client_seed,
+            nonce: provablyFair.nonce,
+            deck_hash: provablyFair.deck_hash,
+            algorithm_version: provablyFair.algorithm_version,
+            revealed_at: provablyFair.revealed_at,
+          }
+        : null,
       players: players.map((p) => ({
         id: p.id,
         user_id: p.user_id,
