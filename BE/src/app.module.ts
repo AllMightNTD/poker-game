@@ -27,13 +27,18 @@ import { AppV1Module } from './v1/modules/app-v1.module';
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        connection: {
-          host: configService.get<string>('REDIS_HOST', 'localhost'),
-          port: configService.get<number>('REDIS_PORT', 6380), // thay 6379 thành 6380,
-          password: configService.get<string>('REDIS_PASSWORD'),
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const redisHost = configService.get<string>('REDIS_HOST', 'localhost');
+        const isUpstash = redisHost.includes('upstash.io');
+        return {
+          connection: {
+            host: redisHost,
+            port: configService.get<number>('REDIS_PORT', 6379),
+            password: configService.get<string>('REDIS_PASSWORD'),
+            tls: isUpstash ? {} : undefined,
+          },
+        };
+      },
     }),
 
     /** Throttler / Rate Limit */
@@ -49,8 +54,9 @@ import { AppV1Module } from './v1/modules/app-v1.module';
         ],
         storage: new ThrottlerStorageRedisService({
           host: configService.get<string>('REDIS_HOST', 'localhost'),
-          port: configService.get<number>('REDIS_PORT', 6380),
+          port: configService.get<number>('REDIS_PORT', 6379),
           password: configService.get<string>('REDIS_PASSWORD'),
+          tls: configService.get<string>('REDIS_HOST', '').includes('upstash.io') ? {} : undefined,
         }),
       }),
     }),
