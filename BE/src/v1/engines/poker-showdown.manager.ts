@@ -5,6 +5,7 @@ import { HandPlayer } from '../entities/hand_player.entity';
 import { PokerTable } from '../entities/poker_table.entity';
 import { SystemRevenue } from '../entities/system_revenue.entity';
 import { TableSession } from '../entities/table_session.entity';
+import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
 import { User } from '../entities/user.entity';
 import { PokerGameEngine } from './poker-game.engine';
 import { PokerGameService } from '../services/poker-game.service';
@@ -551,6 +552,22 @@ export class PokerShowdownManager {
 
     // totalPotAmount already has refund subtracted
 
+    // Decrypt the server seed for audit log and hand history
+    let serverSeedPlain = '';
+    if (tableState.encrypted_server_seed && tableState.auth_tag) {
+      try {
+        serverSeedPlain =
+          this.gameService.provablyFairService.decryptServerSeed(
+            tableState.encrypted_server_seed,
+            tableState.auth_tag,
+          );
+      } catch (err) {
+        this.gameService.logger.error(
+          `Failed to decrypt server seed for table ${roomId}: ${err.message}`,
+        );
+      }
+    }
+
     // 3. Lưu lịch sử GameHand vào DB
     const hand = new GameHand();
     hand.table_id = roomId;
@@ -561,11 +578,34 @@ export class PokerShowdownManager {
     hand.total_pot = totalPotAmount.toString();
     hand.rake_amount = rakeCalculated.toString();
     hand.hand_stage = (tableState.game_stage || 'preflop') as HandStage;
-    hand.server_seed = tableState.server_seed || null;
+    hand.server_seed = serverSeedPlain || null;
     hand.client_seed = tableState.client_seed || null;
     hand.shuffled_deck = tableState.shuffled_deck || null;
     hand.ended_at = new Date();
     await hand.save();
+
+    let nonce: number | null = null;
+    let serverSeedHash: string | null = null;
+
+    // Update the ProvablyFairAudit record to link the real hand ID and reveal the server seed
+    if (tableState.provably_fair_audit_id) {
+      try {
+        const audit = await ProvablyFairAudit.findOne({
+          where: { id: tableState.provably_fair_audit_id },
+        });
+        if (audit) {
+          audit.hand_id = hand.id;
+          audit.revealed_at = new Date();
+          await audit.save();
+          nonce = audit.nonce;
+          serverSeedHash = audit.server_seed_hash;
+        }
+      } catch (err) {
+        this.gameService.logger.error(
+          `Failed to update ProvablyFairAudit record: ${err.message}`,
+        );
+      }
+    }
 
     // Emit event
     this.gameService.eventEmitter.emit('poker.hand.completed', {
@@ -713,8 +753,10 @@ export class PokerShowdownManager {
           ? tableState.rit_board2_cards.split(',')
           : [],
       provably_fair: {
-        server_seed_plain: tableState.server_seed,
+        server_seed_plain: serverSeedPlain || null,
+        server_seed_hash: serverSeedHash || null,
         client_seed: tableState.client_seed,
+        nonce: nonce || null,
       },
     });
 

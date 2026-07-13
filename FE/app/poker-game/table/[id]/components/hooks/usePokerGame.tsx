@@ -21,6 +21,8 @@ interface PokerGameContextProps {
   setIsFullscreen: (v: boolean) => void;
   isSettingsOpen: boolean;
   setIsSettingsOpen: (v: boolean) => void;
+  isProvablyFairOpen: boolean;
+  setIsProvablyFairOpen: (v: boolean) => void;
   showChat: boolean;
   setShowChat: (v: boolean) => void;
   showHistory: boolean;
@@ -143,6 +145,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isProvablyFairOpen, setIsProvablyFairOpen] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -1138,6 +1141,8 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsFullscreen,
         isSettingsOpen,
         setIsSettingsOpen,
+        isProvablyFairOpen,
+        setIsProvablyFairOpen,
         showChat,
         setShowChat,
         showHistory,

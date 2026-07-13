@@ -11,34 +11,34 @@ import {
 } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Award,
   CheckCircle2,
-  Coins,
-  Plus,
-  User,
-  Settings,
-  Mail,
-  HelpCircle,
-  LogOut,
-  Play,
   ChevronRight,
+  Coins,
+  Compass,
+  Cpu,
+  HelpCircle,
+  Lock,
+  LogOut,
+  Mail,
+  Play,
+  Plus,
+  Settings,
   ShieldAlert,
   Signal,
-  Cpu,
-  Lock,
-  Compass,
   Trophy,
-  Award,
+  User,
   Wallet
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CreateTableModal } from "./components/CreateTableModal";
+import { EventBanner } from "./components/EventBanner";
+import { HeroBanner } from "./components/HeroBanner";
+import { LobbyWidgets } from "./components/LobbyWidgets";
 import { SearchFiltersBar } from "./components/SearchFiltersBar";
 import { TableCard } from "./components/TableCard";
-import { EventBanner } from "./components/EventBanner";
-import { LobbyWidgets } from "./components/LobbyWidgets";
 import { formatChips } from "./components/utils";
-import { HeroBanner } from "./components/HeroBanner";
 
 const DEFAULT_CHIPS_BALANCE = "50000000";
 
@@ -432,10 +432,10 @@ function PokerGameLobby() {
               color: s === "♥" || s === "♦" ? "#E23744" : "#F7EFDD",
             }}
           >
-              {s}
-            </span>
-          ))}
-        </div>
+            {s}
+          </span>
+        ))}
+      </div>
 
       {/* Top Premium Header Bar */}
       <header className="relative z-30 max-w-6xl mx-auto py-4 border-b border-white/5 flex items-center justify-between gap-4">
@@ -517,7 +517,7 @@ function PokerGameLobby() {
                       onClick={() => {
                         api.post("/api/v1/auth/logout").finally(() => {
                           localStorage.removeItem("token");
-                          router.push("/auth/login");
+                          router.push("/login");
                         });
                       }}
                       className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
@@ -542,9 +542,8 @@ function PokerGameLobby() {
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.9 }}
-              className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl border text-sm font-semibold backdrop-blur-md text-white ${
-                toast.type === "success" ? "bg-[#1b2b36]/95 border-[#F4B942]/40" : "bg-[#E23744]/95 border-[#E23744]"
-              }`}
+              className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl border text-sm font-semibold backdrop-blur-md text-white ${toast.type === "success" ? "bg-[#1b2b36]/95 border-[#F4B942]/40" : "bg-[#E23744]/95 border-[#E23744]"
+                }`}
             >
               {toast.type === "success" ? (
                 <CheckCircle2 size={18} className="shrink-0 text-[#F4B942]" />
@@ -583,21 +582,19 @@ function PokerGameLobby() {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setQpGameType("NLH")}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${
-                    qpGameType === "NLH"
-                      ? "bg-[#F4B942] border-[#F4B942] text-[#142019] shadow-md shadow-[#F4B942]/5"
-                      : "bg-[#08121a]/80 border-white/5 text-[#F7EFDD]/60 hover:text-white"
-                  }`}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${qpGameType === "NLH"
+                    ? "bg-[#F4B942] border-[#F4B942] text-[#142019] shadow-md shadow-[#F4B942]/5"
+                    : "bg-[#08121a]/80 border-white/5 text-[#F7EFDD]/60 hover:text-white"
+                    }`}
                 >
                   Texas Hold&apos;em
                 </button>
                 <button
                   onClick={() => setQpGameType("PLO")}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${
-                    qpGameType === "PLO"
-                      ? "bg-[#F4B942] border-[#F4B942] text-[#142019] shadow-md shadow-[#F4B942]/5"
-                      : "bg-[#08121a]/80 border-white/5 text-[#F7EFDD]/60 hover:text-white"
-                  }`}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${qpGameType === "PLO"
+                    ? "bg-[#F4B942] border-[#F4B942] text-[#142019] shadow-md shadow-[#F4B942]/5"
+                    : "bg-[#08121a]/80 border-white/5 text-[#F7EFDD]/60 hover:text-white"
+                    }`}
                 >
                   Omaha PLO
                 </button>
@@ -614,11 +611,10 @@ function PokerGameLobby() {
                   <button
                     key={st.id}
                     onClick={() => setQpStake(st.id)}
-                    className={`py-1.5 px-1 rounded-lg text-[10px] font-bold transition-all border ${
-                      qpStake === st.id
-                        ? "bg-[#F4B942]/20 border-[#F4B942] text-[#F4B942]"
-                        : "bg-[#08121a]/50 border-white/5 text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
-                    }`}
+                    className={`py-1.5 px-1 rounded-lg text-[10px] font-bold transition-all border ${qpStake === st.id
+                      ? "bg-[#F4B942]/20 border-[#F4B942] text-[#F4B942]"
+                      : "bg-[#08121a]/50 border-white/5 text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
+                      }`}
                   >
                     {st.label}
                   </button>
@@ -642,9 +638,8 @@ function PokerGameLobby() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab("cash")}
-              className={`pb-3 px-4 text-sm font-black uppercase tracking-wider relative transition-all cursor-pointer ${
-                activeTab === "cash" ? "text-[#F4B942]" : "text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
-              }`}
+              className={`pb-3 px-4 text-sm font-black uppercase tracking-wider relative transition-all cursor-pointer ${activeTab === "cash" ? "text-[#F4B942]" : "text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
+                }`}
             >
               Cash Game
               {activeTab === "cash" && (
@@ -654,9 +649,8 @@ function PokerGameLobby() {
 
             <button
               onClick={() => setActiveTab("private")}
-              className={`pb-3 px-4 text-sm font-black uppercase tracking-wider relative transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === "private" ? "text-[#F4B942]" : "text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
-              }`}
+              className={`pb-3 px-4 text-sm font-black uppercase tracking-wider relative transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "private" ? "text-[#F4B942]" : "text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
+                }`}
             >
               <Lock size={13} />
               Phòng Riêng Tư
@@ -779,11 +773,10 @@ function PokerGameLobby() {
                               <button
                                 onClick={() => joinTableMutation.mutate(table)}
                                 disabled={isFull}
-                                className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                  isFull
-                                    ? "bg-[#08121a]/60 text-[#F7EFDD]/30 border border-white/5 cursor-not-allowed"
-                                    : "bg-gradient-to-r from-[#F4B942] to-[#E0942A] hover:brightness-110 text-[#142019]"
-                                }`}
+                                className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${isFull
+                                  ? "bg-[#08121a]/60 text-[#F7EFDD]/30 border border-white/5 cursor-not-allowed"
+                                  : "bg-gradient-to-r from-[#F4B942] to-[#E0942A] hover:brightness-110 text-[#142019]"
+                                  }`}
                               >
                                 {isFull ? "Bàn đầy" : "Vào chơi"}
                               </button>
@@ -809,7 +802,7 @@ function PokerGameLobby() {
               <span className="text-[#E23744]/45 hover:text-[#E23744]/75 transition-colors cursor-default">♦</span>
               <span className="text-white/30 hover:text-white/50 transition-colors cursor-default">♣</span>
             </div>
-            <h3 
+            <h3
               className="text-xl font-medium text-[#F7EFDD] relative z-10"
               style={{ fontFamily: "'Fraunces', Georgia, serif" }}
             >

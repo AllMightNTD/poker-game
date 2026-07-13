@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, X, Eye, EyeOff, Shield, Users, Timer } from "lucide-react";
+import { Eye, EyeOff, Plus, Shield, Timer, Users, X } from "lucide-react";
 import React, { useState } from "react";
 
 interface CreateTableModalProps {
@@ -343,9 +343,8 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
                         className="w-full bg-[#08121a] border border-white/10 rounded-xl py-2.5 pl-3 pr-8 text-sm text-[#F7EFDD] focus:outline-none focus:border-[#F4B942]/60 appearance-none cursor-pointer"
                       >
                         <option value={0}>Không giới hạn</option>
-                        <option value={5}>Tối đa 5 người</option>
-                        <option value={10}>Tối đa 10 người</option>
-                        <option value={20}>Tối đa 20 người</option>
+                        <option value={5}>Tối đa 6 người</option>
+                        <option value={10}>Tối đa 9 người</option>
                       </select>
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#F7EFDD]/40 text-[10px]">▼</div>
                     </div>

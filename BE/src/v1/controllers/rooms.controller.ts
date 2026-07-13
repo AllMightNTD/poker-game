@@ -206,10 +206,27 @@ export class RoomsController {
     @Request() req,
     @Param('roomId') roomId: string,
     @Body()
-    body: { seat_number: number; display_name: string; buy_in_chips: number },
+    body: {
+      seat_number: number;
+      display_name: string;
+      buy_in_chips: number;
+      fingerprint?: string;
+    },
   ) {
     const userId = req.user.sub;
-    const result = await this.lobbyService.joinSeat(userId, roomId, body);
+    const ipAddress =
+      req.ip ||
+      req.headers['x-forwarded-for'] ||
+      req.socket?.remoteAddress ||
+      '';
+    const userAgent = req.headers['user-agent'] || '';
+    const result = await this.lobbyService.joinSeat(
+      userId,
+      roomId,
+      body,
+      ipAddress,
+      userAgent,
+    );
     if (result.auto_approved) {
       this.lobbyGateway.server.to(`table_${roomId}`).emit('user_joined_seat', {
         room_id: Number(roomId),

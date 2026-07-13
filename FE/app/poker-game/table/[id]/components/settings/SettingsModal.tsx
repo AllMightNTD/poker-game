@@ -50,6 +50,7 @@ export const SettingsModal = () => {
     setSoundEnabled,
     tableId,
     showToast,
+    setIsProvablyFairOpen,
   } = usePokerGame();
 
   return (
@@ -244,12 +245,30 @@ export const SettingsModal = () => {
               </div>
 
               {/* Info block */}
-              <div className="border-t border-slate-850 my-2 pt-3">
+              <div className="border-t border-slate-850 my-2 pt-3 space-y-3">
                 <div className="text-[10px] text-slate-500 leading-relaxed font-semibold">
                   ID bàn: <span className="font-mono text-slate-400 select-all">{tableId}</span>
                   <br />
                   Loại trò chơi: Texas Hold&apos;em No Limit Cash Game
                 </div>
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSettingsOpen(false);
+                    setIsProvablyFairOpen(true);
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-500/20 hover:border-emerald-500/40 transition-colors"
+                >
+                  <div className="flex items-center gap-2 text-left">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <div>
+                      <span className="text-xs font-bold text-emerald-400 block">Hệ thống Provably Fair</span>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wide">Cấu hình & Xác thực Hạt giống</span>
+                    </div>
+                  </div>
+                  <span className="text-emerald-500 text-xs font-black">➔</span>
+                </button>
               </div>
             </div>
 

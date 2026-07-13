@@ -1,13 +1,14 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { createHash, randomBytes, randomUUID } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { Server } from 'socket.io';
 import { GameHand } from '../entities/game_hand.entity';
 import { PokerTable } from '../entities/poker_table.entity';
 import { TableSession } from '../entities/table_session.entity';
-import { PokerGameEngine } from '../engines/poker-game.engine';
 import { PokerLobbyService } from './poker-lobby.service';
 import { PokerStateService } from './poker-state.service';
+import { ProvablyFairService } from './provably-fair.service';
+import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
 import { PokerBotManager } from '../engines/poker-bot.manager';
 import { PokerShowdownManager } from '../engines/poker-showdown.manager';
 import { PokerActionProcessor } from '../engines/poker-action.processor';
@@ -46,6 +47,7 @@ export class PokerGameService implements OnModuleDestroy {
     readonly lobbyService: PokerLobbyService,
     readonly stateService: PokerStateService,
     readonly eventEmitter: EventEmitter2,
+    readonly provablyFairService: ProvablyFairService,
   ) {
     this.startIdleCleanupInterval();
   }
@@ -900,10 +902,21 @@ export class PokerGameService implements OnModuleDestroy {
         }
       }
 
-      const serverSeed = randomBytes(32).toString('hex');
-      const serverSeedHash = createHash('sha256')
-        .update(serverSeed)
-        .digest('hex');
+      // 1. Get the last nonce for this table to calculate the next nonce
+      const lastAudit = await ProvablyFairAudit.findOne({
+        where: { table_id: roomId },
+        order: { created_at: 'DESC' },
+      });
+      const nonce = lastAudit ? lastAudit.nonce + 1 : 1;
+
+      // 2. Generate and hash the server seed
+      const serverSeed = this.provablyFairService.generateServerSeed();
+      const serverSeedHash =
+        this.provablyFairService.hashServerSeed(serverSeed);
+
+      // 3. Encrypt the server seed (AES-256-GCM)
+      const { encryptedSeed, authTag } =
+        this.provablyFairService.encryptServerSeed(serverSeed);
 
       let clientSeed = clientSeedOverride;
       if (!clientSeed) {
@@ -923,12 +936,33 @@ export class PokerGameService implements OnModuleDestroy {
         next_hand_bomb_pot: '',
       });
 
-      const shuffledDeck = PokerGameEngine.shuffleDeck(serverSeed, clientSeed);
+      // 4. Shuffle the deck using ChaCha20 seeded by Combined Final Seed
+      const shuffledDeck = this.provablyFairService.shuffleDeck(
+        serverSeed,
+        clientSeed,
+        nonce,
+      );
 
       const uniqueCardsInDeck = new Set(shuffledDeck);
       if (shuffledDeck.length !== 52 || uniqueCardsInDeck.size !== 52) {
         throw new Error(`LỖI HỆ THỐNG: Bộ bài bị trùng lặp.`);
       }
+
+      // Calculate Deck Hash
+      const deckHash = this.provablyFairService.calculateDeckHash(shuffledDeck);
+
+      // 5. Create a ProvablyFairAudit record (revealed_at remains null during the hand)
+      const audit = new ProvablyFairAudit();
+      audit.table_id = roomId;
+      audit.hand_id = '0'; // placeholder updated at showdown
+      audit.server_seed_hash = serverSeedHash;
+      audit.encrypted_server_seed = encryptedSeed;
+      audit.auth_tag = authTag;
+      audit.client_seed = clientSeed;
+      audit.nonce = nonce;
+      audit.deck_hash = deckHash;
+      audit.algorithm_version = 'ChaCha20-v1';
+      await audit.save();
 
       const sortedActivePlayers = [...activePlayers].sort((a, b) => {
         const distA =
@@ -990,7 +1024,10 @@ export class PokerGameService implements OnModuleDestroy {
         big_blind_seat: bbSeat,
         community_cards: communityCards,
         current_turn_seat: firstTurn,
-        server_seed: serverSeed,
+        encrypted_server_seed: encryptedSeed,
+        auth_tag: authTag,
+        provably_fair_nonce: nonce.toString(),
+        provably_fair_audit_id: audit.id,
         server_seed_hash: serverSeedHash,
         client_seed: clientSeed,
         hand_started_at: Date.now().toString(),
@@ -1025,6 +1062,7 @@ export class PokerGameService implements OnModuleDestroy {
         big_blind_seat: bbSeat,
         server_seed_hash: serverSeedHash,
         client_seed: clientSeed,
+        nonce: nonce,
         is_bomb_pot: isBombPot,
         community_cards: communityCards ? communityCards.split(',') : [],
       });

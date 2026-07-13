@@ -20,6 +20,9 @@ const HistoryDrawer = dynamic(() => import("./components/chat/HistoryDrawer").th
 const SettingsModal = dynamic(() => import("./components/settings/SettingsModal").then(mod => mod.SettingsModal), {
   ssr: false,
 });
+const ProvablyFairModal = dynamic(() => import("./components/settings/ProvablyFairModal").then(mod => mod.ProvablyFairModal), {
+  ssr: false,
+});
 const SitRequestModal = dynamic(() => import("./components/settings/SitRequestModal").then(mod => mod.SitRequestModal), {
   ssr: false,
 });
@@ -62,6 +65,9 @@ function PokerTableRoom() {
 
       {/* ⚙️ Settings Modal */}
       <SettingsModal />
+
+      {/* 🛡️ Provably Fair Modal */}
+      <ProvablyFairModal />
 
       {/* 🙋‍♂️ Sit Requests Modal */}
       <SitRequestModal />
