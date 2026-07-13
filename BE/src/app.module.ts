@@ -1,16 +1,20 @@
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { BullModule } from '@nestjs/bullmq';
 import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import databaseConfig from './config/database';
 import mailConfig from './config/mail.config';
 import { SeedModule } from './database/seed/seed.module';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { MailModule } from './mail/mail.module';
 import { AppV1Module } from './v1/modules/app-v1.module';
+
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
@@ -29,6 +33,25 @@ import { AppV1Module } from './v1/modules/app-v1.module';
           port: configService.get<number>('REDIS_PORT', 6380), // thay 6379 thành 6380,
           password: configService.get<string>('REDIS_PASSWORD'),
         },
+      }),
+    }),
+
+    /** Throttler / Rate Limit */
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        throttlers: [
+          {
+            ttl: 60000,
+            limit: 100,
+          },
+        ],
+        storage: new ThrottlerStorageRedisService({
+          host: configService.get<string>('REDIS_HOST', 'localhost'),
+          port: configService.get<number>('REDIS_PORT', 6380),
+          password: configService.get<string>('REDIS_PASSWORD'),
+        }),
       }),
     }),
 
@@ -52,6 +75,12 @@ import { AppV1Module } from './v1/modules/app-v1.module';
     MailModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

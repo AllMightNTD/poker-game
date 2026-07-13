@@ -28,6 +28,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.717.0",
     "@faker-js/faker": "^10.4.0",
+    "@nest-lab/throttler-storage-redis": "^1.2.0",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/bullmq": "^10.1.1",
     "@nestjs/cache-manager": "^3.0.1",
@@ -41,6 +42,7 @@
     "@nestjs/platform-socket.io": "^10.4.20",
     "@nestjs/schedule": "^4.1.2",
     "@nestjs/swagger": "^8.1.0",
+    "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^10.0.2",
     "@nestjs/websockets": "^10.4.20",
     "@types/bcrypt": "^6.0.0",
@@ -68,6 +70,7 @@
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1",
     "typeorm": "^0.3.27",
+    "xss": "^1.0.15",
     "zingmp3-api-full": "^1.0.14"
   },
   "devDependencies": {

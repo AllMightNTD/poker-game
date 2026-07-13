@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import * as path from 'path';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/exceptions/http.exception.filter';
+import { XssValidationPipe } from './common/pipes/xss-validation.pipe';
 import { logEnvironmentVariables } from './config/env.config';
 import { flattenValidationErrors } from './global-enum';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
@@ -37,6 +38,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor());
 
   app.useGlobalPipes(
+    new XssValidationPipe(),
     new ValidationPipe({
       exceptionFactory: (validationErrors: ValidationError[] = []) => {
         const flattenedErrors = flattenValidationErrors(validationErrors);
