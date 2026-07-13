@@ -1,10 +1,10 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/axios";
-import { formatChips } from "./utils";
-import { Trophy, History, Users, Flame, ExternalLink, Award, CheckCircle2, ChevronRight } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { Award, CheckCircle2, ChevronRight, ExternalLink, Flame, History, Trophy, Users } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import React from "react";
+import { formatChips } from "./utils";
 
 interface LobbyWidgetsProps {
   onJoinTable: (table: any) => void;
@@ -22,6 +22,8 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
     },
     staleTime: 30_000,
   });
+
+  console.log("recentRooms", recentRooms);
 
   // 2. Fetch Leaderboard
   const { data: leaderboard = [] } = useQuery({
@@ -64,9 +66,9 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
 
             {recentRooms.length > 0 ? (
               <div className="space-y-2.5">
-                {recentRooms.slice(0, 3).map((room: any) => (
+                {recentRooms.slice(0, 3).map((room: any, idx: number) => (
                   <div
-                    key={room.room_id}
+                    key={`room-${room?.room_id || idx}-${idx}`}
                     onClick={() => router.push(`/poker-game/table/${room.room_id}`)}
                     className="flex justify-between items-center bg-[#08121a]/80 hover:bg-[#0c1b26] border border-white/5 hover:border-[#F4B942]/20 rounded-2xl p-3 transition-all cursor-pointer group"
                   >
@@ -175,9 +177,8 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
                       <div className="flex items-center gap-3 text-left">
                         {/* Rank Badge */}
                         <div
-                          className={`w-6 h-6 rounded-lg font-black text-xs flex items-center justify-center shrink-0 ${
-                            isTop3 ? rankColors[index] : "bg-white/5 text-[#F7EFDD]/60 border border-white/5"
-                          }`}
+                          className={`w-6 h-6 rounded-lg font-black text-xs flex items-center justify-center shrink-0 ${isTop3 ? rankColors[index] : "bg-white/5 text-[#F7EFDD]/60 border border-white/5"
+                            }`}
                         >
                           {user.rank}
                         </div>
@@ -243,9 +244,8 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
 
                     <div className="relative w-full h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          isDone ? "bg-emerald-500/80" : "bg-gradient-to-r from-[#F4B942] to-[#E0942A]"
-                        }`}
+                        className={`h-full rounded-full transition-all duration-500 ${isDone ? "bg-emerald-500/80" : "bg-gradient-to-r from-[#F4B942] to-[#E0942A]"
+                          }`}
                         style={{ width: `${(mission.progress / mission.target) * 100}%` }}
                       />
                     </div>

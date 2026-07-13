@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+
 import { PlayerStatsService } from './player-stats.service';
 import { PlayerStats } from '../entities/player-stats.entity';
 import { Achievement } from '../entities/achievement.entity';
@@ -79,13 +79,21 @@ describe('PlayerStatsService', () => {
           user_id: 'user1',
           total_chips_won: '1000',
           hands_played: 10,
-          user: { id: 'user1', user_name: 'Player 1', avatar_url: 'avatar1.png' },
+          user: {
+            id: 'user1',
+            user_name: 'Player 1',
+            avatar_url: 'avatar1.png',
+          },
         },
         {
           user_id: 'user2',
           total_chips_won: '500',
           hands_played: 5,
-          user: { id: 'user2', user_name: 'Player 2', avatar_url: 'avatar2.png' },
+          user: {
+            id: 'user2',
+            user_name: 'Player 2',
+            avatar_url: 'avatar2.png',
+          },
         },
       ];
       statsRepo.find.mockResolvedValue(mockTopStats);

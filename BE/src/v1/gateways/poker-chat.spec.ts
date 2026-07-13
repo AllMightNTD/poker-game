@@ -4,6 +4,7 @@ import { PokerGameService } from '../services/poker-game.service';
 import { PokerLobbyService } from '../services/poker-lobby.service';
 import { PokerStateService } from '../services/poker-state.service';
 import { PokerLobbyGateway } from './poker-lobby.gateway';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 // Mock DB Entities
 jest.mock('../entities/poker_table.entity', () => ({
@@ -89,7 +90,10 @@ describe('PokerLobbyGateway - Chat Realtime & History', () => {
         { provide: PokerGameService, useValue: { setServer: jest.fn() } },
         { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
       ],
-    }).compile();
+    })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     gateway = module.get<PokerLobbyGateway>(PokerLobbyGateway);
     stateService = module.get<PokerStateService>(PokerStateService) as any;

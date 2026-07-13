@@ -4,6 +4,12 @@ import { PokerLobbyService } from '../services/poker-lobby.service';
 import { PokerStateService } from '../services/poker-state.service';
 import { PokerGameEngine } from './poker-game.engine';
 import { PokerShowdownManager } from './poker-showdown.manager';
+import { ProvablyFairService } from '../services/provably-fair.service';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { AntiCollusionService } from '../services/anti-collusion.service';
+import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
+import { AuditLog } from '../entities/audit_log.entity';
+import { GameHand } from '../entities/game_hand.entity';
 
 // ── Mock Database Entities ──
 jest.mock('../entities/poker_table.entity', () => ({
@@ -32,6 +38,10 @@ jest.mock('../entities/game_hand.entity', () => {
   class MockGameHand {
     static findOne = jest.fn().mockResolvedValue(null);
     static create = jest.fn().mockImplementation(() => new MockGameHand());
+    static latestInstance: any = null;
+    constructor() {
+      MockGameHand.latestInstance = this;
+    }
     save = jest.fn().mockResolvedValue(this);
   }
   return { GameHand: MockGameHand };
@@ -64,13 +74,65 @@ jest.mock('../entities/system_revenue.entity', () => {
   return { SystemRevenue: MockSystemRevenue };
 });
 
-jest.mock('../entities/table_session.entity', () => ({
-  TableSession: { findOne: jest.fn() },
-}));
+jest.mock('../entities/table_session.entity', () => {
+  const mockQueryBuilder = {
+    where: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    getMany: jest.fn().mockResolvedValue([]),
+  };
+  return {
+    TableSession: {
+      findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+      createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+    },
+  };
+});
+
+jest.mock('../entities/audit_log.entity', () => {
+  const save = jest.fn().mockResolvedValue(true);
+  class MockAuditLog {
+    save = save;
+  }
+  (MockAuditLog as any).mockSave = save;
+  return { AuditLog: MockAuditLog };
+});
 
 jest.mock('../entities/user.entity', () => ({
   User: { findOne: jest.fn() },
 }));
+
+jest.mock('../entities/provably_fair_audit.entity', () => {
+  class MockProvablyFairAudit {
+    static findOne = jest.fn().mockImplementation(() => {
+      return Promise.resolve({
+        id: 'mock_audit_id',
+        table_id: 'mock_table_id',
+        server_seed_hash: 'mock_server_seed_hash',
+        encrypted_server_seed: 'iv_hex:seed_hex',
+        auth_tag: 'mock_auth_tag',
+        client_seed: 'mock_client_seed',
+        nonce: 1,
+        save: jest.fn().mockResolvedValue(true),
+      });
+    });
+    static create = jest.fn().mockImplementation(() => {
+      return {
+        id: 'mock_audit_id',
+        table_id: 'mock_table_id',
+        server_seed_hash: 'mock_server_seed_hash',
+        encrypted_server_seed: 'iv_hex:seed_hex',
+        auth_tag: 'mock_auth_tag',
+        client_seed: 'mock_client_seed',
+        nonce: 1,
+        save: jest.fn().mockResolvedValue(true),
+      };
+    });
+    save = jest.fn().mockResolvedValue(this);
+  }
+  return { ProvablyFairAudit: MockProvablyFairAudit };
+});
 
 // ── In-Memory state service mock to avoid Redis dependency ──
 class MockPokerStateService {
@@ -165,6 +227,8 @@ describe('Poker Integrated Advanced Features', () => {
   let showdownManager: PokerShowdownManager;
   let stateService: MockPokerStateService;
   let gateway: PokerLobbyGateway;
+  let antiCollusionService: AntiCollusionService;
+  let provablyFairService: ProvablyFairService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -173,16 +237,92 @@ describe('Poker Integrated Advanced Features', () => {
       providers: [
         PokerGameService,
         PokerLobbyGateway,
+        AntiCollusionService,
         { provide: PokerStateService, useClass: MockPokerStateService },
         { provide: PokerLobbyService, useValue: { leaveRoom: jest.fn() } },
         { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: ProvablyFairService,
+          useValue: {
+            generateServerSeed: jest.fn().mockReturnValue('mock_server_seed'),
+            hashServerSeed: jest.fn().mockReturnValue('mock_server_seed_hash'),
+            encryptServerSeed: jest.fn().mockReturnValue({
+              encryptedSeed: 'mock_encrypted_seed',
+              authTag: 'mock_auth_tag',
+            }),
+            decryptServerSeed: jest.fn().mockReturnValue('mock_server_seed'),
+            calculateDeckHash: jest.fn().mockReturnValue('mock_deck_hash'),
+            shuffleDeck: jest
+              .fn()
+              .mockImplementation(() => [
+                '2C',
+                '3C',
+                '4C',
+                '5C',
+                '6C',
+                '7C',
+                '8C',
+                '9C',
+                'TC',
+                'JC',
+                'QC',
+                'KC',
+                'AC',
+                '2D',
+                '3D',
+                '4D',
+                '5D',
+                '6D',
+                '7D',
+                '8D',
+                '9D',
+                'TD',
+                'JD',
+                'QD',
+                'KD',
+                'AD',
+                '2H',
+                '3H',
+                '4H',
+                '5H',
+                '6H',
+                '7H',
+                '8H',
+                '9H',
+                'TH',
+                'JH',
+                'QH',
+                'KH',
+                'AH',
+                '2S',
+                '3S',
+                '4S',
+                '5S',
+                '6S',
+                '7S',
+                '8S',
+                '9S',
+                'TS',
+                'JS',
+                'QS',
+                'KS',
+                'AS',
+              ]),
+          },
+        },
       ],
-    }).compile();
+    })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     gameService = module.get<PokerGameService>(PokerGameService);
     stateService = module.get<PokerStateService>(PokerStateService) as any;
     gateway = module.get<PokerLobbyGateway>(PokerLobbyGateway);
+    antiCollusionService =
+      module.get<AntiCollusionService>(AntiCollusionService);
+    provablyFairService = module.get<ProvablyFairService>(ProvablyFairService);
 
     gameService.server = {
       to: jest.fn().mockReturnThis(),
@@ -428,5 +568,185 @@ describe('Poker Integrated Advanced Features', () => {
     // Loser's card must be hidden (mucked)
     expect(loserHand.pocket_cards).toEqual([]);
     expect(loserHand.is_mucked).toBe(true);
+  });
+
+  // ── 5. TEST PROVABLY FAIR ──
+  it('[PROVABLY-FAIR] Ván đấu kết thúc -> Showdown/Fold -> Giải mã server seed, lưu trữ audit log và công khai trong event table:hand-ended', async () => {
+    const roomId = 'room_provably_fair';
+
+    // Mock findOne for ProvablyFairAudit to return a valid record
+    const auditSaveSpy = jest.fn().mockResolvedValue(true);
+    const mockAuditRecord = {
+      id: 'mock_audit_id',
+      table_id: roomId,
+      server_seed_hash: 'mock_server_seed_hash',
+      encrypted_server_seed: 'iv_hex:seed_hex',
+      auth_tag: 'mock_auth_tag',
+      client_seed: 'mock_client_seed',
+      nonce: 1,
+      save: auditSaveSpy,
+      server_seed_plain: undefined,
+    };
+
+    // Use imported ProvablyFairAudit
+    jest
+      .spyOn(ProvablyFairAudit, 'findOne')
+      .mockResolvedValue(mockAuditRecord as any);
+
+    // Mock decryptServerSeed to return plaintext
+    jest
+      .spyOn(provablyFairService, 'decryptServerSeed')
+      .mockReturnValue('decrypted_plain_server_seed');
+
+    // Setup active table state
+    await stateService.setTableState(roomId, {
+      game_stage: 'showdown',
+      total_pot: '1000',
+      community_cards: 'As,Ks,Qs,Js,2d',
+      encrypted_server_seed: 'iv_hex:seed_hex',
+      auth_tag: 'mock_auth_tag',
+      provably_fair_audit_id: 'mock_audit_id',
+      client_seed: 'mock_client_seed',
+    });
+
+    // 2 players showdown
+    await stateService.setAllSeats(roomId, [
+      {
+        seat_number: 1,
+        user_id: 'winner_id',
+        username: 'Winner',
+        status: 'active',
+        stack: '0',
+        total_contributed: '500',
+        muck_cards: '0',
+      },
+      {
+        seat_number: 2,
+        user_id: 'loser_id',
+        username: 'Loser',
+        status: 'active',
+        stack: '0',
+        total_contributed: '500',
+        muck_cards: '0',
+      },
+    ]);
+
+    await stateService.setPlayerCards(roomId, 'winner_id', ['Ac', 'Ad']);
+    await stateService.setPlayerCards(roomId, 'loser_id', ['3c', '4c']);
+
+    // Split pot
+    jest
+      .spyOn(PokerGameEngine, 'splitPot')
+      .mockReturnValue([
+        { amount: 1000, eligibleSeats: [1, 2], isUncalled: false },
+      ]);
+
+    // Let the showdown run, which triggers finalizeAndBroadcastHand
+    const testShowdownManager = new PokerShowdownManager(gameService);
+    await testShowdownManager.processShowdown(roomId);
+
+    // Check if the decrypted seed was published in table:hand-ended event
+    expect(gameService.server.to).toHaveBeenCalledWith(`table_${roomId}`);
+    const handEndedCall = (
+      gameService.server.emit as jest.Mock
+    ).mock.calls.find((call) => call[0] === 'table:hand-ended');
+
+    expect(handEndedCall).toBeDefined();
+    const payload = handEndedCall[1];
+
+    expect(payload.provably_fair).toBeDefined();
+    expect(payload.provably_fair.server_seed_plain).toBe(
+      'decrypted_plain_server_seed',
+    );
+    expect(payload.provably_fair.server_seed_hash).toBe(
+      'mock_server_seed_hash',
+    );
+    expect(payload.provably_fair.client_seed).toBe('mock_client_seed');
+    expect(payload.provably_fair.nonce).toBe(1);
+
+    // Verify GameHand and ProvablyFairAudit records were updated and saved
+    // Use imported GameHand
+    expect((GameHand as any).latestInstance.server_seed).toBe(
+      'decrypted_plain_server_seed',
+    );
+    expect(auditSaveSpy).toHaveBeenCalled();
+  });
+
+  // ── 6. TEST ANTI-COLLUSION ──
+  it('[ANTI-COLLUSION] Chặn người chơi tham gia bàn nếu Risk Score vượt quá ngưỡng 60 (ví dụ: Device Fingerprint trùng)', async () => {
+    const roomId = 'room_anti_collusion';
+
+    // Mock existing seats: Player A is seated with Device Fingerprint 'fingerprint_123'
+    await stateService.setAllSeats(roomId, [
+      {
+        seat_number: 1,
+        user_id: 'user_a',
+        username: 'PlayerA',
+        status: 'active',
+        stack: '1000',
+        ip: '192.168.1.10',
+        device_fingerprint: 'fingerprint_123',
+        user_agent: 'Mozilla/5.0',
+      },
+    ]);
+
+    // Calculate risk score for a new user B with same fingerprint
+    const risk = await antiCollusionService.calculateRiskScore(
+      'user_b',
+      roomId,
+      '192.168.1.50',
+      'Mozilla/5.0',
+      'fingerprint_123', // Same fingerprint
+    );
+
+    // Fingerprint match score is 40.
+    // Let's verify score calculation
+    expect(risk.score).toBeGreaterThanOrEqual(40);
+    expect(risk.reasons.some((r: string) => r.includes('Fingerprint'))).toBe(
+      true,
+    );
+
+    // Now test with SAME IP
+    const riskSameIp = await antiCollusionService.calculateRiskScore(
+      'user_b',
+      roomId,
+      '192.168.1.10', // Same IP
+      'Safari/5.0',
+      'fingerprint_different',
+    );
+
+    // IP match score is 30.
+    expect(riskSameIp.score).toBeGreaterThanOrEqual(30);
+    expect(
+      riskSameIp.reasons.some((r: string) => r.includes('IP Subnet')),
+    ).toBe(true);
+
+    // Now test with BOTH SAME IP and SAME Fingerprint -> Score should be 70 (> 60) -> Should block
+    const riskBlocked = await antiCollusionService.calculateRiskScore(
+      'user_b',
+      roomId,
+      '192.168.1.10',
+      'Mozilla/5.0',
+      'fingerprint_123',
+    );
+
+    expect(riskBlocked.score).toBeGreaterThanOrEqual(70);
+
+    // Spy on AuditLog save
+    // Use imported AuditLog
+    const logSaveSpy = (AuditLog as any).mockSave;
+    logSaveSpy.mockClear();
+
+    // Trigger logCollusionWarning
+    await antiCollusionService.logCollusionWarning(
+      'user_b',
+      roomId,
+      riskBlocked.score,
+      riskBlocked.reasons,
+      '192.168.1.10',
+      'Mozilla/5.0',
+    );
+
+    expect(logSaveSpy).toHaveBeenCalled();
   });
 });

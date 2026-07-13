@@ -277,6 +277,15 @@ export class AuthService {
       select: ['id', 'email', 'user_name', 'password', 'status'],
     });
 
+    const redis = this.pokerStateService.getRedisClient();
+    const lockoutKey = `lockout:${email}`;
+    const isLocked = await redis.get(lockoutKey);
+    if (isLocked) {
+      throw new UnauthorizedException(
+        'Tài khoản bị tạm khóa 15 phút do đăng nhập sai quá nhiều lần.',
+      );
+    }
+
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -290,8 +299,24 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      const attemptsKey = `login_attempts:${email}`;
+      const attempts = await redis.incr(attemptsKey);
+      await redis.expire(attemptsKey, 900); // 15 mins
+
+      if (attempts >= 5) {
+        await redis.set(lockoutKey, '1', 'EX', 900); // Lock for 15 mins
+        await redis.del(attemptsKey);
+        throw new UnauthorizedException(
+          'Tài khoản bị tạm khóa 15 phút do đăng nhập sai quá nhiều lần.',
+        );
+      }
+      throw new UnauthorizedException(
+        `Sai email hoặc mật khẩu. Bạn còn ${5 - attempts} lần thử.`,
+      );
     }
+
+    // Reset attempts on successful login
+    await redis.del(`login_attempts:${email}`);
 
     const payload = { sub: user.id, username: user.user_name };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });

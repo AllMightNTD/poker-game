@@ -5,6 +5,8 @@ import { PokerGameService } from '../services/poker-game.service';
 import { PokerLobbyService } from '../services/poker-lobby.service';
 import { PokerStateService } from '../services/poker-state.service';
 
+import { ThrottlerGuard } from '@nestjs/throttler';
+
 // Mock Services
 class MockPokerStateService {
   private locks = new Map<string, boolean>();
@@ -79,7 +81,10 @@ describe('Concurrency / Race Condition Test (PokerLobbyGateway)', () => {
         { provide: PokerGameService, useClass: MockPokerGameService },
         { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
       ],
-    }).compile();
+    })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     gateway = module.get<PokerLobbyGateway>(PokerLobbyGateway);
 

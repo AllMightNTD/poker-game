@@ -22,29 +22,51 @@ import { User } from '../entities/user.entity';
 import { Wallet } from '../entities/wallet.entity';
 import { PlayerStats } from '../gamification/entities/player-stats.entity';
 import { PokerStateService } from './poker-state.service';
+import { AntiCollusionService } from './anti-collusion.service';
 
 @Injectable()
 export class PokerLobbyService {
   private idempotencyKeys = new Map<string, number>();
-  private activeLobbySubscribers = new Set<string>();
+
+  // client_id -> user_id (or client_id if guest)
+  private clientToUserMap = new Map<string, string>();
+  // user_id -> Set of client_ids (tracks multiple tabs/devices per user)
+  private userActiveSessions = new Map<string, Set<string>>();
 
   constructor(
     private readonly stateService: PokerStateService,
     private readonly dataSource: DataSource,
     private readonly eventEmitter: EventEmitter2,
+    private readonly antiCollusionService: AntiCollusionService,
   ) {}
 
   // Tracks active socket connections at lobby level
-  addLobbySubscriber(clientId: string) {
-    this.activeLobbySubscribers.add(clientId);
+  addLobbySubscriber(clientId: string, userId?: string) {
+    const actualUserId = userId || clientId; // Fallback to clientId for anonymous guests
+    this.clientToUserMap.set(clientId, actualUserId);
+
+    if (!this.userActiveSessions.has(actualUserId)) {
+      this.userActiveSessions.set(actualUserId, new Set<string>());
+    }
+    this.userActiveSessions.get(actualUserId).add(clientId);
   }
 
   removeLobbySubscriber(clientId: string) {
-    this.activeLobbySubscribers.delete(clientId);
+    const userId = this.clientToUserMap.get(clientId);
+    if (userId) {
+      const sessions = this.userActiveSessions.get(userId);
+      if (sessions) {
+        sessions.delete(clientId);
+        if (sessions.size === 0) {
+          this.userActiveSessions.delete(userId);
+        }
+      }
+      this.clientToUserMap.delete(clientId);
+    }
   }
 
   getLobbySubscriberCount(): number {
-    return this.activeLobbySubscribers.size;
+    return this.userActiveSessions.size;
   }
 
   async getActiveEvents(): Promise<PromoEvent[]> {
@@ -71,8 +93,9 @@ export class PokerLobbyService {
    * Chức năng: Lấy thông tin tổng quan của sảnh chơi
    */
   async getLobbyStats() {
-    // 1. Số người online = Số socket sub + một hạt giống cơ bản để sảnh trông sống động (ví dụ: 1428)
-    const onlinePlayers = 1428 + this.getLobbySubscriberCount();
+    // 1. Số người online = Số unique user + base_padding (từ env hoặc 0)
+    const basePadding = Number(process.env.BASE_ONLINE_PLAYERS || 0);
+    const onlinePlayers = basePadding + this.getLobbySubscriberCount();
 
     // 2. Số bàn active = Số bàn có status là running hoặc waiting
     const activeTables = await PokerTable.count({
@@ -93,7 +116,7 @@ export class PokerLobbyService {
 
     return {
       online_players: onlinePlayers,
-      active_tables: activeTables || 6, // Fallback to 6 mock tables if database has none
+      active_tables: activeTables || 0,
       total_jackpot_pot: totalJackpot,
     };
   }
@@ -493,6 +516,8 @@ export class PokerLobbyService {
       seat_number: number;
       custom_name?: string;
       ip?: string;
+      user_agent?: string;
+      device_fingerprint?: string;
     },
   ) {
     const table = await PokerTable.findOne({
@@ -611,6 +636,8 @@ export class PokerLobbyService {
         disconnected_at: '0',
         has_used_extra_time: '0',
         ip: body.ip || '127.0.0.1',
+        user_agent: body.user_agent || '',
+        device_fingerprint: body.device_fingerprint || '',
         gamification_level: playerStats?.level || 'bronze',
         gamification_xp: playerStats?.current_xp || 0,
       });
@@ -1306,13 +1333,53 @@ export class PokerLobbyService {
   async joinSeat(
     userId: string,
     roomId: string,
-    body: { seat_number: number; display_name: string; buy_in_chips: number },
+    body: {
+      seat_number: number;
+      display_name: string;
+      buy_in_chips: number;
+      fingerprint?: string;
+    },
+    ipAddress?: string,
+    userAgent?: string,
   ) {
     const table = await PokerTable.findOne({
       where: { id: roomId, is_active: true },
     });
     if (!table) {
       throw new NotFoundException('Bàn chơi không tồn tại.');
+    }
+
+    // Check collusion risk score
+    const fingerprint = body.fingerprint || '';
+    const risk = await this.antiCollusionService.calculateRiskScore(
+      userId,
+      roomId,
+      ipAddress || '',
+      userAgent || '',
+      fingerprint,
+    );
+
+    if (risk.score > 60) {
+      await this.antiCollusionService.logCollusionWarning(
+        userId,
+        roomId,
+        risk.score,
+        risk.reasons,
+        ipAddress || '',
+        userAgent || '',
+      );
+      throw new BadRequestException(
+        `Phát hiện rủi ro thông đồng cao (${risk.score}/100). Bạn bị cấm tham gia bàn này để đảm bảo tính công bằng.`,
+      );
+    } else if (risk.score > 0) {
+      await this.antiCollusionService.logCollusionWarning(
+        userId,
+        roomId,
+        risk.score,
+        risk.reasons,
+        ipAddress || '',
+        userAgent || '',
+      );
     }
 
     if (body.seat_number < 1 || body.seat_number > table.max_players) {
@@ -1380,6 +1447,9 @@ export class PokerLobbyService {
         amount: body.buy_in_chips,
         seat_number: body.seat_number,
         custom_name: body.display_name,
+        ip: ipAddress,
+        user_agent: userAgent,
+        device_fingerprint: fingerprint,
       });
 
       return {
@@ -1495,14 +1565,14 @@ export class PokerLobbyService {
       });
 
       roomsMap.set(table.id, {
-        room_id: parseInt(table.id),
+        room_id: table.id,
         room_name: table.name,
         max_players: table.max_players,
         current_players_count: playersCount,
-        small_blind: parseInt(table.small_blind),
-        big_blind: parseInt(table.big_blind),
-        min_buy_in: parseInt(table.min_buyin),
-        max_buy_in: parseInt(table.max_buyin),
+        small_blind: parseInt(table.small_blind?.toString() || '0'),
+        big_blind: parseInt(table.big_blind?.toString() || '0'),
+        min_buy_in: parseInt(table.min_buyin?.toString() || '0'),
+        max_buy_in: parseInt(table.max_buyin?.toString() || '0'),
         status: (table.status || 'waiting').toUpperCase(),
         played_at: session.created_at,
       });
@@ -1514,7 +1584,7 @@ export class PokerLobbyService {
   async getLeaderboard() {
     const wallets = await Wallet.createQueryBuilder('wallet')
       .leftJoinAndSelect('wallet.user', 'user')
-      .orderBy('CAST(wallet.chips_balance AS DECIMAL)', 'DESC')
+      .orderBy('wallet.chips_balance', 'DESC')
       .limit(10)
       .getMany();
 
@@ -1533,7 +1603,6 @@ export class PokerLobbyService {
       .where('session.member_status = :status', { status: 'active' })
       .andWhere('session.user_id != :userId', { userId })
       .orderBy('session.joined_at', 'DESC')
-      .limit(10)
       .getMany();
 
     return sessions.map((s) => ({

@@ -1,4 +1,4 @@
-import { Logger, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Logger, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
@@ -19,6 +19,7 @@ import { PokerLobbyService } from '../services/poker-lobby.service';
 import { PokerStateService } from '../services/poker-state.service';
 import { PokerGameService } from '../services/poker-game.service';
 import { corsOriginFn } from '../../config/cors.config';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 
 @WebSocketGateway({
   cors: {
@@ -35,6 +36,8 @@ import { corsOriginFn } from '../../config/cors.config';
     whitelist: true,
   }),
 )
+@UseGuards(ThrottlerGuard)
+@Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 actions / minute max for web sockets
 export class PokerLobbyGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
@@ -128,7 +131,8 @@ export class PokerLobbyGateway
   async handleLobbySubscribe(@ConnectedSocket() client: Socket) {
     try {
       client.join('lobby_channel');
-      this.lobbyService.addLobbySubscriber(client.id);
+      const userId = client.data?.user?.id;
+      this.lobbyService.addLobbySubscriber(client.id, userId);
       const stats = await this.lobbyService.getLobbyStats();
       client.emit('lobby:stats-update', stats);
     } catch (err) {
