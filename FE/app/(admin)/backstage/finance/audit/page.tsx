@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Search, Eye, X, ShieldAlert, Ban, UserX } from "lucide-react";
 import httpClient from "@/core/api/http-client";
 
@@ -11,7 +11,7 @@ export default function FinancialAuditPage() {
   const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchAlerts = async () => {
+  const fetchAlerts = useCallback(async () => {
     try {
       setLoading(true);
       const res = await httpClient.get("/api/v1/admin/financial-audit/chip-dumping");
@@ -24,10 +24,24 @@ export default function FinancialAuditPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchAlerts();
+    // Define fetch logic inline to satisfy react-hooks/set-state-in-effect rule
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await httpClient.get("/api/v1/admin/financial-audit/chip-dumping");
+        if (res.data && res.data.data) {
+          setAlerts(res.data.data);
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Không thể tải danh sách cảnh báo bơm chip");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   const handleBanUser = async (userId: string, username: string) => {

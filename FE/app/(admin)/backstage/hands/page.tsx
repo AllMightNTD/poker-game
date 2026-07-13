@@ -1,7 +1,7 @@
 "use client";
 
 import httpClient from "@/core/api/http-client";
-import { Eye, X, ShieldCheck, ShieldAlert, Check, RefreshCw } from "lucide-react";
+import { Eye, X, ShieldCheck, ShieldAlert, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { localShuffleDeck } from "../../../poker-game/table/[id]/components/utils/provablyFairVerify";
 

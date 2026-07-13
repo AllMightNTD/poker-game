@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, X, RefreshCw, Clipboard, Check, Eye, HelpCircle } from "lucide-react";
+import { ShieldCheck, X, RefreshCw, Clipboard, Check, Eye } from "lucide-react";
 import { usePokerGame } from "../hooks/usePokerGame";
 import { localShuffleDeck, calculateDeckHash } from "../utils/provablyFairVerify";
 
@@ -41,8 +41,14 @@ export const ProvablyFairModal = () => {
   const [activeTab, setActiveTab] = useState<"config" | "verify">("config");
 
   // Tab 1 state
-  const [clientSeedInput, setClientSeedInput] = useState("");
-  const [isCopiedHash, setIsCopiedHash] = useState(false);
+  const [clientSeedInput, setClientSeedInput] = useState(provablyFair?.client_seed ?? "");
+
+  // Sync clientSeedInput when provablyFair changes (render-time update, avoids useEffect setState)
+  const prevSeedRef = useRef(provablyFair?.client_seed);
+  if (prevSeedRef.current !== provablyFair?.client_seed) {
+    prevSeedRef.current = provablyFair?.client_seed;
+    setClientSeedInput(provablyFair?.client_seed ?? "");
+  }
 
   // Tab 2 state (Verification Tool)
   const [verifyServerSeed, setVerifyServerSeed] = useState("");
@@ -53,13 +59,6 @@ export const ProvablyFairModal = () => {
     deck: string[];
     hash: string;
   } | null>(null);
-
-  // Sync client seed input from context on load/change
-  useEffect(() => {
-    if (provablyFair?.client_seed) {
-      setClientSeedInput(provablyFair.client_seed);
-    }
-  }, [provablyFair]);
 
   const handleRandomizeSeed = () => {
     const chars = "abcdef0123456789";

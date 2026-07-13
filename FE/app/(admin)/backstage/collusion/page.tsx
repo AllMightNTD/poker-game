@@ -2,7 +2,7 @@
 
 import httpClient from "@/core/api/http-client";
 import { Ban, Eye, Search, ShieldAlert, UserMinus, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export default function AdminCollusionPage() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -16,7 +16,7 @@ export default function AdminCollusionPage() {
   const [detail, setDetail] = useState<any | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchLogs = async (cursor?: string | null, clear = false) => {
+  const fetchLogs = useCallback(async (cursor?: string | null, clear = false) => {
     try {
       if (cursor) setLoadingMore(true);
       else setLoading(true);
@@ -44,13 +44,13 @@ export default function AdminCollusionPage() {
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, [searchQuery]);
 
   useEffect(() => {
     Promise.resolve().then(() => {
       fetchLogs();
     });
-  }, []);
+  }, [fetchLogs]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

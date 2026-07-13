@@ -13,7 +13,7 @@ import {
   Zap,
 } from "lucide-react";
 import React, { useState, useEffect, useCallback } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { DateTimePicker } from "@/components/ui/DateTimePicker";
@@ -83,7 +83,7 @@ export default function AdminEventsPage() {
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm<EventFormValues>({
@@ -102,7 +102,7 @@ export default function AdminEventsPage() {
     },
   });
 
-  const currentColorGradient = watch("colorGradient");
+  const currentColorGradient = useWatch({ control, name: "colorGradient" });
 
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
