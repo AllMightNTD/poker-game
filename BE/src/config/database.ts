@@ -20,7 +20,9 @@ const config = {
   migrations: [__dirname + '/../database/migrations/**/*{.ts,.js}'],
   charset: 'utf8mb4',
   logging: false,
-  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
+  ssl: (process.env.DB_SSL === 'true' || (process.env.DB_HOST && process.env.DB_HOST.includes('tidbcloud.com')))
+    ? { rejectUnauthorized: false }
+    : undefined,
 };
 
 export default registerAs('database', () => config);
