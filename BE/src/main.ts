@@ -18,7 +18,7 @@ import { corsOriginFn } from './config/cors.config';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const prefix = process.env.APP_ROUTE_PREFIX || 'api';
-  const port = +process.env.APP_PORT || 3001;
+  const port = +process.env.APP_PORT || +process.env.PORT || 3001;
   const host = process.env.APP_HOST || 'localhost';
   const protocol = process.env.APP_PROTOCOL || 'http';
   const url = `${protocol}://${host}:${port}/${prefix}`;
