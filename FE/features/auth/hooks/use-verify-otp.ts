@@ -61,7 +61,10 @@ export function useVerifyOtp(
         router.push("/login");
       }, 3000);
     } catch (error: any) {
-      const msg = error.response?.data?.message || t("api.verifyFailed") || "Xác thực thất bại.";
+      const msgRaw = error.response?.data?.message;
+      const msg = Array.isArray(msgRaw) 
+        ? (typeof msgRaw[0] === "string" ? msgRaw[0] : (msgRaw[0]?.error || t("api.verifyFailed") || "Xác thực thất bại.")) 
+        : (typeof msgRaw === "string" ? msgRaw : (t("api.verifyFailed") || "Xác thực thất bại."));
       setErrorMessage(msg);
       toastError(msg);
     } finally {
@@ -95,7 +98,10 @@ export function useVerifyOtp(
       toastSuccess(result.message || t("api.resendSuccess") || "Mã OTP mới đã được gửi!");
       setCooldown(60);
     } catch (error: any) {
-      const msg = error.response?.data?.message || t("api.resendFailed") || "Không thể gửi lại OTP.";
+      const msgRaw = error.response?.data?.message;
+      const msg = Array.isArray(msgRaw) 
+        ? (typeof msgRaw[0] === "string" ? msgRaw[0] : (msgRaw[0]?.error || t("api.resendFailed") || "Không thể gửi lại OTP.")) 
+        : (typeof msgRaw === "string" ? msgRaw : (t("api.resendFailed") || "Không thể gửi lại OTP."));
       setErrorMessage(msg);
       toastError(msg);
     }

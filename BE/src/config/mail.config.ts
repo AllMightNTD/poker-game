@@ -4,17 +4,19 @@ import { registerAs } from '@nestjs/config';
 import { join } from 'path';
 
 export default registerAs('mail', (): MailerOptions => {
-  const sendGridApiKey = process.env.SENDGRID_API_KEY;
-  const fromEmail =
-    process.env.SENDGRID_FROM_EMAIL || 'no-reply@yourdomain.com';
+  const mailHost = process.env.MAIL_HOST || 'smtp.gmail.com';
+  const mailPort = parseInt(process.env.MAIL_PORT || '587', 10);
+  const mailUser = process.env.MAIL_USER || 'no-reply@yourdomain.com';
+  const mailPass = process.env.MAIL_PASS;
+  const fromEmail = process.env.MAIL_FROM || mailUser;
 
   const transport = {
-    host: 'smtp.sendgrid.net',
-    port: 587,
-    secure: false, // Sử dụng TLS qua port 587
+    host: mailHost,
+    port: mailPort,
+    secure: mailPort === 465, // true for port 465, false for 587
     auth: {
-      user: 'apikey', // Luôn cố định là 'apikey' đối với SendGrid SMTP
-      pass: sendGridApiKey,
+      user: mailUser,
+      pass: mailPass,
     },
     tls: {
       rejectUnauthorized: false,
@@ -35,6 +37,6 @@ export default registerAs('mail', (): MailerOptions => {
         strict: true,
       },
     },
-    preview: false, // Tắt preview modal để tập trung log debug
+    preview: false, // Turn off preview modal to focus on debug logs
   };
 });
