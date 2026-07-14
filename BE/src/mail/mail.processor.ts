@@ -39,7 +39,7 @@ export class MailProcessor extends WorkerHost {
       'WEB_URL',
       'http://localhost:3000',
     );
-    const verificationUrl = `${webUrl}/verify-otp?token=${data.token}&otp=${data.otp}`;
+    const verificationUrl = `${webUrl}/verify-otp?token=${data.token}`;
 
     try {
       await this.mailerService.sendMail({

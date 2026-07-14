@@ -16,7 +16,7 @@ export const AuthService = {
     return response.data;
   },
 
-  async verifyOtp(data: { token: string; otp: string }) {
+  async verifyOtp(data: { token?: string; email?: string; otp: string }) {
     const response = await httpClient.post("/api/v1/auth/verify-otp", data);
     return response.data;
   },

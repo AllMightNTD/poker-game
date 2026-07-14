@@ -3,28 +3,28 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { withTransaction } from 'src/common/helpers/transaction.helper';
-import { DataSource, Repository } from 'typeorm';
 import { UserStatus } from 'src/constants/enums';
+import { MailService } from 'src/mail/services/mail.service';
+import { DataSource, Repository } from 'typeorm';
 import { RefreshToken } from '../../../entities/refresh_token.entity';
 import { User } from '../../../entities/user.entity';
 import { Wallet } from '../../../entities/wallet.entity';
+import { PokerStateService } from '../../../services/poker-state.service';
 import {
   LoginDto,
   RefreshTokenDto,
   RegisterDto,
-  VerifyOtpDto,
   ResendOtpDto,
+  VerifyOtpDto,
 } from '../../dto/auth.dto';
 import { RequestPasswordResetDto } from '../../dto/request-reset-password.dto';
 import { ResetPasswordDto } from '../../dto/reset-password.dto';
-import { MailService } from 'src/mail/services/mail.service';
-import { PokerStateService } from '../../../services/poker-state.service';
-import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
@@ -40,7 +40,7 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async generateAndSendOtp(user: User): Promise<void> {
+  async generateAndSendOtp(user: User): Promise<string> {
     const redis = this.pokerStateService.getRedisClient();
 
     // Check if email is currently blocked
@@ -81,6 +81,8 @@ export class AuthService {
       token,
       username: user.user_name,
     });
+
+    return token;
   }
 
   async register(registerDto: RegisterDto) {
@@ -100,11 +102,12 @@ export class AuthService {
       existingUser.user_name = user_name;
       await this.userRepository.save(existingUser);
 
-      await this.generateAndSendOtp(existingUser);
+      const token = await this.generateAndSendOtp(existingUser);
 
       return {
         message:
           'Tài khoản chưa được kích hoạt. Mã xác thực mới đã được gửi tới email của bạn.',
+        token,
         user: {
           id: existingUser.id,
           email: existingUser.email,
@@ -134,11 +137,12 @@ export class AuthService {
       return newUser;
     });
 
-    await this.generateAndSendOtp(user);
+    const token = await this.generateAndSendOtp(user);
 
     return {
       message:
         'Đăng ký tài khoản thành công. Vui lòng xác thực mã OTP gửi tới email của bạn.',
+      token,
       user: {
         id: user.id,
         email: user.email,
@@ -148,18 +152,28 @@ export class AuthService {
   }
 
   async verifyOtp(verifyOtpDto: VerifyOtpDto) {
-    const { token, otp } = verifyOtpDto;
+    const { token, otp, email: dtoEmail } = verifyOtpDto;
 
-    let payload: any;
-    try {
-      payload = this.jwtService.verify(token);
-    } catch {
-      throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn.');
+    let email = dtoEmail;
+
+    if (token) {
+      let payload: any;
+      try {
+        payload = this.jwtService.verify(token);
+      } catch {
+        throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn.');
+      }
+
+      email = payload.email;
+      if (!email) {
+        throw new BadRequestException('Token không hợp lệ.');
+      }
     }
 
-    const email = payload.email;
     if (!email) {
-      throw new BadRequestException('Token không hợp lệ.');
+      throw new BadRequestException(
+        'Vui lòng cung cấp email hoặc token xác thực.',
+      );
     }
 
     const redis = this.pokerStateService.getRedisClient();
@@ -184,15 +198,24 @@ export class AuthService {
       };
     }
 
-    // Verify token matches current active token in Redis
-    const activeToken = await redis.get(`otp:token:${email}`);
-    if (activeToken !== token) {
-      throw new BadRequestException(
-        'Token xác thực đã hết hạn hoặc đã bị hủy do yêu cầu mới.',
-      );
+    // Verify token matches current active token in Redis if provided
+    if (token) {
+      const activeToken = await redis.get(`otp:token:${email}`);
+      if (activeToken !== token) {
+        throw new BadRequestException(
+          'Token xác thực đã hết hạn hoặc đã bị hủy do yêu cầu mới.',
+        );
+      }
     }
 
     const activeOtp = await redis.get(`otp:code:${email}`);
+    console.log('--- OTP Verify ---', {
+      inputOtp: otp,
+      inputOtpType: typeof otp,
+      activeOtp,
+      activeOtpType: typeof activeOtp,
+      email,
+    });
     if (!activeOtp) {
       throw new BadRequestException(
         'Mã OTP đã hết hạn hoặc không tồn tại. Vui lòng gửi lại yêu cầu.',
@@ -263,10 +286,11 @@ export class AuthService {
       );
     }
 
-    await this.generateAndSendOtp(user);
+    const token = await this.generateAndSendOtp(user);
 
     return {
       message: 'Mã OTP mới đã được gửi tới email của bạn.',
+      token,
     };
   }
 

@@ -83,12 +83,20 @@ export class VerifyOtpDto {
   @Length(6, 6)
   otp: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'JWT Token dùng để định danh email xác thực',
   })
   @IsString()
-  @IsNotEmpty()
-  token: string;
+  @IsOptional()
+  token?: string;
+
+  @ApiPropertyOptional({
+    example: 'player1@poker.com',
+    description: 'Email dùng để xác thực thay thế token',
+  })
+  @IsEmail()
+  @IsOptional()
+  email?: string;
 }
 
 export class ResendOtpDto {

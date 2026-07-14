@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, CheckCircle2, Loader2, Mail, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { useVerifyOtp } from "../hooks/use-verify-otp";
 
 interface VerifyOtpFormProps {
@@ -12,26 +12,9 @@ interface VerifyOtpFormProps {
   email: string | null;
 }
 
-export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: emailParam }: VerifyOtpFormProps) {
-  const t = (key: string) => {
-    const translations: Record<string, string> = {
-      verifyTitle: "KÍCH HOẠT TÀI KHOẢN",
-      verifyDescription: "Vui lòng hoàn tất kích hoạt để bắt đầu hành trình Poker CG",
-      resendOtp: "GỬI LẠI OTP",
-      cooldownText: "GỬI LẠI SAU {time}S",
-      verifyButton: "XÁC NHẬN KÍCH HOẠT",
-      activating: "ĐANG KÍCH HOẠT...",
-      activationSuccess: "KÍCH HOẠT THÀNH CÔNG!",
-      redirecting: "Chuyển hướng về trang Đăng nhập sau giây lát...",
-      checkEmailInstruction: "Chúng tôi đã gửi link xác thực và mã OTP vào email của bạn.",
-      checkEmailDetail: "Vui lòng nhấp vào liên kết trong email hoặc nhập mã 6 số dưới đây để kích hoạt tài khoản.",
-      enterOtpManually: "MÃ XÁC THỰC OTP (6 SỐ)",
-      invalidOtpLength: "Mã OTP phải có đúng 6 chữ số.",
-      missingToken: "Không tìm thấy token kích hoạt. Vui lòng kiểm tra email của bạn hoặc đăng ký lại.",
-    };
-    return translations[key] || key;
-  };
+const OTP_LENGTH = 6;
 
+export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: emailParam }: VerifyOtpFormProps) {
   const {
     otp,
     setOtp,
@@ -45,7 +28,7 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
     token,
     handleManualVerify,
     handleResend,
-  } = useVerifyOtp(initialToken, initialOtp, emailParam, t);
+  } = useVerifyOtp(initialToken, initialOtp, emailParam);
 
   const maskEmail = (emailStr: string) => {
     if (!emailStr) return "";
@@ -59,7 +42,6 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Automatically focus the first empty input box on load if no auto-verification is happening
   useEffect(() => {
     if (!initialOtp && inputRefs.current[0]) {
       inputRefs.current[0].focus();
@@ -67,14 +49,13 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
   }, [initialOtp]);
 
   const handleInputChange = (value: string, index: number) => {
-    if (!/^\d*$/.test(value)) return; // Only allow numbers
+    if (!/^\d*$/.test(value)) return;
 
     const newOtp = [...otp];
-    newOtp[index] = value.slice(-1); // Only keep the last character
+    newOtp[index] = value.slice(-1);
     setOtp(newOtp);
 
-    // Auto-focus next input if not empty
-    if (value && index < 5) {
+    if (value && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -82,7 +63,6 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
     if (e.key === "Backspace") {
       if (!otp[index] && index > 0) {
-        // Clear previous input and focus it
         const newOtp = [...otp];
         newOtp[index - 1] = "";
         setOtp(newOtp);
@@ -94,7 +74,7 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
       }
     } else if (e.key === "ArrowLeft" && index > 0) {
       inputRefs.current[index - 1]?.focus();
-    } else if (e.key === "ArrowRight" && index < 5) {
+    } else if (e.key === "ArrowRight" && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -102,19 +82,18 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData("text").trim();
-    if (!/^\d+$/.test(pastedData)) return; // Only digits
+    if (!/^\d+$/.test(pastedData)) return;
 
-    const digits = pastedData.slice(0, 6).split("");
+    const digits = pastedData.slice(0, OTP_LENGTH).split("");
     const newOtp = [...otp];
-    
+
     digits.forEach((digit, i) => {
       newOtp[i] = digit;
     });
 
     setOtp(newOtp);
 
-    // Focus the last filled box or next empty one
-    const focusIndex = Math.min(digits.length, 5);
+    const focusIndex = Math.min(digits.length, OTP_LENGTH - 1);
     inputRefs.current[focusIndex]?.focus();
   };
 
@@ -122,13 +101,10 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
 
   return (
     <div className="relative w-full max-w-md mx-auto">
-      {/* Glow effect matching CG Poker style */}
       <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500 via-[#F4B942] to-amber-600 rounded-2xl blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
-      
-      {/* Form Card */}
+
       <div className="relative rounded-2xl bg-[#081326] border border-[#16294A] p-6 sm:p-8 overflow-hidden shadow-2xl">
-        
-        {/* Verification Success Screen Overlay */}
+        {/* Success Overlay */}
         <AnimatePresence>
           {isSuccess && (
             <motion.div
@@ -146,14 +122,12 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
                 <CheckCircle2 className="w-8 h-8 animate-bounce" />
               </motion.div>
               <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-wide">
-                {t("activationSuccess")}
+                KÍCH HOẠT THÀNH CÔNG!
               </h3>
-              <p className="text-slate-300 text-sm max-w-xs mb-4">
-                {successMessage}
-              </p>
+              <p className="text-slate-300 text-sm max-w-xs mb-4">{successMessage}</p>
               <div className="flex items-center gap-2 text-yellow-400/80 text-xs mt-4">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>{t("redirecting")}</span>
+                <span>Chuyển hướng về trang Đăng nhập sau giây lát...</span>
               </div>
             </motion.div>
           )}
@@ -172,9 +146,7 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
                 <div className="absolute w-16 h-16 rounded-full border-4 border-yellow-400/20 border-t-yellow-400 animate-spin" />
                 <Loader2 className="w-8 h-8 text-yellow-400 animate-pulse" />
               </div>
-              <h3 className="text-lg font-bold text-white uppercase tracking-wide">
-                {t("activating")}
-              </h3>
+              <h3 className="text-lg font-bold text-white uppercase tracking-wide">ĐANG KÍCH HOẠT...</h3>
               <p className="text-xs text-slate-400 mt-2">
                 Hệ thống đang kiểm tra chữ ký token và mã OTP...
               </p>
@@ -182,25 +154,21 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
           )}
         </AnimatePresence>
 
-        {/* Welcome screen without token OR normal verify screen with token */}
-        {!token ? (
+        {!(token || email) ? (
           <div className="space-y-6 text-center py-4">
-            {/* Celebration Icon/Graphic */}
             <div className="mx-auto w-20 h-20 rounded-full bg-yellow-400/10 border border-yellow-400 flex items-center justify-center text-yellow-400 shadow-[0_0_20px_rgba(244,185,66,0.2)]">
               <span className="text-3.5xl">🎰</span>
             </div>
 
-            {/* Welcome header & description */}
             <div className="space-y-2">
               <h3 className="text-xl sm:text-2xl font-black text-white tracking-wide uppercase bg-gradient-to-r from-yellow-400 via-[#F4B942] to-amber-500 bg-clip-text text-transparent">
-                Welcome to the Elite Table! 🎰
+                Chào mừng đến với Bàn chơi Elite! 🎰
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 px-2 leading-relaxed font-medium">
-                A verification email has been sent to your inbox. Please check it to activate your CG Poker account and start your journey.
+                Email xác thực đã được gửi đến hộp thư của bạn. Vui lòng kiểm tra để kích hoạt tài khoản CG Poker và bắt đầu hành trình.
               </p>
             </div>
 
-            {/* Masked Email Badge */}
             {email && (
               <div className="inline-flex flex-col items-center justify-center p-4 rounded-xl bg-[#0B1B33] border border-[#1E3A5F] w-full max-w-sm mx-auto shadow-inner">
                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">EMAIL ĐĂNG KÝ</span>
@@ -208,9 +176,10 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
               </div>
             )}
 
-            {/* Deep Links to Email Apps */}
             <div className="space-y-3 pt-2 text-left">
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center">Mở nhanh hộp thư email của bạn</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center">
+                Mở nhanh hộp thư email của bạn
+              </p>
               <div className="grid grid-cols-3 gap-2">
                 <a
                   href="https://mail.google.com"
@@ -242,10 +211,10 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
               </div>
             </div>
 
-            {/* Error Message if Resend Fails */}
             <AnimatePresence mode="wait">
               {errorMessage && (
                 <motion.div
+                  role="alert"
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -5 }}
@@ -257,7 +226,6 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
               )}
             </AnimatePresence>
 
-            {/* Resend Action */}
             <div className="pt-2 space-y-4">
               {!emailParam && (
                 <div className="relative">
@@ -272,55 +240,50 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
               )}
 
               <button
+                type="button"
                 onClick={handleResend}
                 disabled={cooldown > 0 || isVerifying}
                 className="w-full h-12 rounded-xl bg-gradient-to-b from-[#1E3A5F] to-[#0F223F] border border-[#2B548C] hover:border-yellow-400/40 text-slate-200 hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-md uppercase tracking-wider"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${cooldown > 0 ? "animate-spin" : ""}`} />
-                <span>
-                  {cooldown > 0
-                    ? `Gửi lại sau ${cooldown}s`
-                    : "GỬI LẠI EMAIL KÍCH HOẠT"}
-                </span>
+                <span>{cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "GỬI LẠI EMAIL KÍCH HOẠT"}</span>
               </button>
             </div>
 
-            {/* Return to Login */}
             <div className="text-center pt-2">
-              <Link
-                href="/login"
-                className="text-xs text-[#F4B942] font-semibold hover:underline uppercase tracking-wide"
-              >
+              <Link href="/login" className="text-xs text-[#F4B942] font-semibold hover:underline uppercase tracking-wide">
                 Quay lại Đăng nhập
               </Link>
             </div>
-          </div>
+          </div >
+
         ) : (
           <div className="space-y-6">
-            {/* Header */}
             <div className="text-center mb-6">
               <h2 className="text-xl sm:text-2xl font-bold text-white tracking-wide uppercase">
-                {t("verifyTitle")}
+                KÍCH HOẠT TÀI KHOẢN
               </h2>
               <p className="mt-1.5 text-xs sm:text-sm text-slate-400">
-                {t("verifyDescription")}
+                Vui lòng hoàn tất kích hoạt để bắt đầu hành trình Poker CG
               </p>
             </div>
 
-            {/* Notification Box */}
             <div className="mb-6 p-4 rounded-xl bg-[#0B1B33] border border-[#1E3A5F] flex gap-3 text-left">
               <Mail className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
               <div className="text-xs">
-                <p className="font-semibold text-white">{t("checkEmailInstruction")}</p>
-                <p className="text-slate-400 mt-1">{t("checkEmailDetail")}</p>
+                <p className="font-semibold text-white">
+                  Chúng tôi mã OTP vào email của bạn.
+                </p>
+                <p className="text-slate-400 mt-1">
+                  Vui lòng nhấp vào liên kết trong email hoặc nhập mã 6 số dưới đây để kích hoạt tài khoản.
+                </p>
               </div>
             </div>
 
-            {/* OTP Input Fields */}
             <div className="space-y-6">
               <div>
                 <label className="block text-slate-400 text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-3">
-                  {t("enterOtpManually")}
+                  MÃ XÁC THỰC OTP (6 SỐ)
                 </label>
                 <div className="flex justify-between gap-2 sm:gap-3">
                   {otp.map((digit, idx) => (
@@ -330,22 +293,32 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
                         inputRefs.current[idx] = el;
                       }}
                       type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
                       maxLength={1}
                       value={digit}
-                      disabled={!token || isSuccess || isVerifying}
+                      disabled={(!token && !email) || isSuccess || isVerifying}
+                      aria-label={`Chữ số OTP thứ ${idx + 1}`}
+                      aria-invalid={!!errorMessage}
                       onChange={(e) => handleInputChange(e.target.value, idx)}
                       onKeyDown={(e) => handleKeyDown(e, idx)}
                       onPaste={handlePaste}
-                      className="w-12 h-14 sm:w-14 sm:h-16 text-center text-xl font-bold text-white rounded-xl bg-[#0B1B33] border border-[#1E3A5F] transition-all outline-none focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/30 disabled:opacity-50"
+                      className={`w-12 h-14 sm:w-14 sm:h-16 text-center text-xl font-bold text-white rounded-xl bg-[#0B1B33] border transition-all outline-none focus:ring-1 disabled:opacity-50 ${errorMessage
+                        ? "border-rose-500 focus:border-rose-400 focus:ring-rose-400/30"
+                        : "border-[#1E3A5F] focus:border-yellow-400 focus:ring-yellow-400/30"
+                        }`}
                     />
                   ))}
                 </div>
+                {!isOtpComplete && (
+                  <p className="text-slate-500 text-[11px] mt-2 ml-1">Mã OTP phải có đúng 6 chữ số.</p>
+                )}
               </div>
 
-              {/* Error Message */}
               <AnimatePresence mode="wait">
                 {errorMessage && (
                   <motion.div
+                    role="alert"
                     initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -5 }}
@@ -357,24 +330,23 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
                 )}
               </AnimatePresence>
 
-              {/* Action Buttons */}
               <div className="space-y-3">
                 <button
+                  type="button"
                   onClick={handleManualVerify}
-                  disabled={!token || !isOtpComplete || isVerifying || isSuccess}
+                  disabled={(!token && !email) || !isOtpComplete || isVerifying || isSuccess}
                   className="h-12 w-full rounded-xl bg-gradient-to-b from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-[#081326] font-bold text-sm transition-all shadow-[0_0_15px_rgba(244,185,66,0.3)] hover:shadow-[0_0_25px_rgba(244,185,66,0.5)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed uppercase"
                 >
                   {isVerifying && !initialOtp ? (
                     <div className="flex items-center justify-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>{t("activating")}</span>
+                      <span>ĐANG KÍCH HOẠT...</span>
                     </div>
                   ) : (
-                    t("verifyButton")
+                    "XÁC NHẬN KÍCH HOẠT"
                   )}
                 </button>
 
-                {/* Email input field if no email is set or if requesting resend */}
                 {!emailParam && (
                   <div className="relative group pt-1">
                     <input
@@ -388,24 +360,18 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
                 )}
 
                 <button
+                  type="button"
                   onClick={handleResend}
                   disabled={cooldown > 0 || isVerifying || isSuccess}
                   className="w-full h-11 rounded-xl bg-transparent border border-[#1E3A5F] hover:border-yellow-400/40 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${cooldown > 0 ? "animate-spin" : ""}`} />
-                  <span>
-                    {cooldown > 0
-                      ? t("cooldownText").replace("{time}", cooldown.toString())
-                      : t("resendOtp")}
-                  </span>
+                  <span>{cooldown > 0 ? `GỬI LẠI SAU ${cooldown}S` : "GỬI LẠI OTP"}</span>
                 </button>
               </div>
 
               <div className="text-center pt-2">
-                <Link
-                  href="/login"
-                  className="text-xs text-[#F4B942] font-semibold hover:underline uppercase tracking-wide"
-                >
+                <Link href="/login" className="text-xs text-[#F4B942] font-semibold hover:underline uppercase tracking-wide">
                   Quay lại Đăng nhập
                 </Link>
               </div>
@@ -415,5 +381,4 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
       </div>
     </div>
   );
-
 }
