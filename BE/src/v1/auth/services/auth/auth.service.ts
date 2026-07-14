@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { withTransaction } from 'src/common/helpers/transaction.helper';
 import { DataSource, Repository } from 'typeorm';
+import { UserStatus } from 'src/constants/enums';
 import { RefreshToken } from '../../../entities/refresh_token.entity';
 import { User } from '../../../entities/user.entity';
 import { Wallet } from '../../../entities/wallet.entity';
@@ -90,7 +91,7 @@ export class AuthService {
     });
 
     if (existingUser) {
-      if (existingUser.status === 'ACTIVE') {
+      if (existingUser.status === UserStatus.ACTIVE) {
         throw new BadRequestException('Email or username already exists');
       }
 
@@ -120,7 +121,7 @@ export class AuthService {
         email,
         user_name,
         password: hashedPassword,
-        status: 'INACTIVE', // default status
+        status: UserStatus.INACTIVE, // default status — activated by OTP
       });
       await qr.manager.save(newUser);
 
@@ -176,7 +177,7 @@ export class AuthService {
       throw new BadRequestException('Người dùng không tồn tại.');
     }
 
-    if (user.status === 'ACTIVE') {
+    if (user.status === UserStatus.ACTIVE) {
       return {
         message: 'Tài khoản đã được xác thực trước đó. Vui lòng đăng nhập.',
         alreadyVerified: true,
@@ -200,7 +201,7 @@ export class AuthService {
 
     if (otp === activeOtp) {
       // Correct OTP
-      user.status = 'ACTIVE';
+      user.status = UserStatus.ACTIVE;
       await this.userRepository.save(user);
 
       // Clean up Redis keys
@@ -240,7 +241,7 @@ export class AuthService {
       throw new BadRequestException('Người dùng không tồn tại.');
     }
 
-    if (user.status === 'ACTIVE') {
+    if (user.status === UserStatus.ACTIVE) {
       throw new BadRequestException('Tài khoản đã được xác thực trước đó.');
     }
 
@@ -290,7 +291,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    if (user.status !== 'ACTIVE') {
+    if (user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException(
         'Tài khoản chưa được kích hoạt. Vui lòng xác thực OTP.',
       );

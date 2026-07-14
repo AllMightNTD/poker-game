@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { UserStatus } from 'src/constants/enums';
 import { HandPlayer } from '../../entities/hand_player.entity';
 import { User } from '../../entities/user.entity';
 import { PokerGameService } from '../../services/poker-game.service';
@@ -52,7 +53,7 @@ export class AdminUsersService {
     const user = await User.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
 
-    user.status = 'banned';
+    user.status = UserStatus.BANNED;
     user.is_active_status = false;
     await user.save();
 
@@ -63,7 +64,7 @@ export class AdminUsersService {
     const user = await User.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
 
-    user.status = 'active';
+    user.status = UserStatus.ACTIVE;
     user.is_active_status = true;
     await user.save();
 

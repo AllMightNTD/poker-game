@@ -3,11 +3,12 @@
 // ============================================================
 
 export enum UserStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  BANNED = 'banned',
-  MEMORIALIZED = 'memorialized',
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  BANNED = 'BANNED',
+  MEMORIALIZED = 'MEMORIALIZED',
 }
+
 
 export enum Gender {
   MALE = 'male',

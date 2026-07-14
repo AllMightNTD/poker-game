@@ -13,11 +13,25 @@ export class PokerStateService implements OnModuleInit {
     const host = this.configService.get<string>('REDIS_HOST', 'localhost');
     const port = this.configService.get<number>('REDIS_PORT', 6380);
     const password = this.configService.get<string>('REDIS_PASSWORD');
+    const isUpstash = host.includes('upstash.io');
 
     this.redis = new Redis({
       host,
       port,
       password: password || undefined,
+      // TLS is required for Upstash Redis cloud connections
+      tls: isUpstash ? {} : undefined,
+      // Upstash does not support Redis CONFIG commands (READY check)
+      enableReadyCheck: false,
+      // Allow long-running commands (e.g. BLPOP in BullMQ)
+      maxRetriesPerRequest: null,
+      // Exponential backoff reconnect: 500ms → 5s cap
+      retryStrategy: (times) => Math.min(times * 500, 5000),
+    });
+
+    // Catch unhandled Redis errors to prevent server crash
+    this.redis.on('error', (err) => {
+      console.error('[PokerStateService] Redis error:', err.message);
     });
   }
 

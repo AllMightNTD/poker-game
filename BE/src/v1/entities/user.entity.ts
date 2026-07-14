@@ -8,7 +8,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { UserStatus } from 'src/constants/enums';
 import { AuditLog } from './audit_log.entity';
+
 import { UserSettings } from './user_settings.entity';
 
 @Entity('users')
@@ -30,10 +32,11 @@ export class User extends BaseEntity {
 
   @Column({
     type: 'enum',
-    enum: ['ACTIVE', 'INACTIVE', 'BANNED'],
-    default: 'ACTIVE',
+    enum: UserStatus,
+    default: UserStatus.ACTIVE,
   })
-  status: string;
+  status: UserStatus;
+
 
   @Column({ type: 'boolean', default: false })
   is_active_status: boolean;

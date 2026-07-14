@@ -36,9 +36,13 @@ import { AppV1Module } from './v1/modules/app-v1.module';
             port: configService.get<number>('REDIS_PORT', 6379),
             password: configService.get<string>('REDIS_PASSWORD'),
             tls: isUpstash ? {} : undefined,
-            // Upstash Free does not support noeviction policy — skip BullMQ check
+            // Upstash Free does not support noeviction policy
             enableReadyCheck: false,
+            // Must be null: BullMQ Worker uses XREAD BLOCK (blocking commands)
+            // Setting commandTimeout would kill the poll cycle every N ms
             maxRetriesPerRequest: null,
+            // Exponential backoff reconnect: 200ms -> 3s cap
+            retryStrategy: (times: number) => Math.min(times * 200, 3000),
           },
           defaultJobOptions: { removeOnComplete: true, removeOnFail: true },
         };
@@ -61,6 +65,11 @@ import { AppV1Module } from './v1/modules/app-v1.module';
           port: configService.get<number>('REDIS_PORT', 6379),
           password: configService.get<string>('REDIS_PASSWORD'),
           tls: configService.get<string>('REDIS_HOST', '').includes('upstash.io') ? {} : undefined,
+          // Upstash does not support CONFIG commands
+          enableReadyCheck: false,
+          maxRetriesPerRequest: null,
+          // Exponential backoff reconnect: 200ms -> 3s cap
+          retryStrategy: (times: number) => Math.min(times * 200, 3000),
         }),
       }),
     }),
