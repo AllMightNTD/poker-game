@@ -39,15 +39,6 @@ export function logEnvironmentVariables(configService: ConfigService): void {
   logger.log(`# TIMEZONE`);
   logger.log(`TIMEZONE: ${configService.get('TIMEZONE')}`);
 
-  logger.log(`# EMAIL Config`);
-  logger.log(`MAIL_USER: ${configService.get('MAIL_USER')}`);
-  logger.log(`MAIL_PORT: ${configService.get('MAIL_PORT')}`);
-  logger.log(`MAIL_HOST: ${configService.get('MAIL_HOST')}`);
-  logger.log(`MAIL_FROM: ${configService.get('MAIL_FROM')}`);
-  logger.log(
-    `MAIL_PASSWORD: ${maskSensitiveValue(configService.get('MAIL_PASSWORD'))}`,
-  );
-
   logger.log(`# AWS Config`);
   logger.log(`AWS_S3_REGION: ${configService.get('AWS_S3_REGION')}`);
   logger.log(`AWS_S3_BUCKET: ${configService.get('AWS_S3_BUCKET')}`);

@@ -18,7 +18,6 @@ import { MailService } from './services';
 
     BullModule.registerQueue({
       name: 'mail-queue',
-      // Upstash Free does not support CONFIG GET/SET maxmemory-policy
       // skipVersionCheck prevents BullMQ from logging the eviction policy warning
       skipVersionCheck: true,
     }),

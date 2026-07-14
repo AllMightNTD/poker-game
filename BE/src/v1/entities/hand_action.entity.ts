@@ -13,13 +13,7 @@ import { GameHand } from './game_hand.entity';
 
 export type PokerStreet = 'preflop' | 'flop' | 'turn' | 'river';
 export type PokerActionType =
-  | 'fold'
-  | 'check'
-  | 'call'
-  | 'raise'
-  | 'bet'
-  | 'allin'
-  | 'timeout';
+  'fold' | 'check' | 'call' | 'raise' | 'bet' | 'allin' | 'timeout';
 
 /**
  * hand_actions — Nhật ký từng hành động trong ván bài.

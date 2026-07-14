@@ -64,7 +64,11 @@ import { AppV1Module } from './v1/modules/app-v1.module';
           host: configService.get<string>('REDIS_HOST', 'localhost'),
           port: configService.get<number>('REDIS_PORT', 6379),
           password: configService.get<string>('REDIS_PASSWORD'),
-          tls: configService.get<string>('REDIS_HOST', '').includes('upstash.io') ? {} : undefined,
+          tls: configService
+            .get<string>('REDIS_HOST', '')
+            .includes('upstash.io')
+            ? {}
+            : undefined,
           // Upstash does not support CONFIG commands
           enableReadyCheck: false,
           maxRetriesPerRequest: null,

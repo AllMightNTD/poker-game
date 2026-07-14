@@ -37,7 +37,6 @@ export class User extends BaseEntity {
   })
   status: UserStatus;
 
-
   @Column({ type: 'boolean', default: false })
   is_active_status: boolean;
 

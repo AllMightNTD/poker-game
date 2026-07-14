@@ -4,43 +4,29 @@ import { registerAs } from '@nestjs/config';
 import { join } from 'path';
 
 export default registerAs('mail', (): MailerOptions => {
-  const isMailerSend =
-    process.env.MAILERSEND_API_KEY && process.env.MAILERSEND_SMTP_USER;
+  const sendGridApiKey = process.env.SENDGRID_API_KEY;
+  const fromEmail =
+    process.env.SENDGRID_FROM_EMAIL || 'no-reply@yourdomain.com';
 
-  const transport = isMailerSend
-    ? {
-      host: 'smtp.mailersend.net',
-      port: 2525,
-      secure: false,
-      auth: {
-        user: process.env.MAILERSEND_SMTP_USER,
-        pass: process.env.MAILERSEND_API_KEY,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      debug: true,
-      logger: true,
-    }
-    : {
-      host: process.env.MAIL_HOST,
-      port: process.env.MAIL_PORT ? +process.env.MAIL_PORT : 587,
-      secure: process.env.MAIL_SECURE === 'true',
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASSWORD,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      debug: true,
-      logger: true,
-    };
+  const transport = {
+    host: 'smtp.sendgrid.net',
+    port: 587,
+    secure: false, // Sử dụng TLS qua port 587
+    auth: {
+      user: 'apikey', // Luôn cố định là 'apikey' đối với SendGrid SMTP
+      pass: sendGridApiKey,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+    debug: true,
+    logger: true,
+  };
 
   return {
     transport,
     defaults: {
-      from: `"${process.env.APP_NAME || 'No Reply'}" <${process.env.MAIL_FROM || 'no-reply@yourdomain.com'}>`,
+      from: `"${process.env.APP_NAME || 'CG Poker'}" <${fromEmail}>`,
     },
     template: {
       dir: join(process.cwd(), 'src', 'mail', 'templates'),
@@ -49,6 +35,6 @@ export default registerAs('mail', (): MailerOptions => {
         strict: true,
       },
     },
-    preview: true,
+    preview: false, // Tắt preview modal để tập trung log debug
   };
 });

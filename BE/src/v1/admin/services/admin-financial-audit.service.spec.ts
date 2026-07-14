@@ -32,7 +32,9 @@ describe('AdminFinancialAuditService', () => {
       ],
     }).compile();
 
-    service = module.get<AdminFinancialAuditService>(AdminFinancialAuditService);
+    service = module.get<AdminFinancialAuditService>(
+      AdminFinancialAuditService,
+    );
     dataSource = module.get<DataSource>(DataSource);
   });
 

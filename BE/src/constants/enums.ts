@@ -9,7 +9,6 @@ export enum UserStatus {
   MEMORIALIZED = 'MEMORIALIZED',
 }
 
-
 export enum Gender {
   MALE = 'male',
   FEMALE = 'female',
