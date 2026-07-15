@@ -122,7 +122,7 @@ export class BlogsController {
   @ApiOperation({ summary: '[Admin] Trigger crawl poker news immediately' })
   async triggerCrawl() {
     // Run async so it doesn't block the HTTP response
-    this.blogsCrawlerService.crawlPokerNews().catch(err => {
+    this.blogsCrawlerService.crawlPokerNews().catch((err) => {
       console.error('Manual crawl failed:', err);
     });
     return { message: 'Crawl triggered successfully' };

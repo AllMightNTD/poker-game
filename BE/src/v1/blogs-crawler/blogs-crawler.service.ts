@@ -25,14 +25,17 @@ export class BlogsCrawlerService {
     @InjectRepository(CrawlLog)
     private readonly crawlLogRepository: Repository<CrawlLog>,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   // Chạy Cron Job tự động mỗi 6 tiếng
   @Cron(CronExpression.EVERY_6_HOURS)
   async handleCron() {
-    const isCronOn = this.configService.get<string>('POKER_NEWS_CRON_ON') === 'true';
+    const isCronOn =
+      this.configService.get<string>('POKER_NEWS_CRON_ON') === 'true';
     if (!isCronOn) {
-      this.logger.log('Poker News Crawl Cron Job is currently disabled in configuration.');
+      this.logger.log(
+        'Poker News Crawl Cron Job is currently disabled in configuration.',
+      );
       return;
     }
 
@@ -45,7 +48,9 @@ export class BlogsCrawlerService {
   async crawlPokerNews() {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (!apiKey) {
-      this.logger.error('GEMINI_API_KEY is not configured. Cannot process articles.');
+      this.logger.error(
+        'GEMINI_API_KEY is not configured. Cannot process articles.',
+      );
       return;
     }
 
@@ -60,8 +65,9 @@ export class BlogsCrawlerService {
       try {
         const rssResponse = await axios.get(rssUrl, {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'application/xml, text/xml, */*'
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            Accept: 'application/xml, text/xml, */*',
           },
           timeout: 10000,
         });
@@ -82,7 +88,9 @@ export class BlogsCrawlerService {
           });
 
           if (existingLog) {
-            this.logger.log(`Skipping already processed article: "${originalTitle}"`);
+            this.logger.log(
+              `Skipping already processed article: "${originalTitle}"`,
+            );
             continue;
           }
 
@@ -100,7 +108,8 @@ export class BlogsCrawlerService {
 
             const response = await axios.get(originalLink, {
               headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
               },
               timeout: 10000,
             });
@@ -109,25 +118,32 @@ export class BlogsCrawlerService {
 
             // Bóc tách OpenGraph thumbnail nếu chưa có
             if (!thumbnail) {
-              thumbnail = $('meta[property="og:image"]').attr('content') || null;
+              thumbnail =
+                $('meta[property="og:image"]').attr('content') || null;
             }
 
             // Lấy nội dung chi tiết bài viết (giúp Gemini có nguồn dịch chính xác hơn)
             // Hầu hết các trang tin tức Poker đặt nội dung chính trong class/tag article, .article-content, hoặc main
-            const mainContent = $('.article-content, article, .post-content, .entry-content').first();
+            const mainContent = $(
+              '.article-content, article, .post-content, .entry-content',
+            ).first();
             if (mainContent.length > 0) {
               contentHtml = mainContent.text().trim();
             } else {
               contentHtml = $('main').text().trim();
             }
           } catch (fetchError) {
-            this.logger.warn(`Failed to fetch full HTML content for: ${originalLink}. Activating Fallback to RSS snippet.`);
+            this.logger.error(fetchError);
+            this.logger.warn(
+              `Failed to fetch full HTML content for: ${originalLink}. Activating Fallback to RSS snippet.`,
+            );
           }
 
           // Fallback sang RSS contentSnippet/description nếu không cào được nội dung đầy đủ
-          const sourceText = contentHtml && contentHtml.length > 200
-            ? contentHtml
-            : (item.contentSnippet || item.content || originalTitle);
+          const sourceText =
+            contentHtml && contentHtml.length > 200
+              ? contentHtml
+              : item.contentSnippet || item.content || originalTitle;
 
           // 3. Gọi Gemini API dịch và cấu trúc bài viết
           try {
@@ -165,7 +181,9 @@ export class BlogsCrawlerService {
             let uniqueSlug = baseSlug;
             let counter = 1;
 
-            while (await this.blogRepository.findOne({ where: { slug: uniqueSlug } })) {
+            while (
+              await this.blogRepository.findOne({ where: { slug: uniqueSlug } })
+            ) {
               uniqueSlug = `${baseSlug}-${counter}`;
               counter++;
             }
@@ -173,7 +191,9 @@ export class BlogsCrawlerService {
             const newBlog = this.blogRepository.create({
               title: parsedData.title,
               slug: uniqueSlug,
-              thumbnail: thumbnail || 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?q=80&w=1000', // ảnh mặc định Poker
+              thumbnail:
+                thumbnail ||
+                'https://images.unsplash.com/photo-1511193311914-0346f16efe90?q=80&w=1000', // ảnh mặc định Poker
               content: parsedData.content,
               excerpt: parsedData.excerpt,
               category: parsedData.category || 'News',
@@ -191,13 +211,17 @@ export class BlogsCrawlerService {
                 source_url: originalLink,
                 status: 'SUCCESS',
                 blog_id: savedBlog.id,
-              })
+              }),
             );
 
-            this.logger.log(`Successfully imported article as Blog: "${parsedData.title}"`);
-
+            this.logger.log(
+              `Successfully imported article as Blog: "${parsedData.title}"`,
+            );
           } catch (geminiError) {
-            this.logger.error(`Failed to process article with Gemini or save to DB: ${originalTitle}`, geminiError.stack);
+            this.logger.error(
+              `Failed to process article with Gemini or save to DB: ${originalTitle}`,
+              geminiError.stack,
+            );
 
             // Ghi log thất bại
             await this.crawlLogRepository.save(
@@ -206,15 +230,18 @@ export class BlogsCrawlerService {
                 source_url: originalLink,
                 status: 'FAILED',
                 error_message: `Gemini/DB Error: ${geminiError.message}`,
-              })
+              }),
             );
           }
 
           // Delay 15 giây giữa các request để bypass giới hạn 5 RPM (requests per minute) của Gemini Free Tier
-          await new Promise(resolve => setTimeout(resolve, 15000));
+          await new Promise((resolve) => setTimeout(resolve, 15000));
         }
       } catch (rssError) {
-        this.logger.error(`Failed to parse RSS feed: ${rssUrl}`, rssError.stack);
+        this.logger.error(
+          `Failed to parse RSS feed: ${rssUrl}`,
+          rssError.stack,
+        );
       }
     }
   }
