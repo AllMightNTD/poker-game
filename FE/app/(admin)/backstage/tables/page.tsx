@@ -4,6 +4,10 @@ import httpClient from "@/core/api/http-client";
 import { CircleDollarSign, PowerOff, Users, Play, Pause, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { useQueryClient, useInfiniteQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { FormInput, FormSelect, FormCheckbox } from "@/components/ui/form";
 
 const adminKeys = {
   all: ["admin"] as const,
@@ -17,23 +21,56 @@ const fetchTablesPage = async ({ pageParam }: { pageParam: string | null }) => {
   return res.data;
 };
 
+const tableSchema = z.object({
+  name: z.string().min(1, "Tên bàn chơi không được để trống"),
+  game_type: z.string(),
+  small_blind: z.string().min(1, "Small Blind là bắt buộc").refine((val) => Number(val) > 0, "Phải lớn hơn 0"),
+  ante: z.string().min(1, "Ante là bắt buộc").refine((val) => Number(val) >= 0, "Không được nhỏ hơn 0"),
+  max_players: z.number(),
+  min_buyin: z.string().min(1, "Min Buy-in là bắt buộc").refine((val) => Number(val) > 0, "Phải lớn hơn 0"),
+  max_buyin: z.string().min(1, "Max Buy-in là bắt buộc").refine((val) => Number(val) > 0, "Phải lớn hơn 0"),
+  rake_rate: z.number().min(0, "Tỉ lệ Rake không được nhỏ hơn 0").max(10, "Tỉ lệ Rake tối đa 10%"),
+  rake_cap: z.string().min(1, "Trần Rake Cap là bắt buộc").refine((val) => Number(val) >= 0, "Không được nhỏ hơn 0"),
+  allow_bomb_pot: z.boolean(),
+  allow_rit: z.boolean(),
+}).refine(
+  (data) => Number(data.max_buyin) >= Number(data.min_buyin),
+  {
+    message: "Max Buy-in phải lớn hơn hoặc bằng Min Buy-in",
+    path: ["max_buyin"],
+  }
+);
+
+type TableFormValues = z.infer<typeof tableSchema>;
+
+const INITIAL_VALUES: TableFormValues = {
+  name: "",
+  game_type: "TEXAS",
+  small_blind: "5",
+  ante: "0",
+  max_players: 9,
+  min_buyin: "400",
+  max_buyin: "2000",
+  rake_rate: 5.0,
+  rake_cap: "30",
+  allow_bomb_pot: false,
+  allow_rit: false,
+};
+
 export default function AdminTablesPage() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Form State for creating a table
-  const [formData, setFormData] = useState({
-    name: "",
-    game_type: "TEXAS",
-    small_blind: "5",
-    ante: "0",
-    max_players: 9,
-    min_buyin: "400",
-    max_buyin: "2000",
-    rake_rate: 5.0,
-    rake_cap: "30",
-    allow_bomb_pot: false,
-    allow_rit: false,
+  // React Hook Form setup
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<TableFormValues>({
+    resolver: zodResolver(tableSchema),
+    defaultValues: INITIAL_VALUES,
+    mode: "onChange",
   });
 
   // Query: Fetch tables with cursor-based pagination
@@ -86,40 +123,27 @@ export default function AdminTablesPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (formDataArg: typeof formData) =>
+    mutationFn: (values: TableFormValues) =>
       httpClient.post("/api/v1/admin/tables", {
-        name: formDataArg.name,
-        game_type: formDataArg.game_type,
-        small_blind: formDataArg.small_blind,
-        ante: formDataArg.ante,
-        max_players: Number(formDataArg.max_players),
-        min_buyin: formDataArg.min_buyin,
-        max_buyin: formDataArg.max_buyin,
-        rake_rate: Number(formDataArg.rake_rate),
-        rake_cap: formDataArg.rake_cap,
+        name: values.name,
+        game_type: values.game_type,
+        small_blind: values.small_blind,
+        ante: values.ante,
+        max_players: Number(values.max_players),
+        min_buyin: values.min_buyin,
+        max_buyin: values.max_buyin,
+        rake_rate: Number(values.rake_rate),
+        rake_cap: values.rake_cap,
         custom_settings: {
-          allow_bomb_pot: formDataArg.allow_bomb_pot,
-          allow_rit: formDataArg.allow_rit,
+          allow_bomb_pot: values.allow_bomb_pot,
+          allow_rit: values.allow_rit,
         }
       }),
     onSuccess: (res) => {
       if (res.data?.success) {
         queryClient.invalidateQueries({ queryKey: adminKeys.tables() });
         setIsModalOpen(false);
-        // Reset form
-        setFormData({
-          name: "",
-          game_type: "TEXAS",
-          small_blind: "5",
-          ante: "0",
-          max_players: 9,
-          min_buyin: "400",
-          max_buyin: "2000",
-          rake_rate: 5.0,
-          rake_cap: "30",
-          allow_bomb_pot: false,
-          allow_rit: false,
-        });
+        reset(INITIAL_VALUES);
       } else {
         alert("Tạo bàn chơi thất bại");
       }
@@ -142,9 +166,8 @@ export default function AdminTablesPage() {
     resumeMutation.mutate(id);
   };
 
-  const handleCreateTable = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate(formData);
+  const onSubmit = (values: TableFormValues) => {
+    createMutation.mutate(values);
   };
 
   return (
@@ -155,7 +178,10 @@ export default function AdminTablesPage() {
           <p className="text-slate-500 text-sm mt-1">Theo dõi bàn đang hoạt động, cấu hình cược và các thao tác admin.</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            reset(INITIAL_VALUES);
+            setIsModalOpen(true);
+          }}
           className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-indigo-600/10 cursor-pointer"
         >
           <Plus size={16} /> Tạo bàn mới
@@ -271,142 +297,104 @@ export default function AdminTablesPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateTable} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-400">Tên bàn chơi</label>
-                <input
-                  type="text"
+            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <FormInput
+                label="Tên bàn chơi"
+                required
+                placeholder="Ví dụ: High Roller Club"
+                error={errors.name?.message}
+                {...register("name")}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormInput
+                  label="Small Blind ($)"
+                  type="number"
                   required
-                  placeholder="Ví dụ: High Roller Club"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                  min="1"
+                  error={errors.small_blind?.message}
+                  {...register("small_blind")}
+                />
+                <FormInput
+                  label="Ante ($)"
+                  type="number"
+                  required
+                  min="0"
+                  error={errors.ante?.message}
+                  {...register("ante")}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <FormSelect
+                  label="Số ghế"
+                  {...register("max_players", { valueAsNumber: true })}
+                >
+                  <option value="9">9 players</option>
+                  <option value="6">6 players</option>
+                  <option value="2">Heads Up (2)</option>
+                </FormSelect>
+
+                <FormSelect
+                  label="Kiểu chơi"
+                  className="col-span-2"
+                  {...register("game_type")}
+                >
+                  <option value="TEXAS">Texas Hold&apos;em</option>
+                  <option value="OMAHA">Omaha (PLO)</option>
+                </FormSelect>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormInput
+                  label="Min Buy-in ($)"
+                  type="number"
+                  required
+                  min="1"
+                  error={errors.min_buyin?.message}
+                  {...register("min_buyin")}
+                />
+                <FormInput
+                  label="Max Buy-in ($)"
+                  type="number"
+                  required
+                  min="1"
+                  error={errors.max_buyin?.message}
+                  {...register("max_buyin")}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Small Blind ($)</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={formData.small_blind}
-                    onChange={(e) => setFormData(prev => ({ ...prev, small_blind: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Ante ($)</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={formData.ante}
-                    onChange={(e) => setFormData(prev => ({ ...prev, ante: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Số ghế</label>
-                  <select
-                    value={formData.max_players}
-                    onChange={(e) => setFormData(prev => ({ ...prev, max_players: Number(e.target.value) }))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="9">9 players</option>
-                    <option value="6">6 players</option>
-                    <option value="2">Heads Up (2)</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5 col-span-2">
-                  <label className="text-xs font-medium text-slate-400">Kiểu chơi</label>
-                  <select
-                    value={formData.game_type}
-                    onChange={(e) => setFormData(prev => ({ ...prev, game_type: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="TEXAS">Texas Hold&apos;em</option>
-                    <option value="OMAHA">Omaha (PLO)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Min Buy-in ($)</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={formData.min_buyin}
-                    onChange={(e) => setFormData(prev => ({ ...prev, min_buyin: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Max Buy-in ($)</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={formData.max_buyin}
-                    onChange={(e) => setFormData(prev => ({ ...prev, max_buyin: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Tỉ lệ Rake (%)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="10"
-                    required
-                    value={formData.rake_rate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, rake_rate: Number(e.target.value) }))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Trần Rake Cap ($)</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={formData.rake_cap}
-                    onChange={(e) => setFormData(prev => ({ ...prev, rake_cap: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
+                <FormInput
+                  label="Tỉ lệ Rake (%)"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  required
+                  error={errors.rake_rate?.message}
+                  {...register("rake_rate", { valueAsNumber: true })}
+                />
+                <FormInput
+                  label="Trần Rake Cap ($)"
+                  type="number"
+                  required
+                  min="0"
+                  error={errors.rake_cap?.message}
+                  {...register("rake_cap")}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer bg-slate-950 px-4 py-2.5 rounded-lg border border-slate-850/60 select-none">
-                  <input
-                    type="checkbox"
-                    checked={formData.allow_bomb_pot}
-                    onChange={(e) => setFormData(prev => ({ ...prev, allow_bomb_pot: e.target.checked }))}
-                    className="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 bg-slate-900 w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-xs font-medium text-slate-300">Cho phép Bomb Pot</span>
-                </label>
+                <FormCheckbox
+                  label="Cho phép Bomb Pot"
+                  {...register("allow_bomb_pot")}
+                />
 
-                <label className="flex items-center gap-2 cursor-pointer bg-slate-950 px-4 py-2.5 rounded-lg border border-slate-850/60 select-none">
-                  <input
-                    type="checkbox"
-                    checked={formData.allow_rit}
-                    onChange={(e) => setFormData(prev => ({ ...prev, allow_rit: e.target.checked }))}
-                    className="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 bg-slate-900 w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-xs font-medium text-slate-300">Cho phép RIT</span>
-                </label>
+                <FormCheckbox
+                  label="Cho phép RIT"
+                  {...register("allow_rit")}
+                />
               </div>
 
               <div className="pt-4 flex gap-3 border-t border-slate-800 mt-6">
@@ -419,7 +407,7 @@ export default function AdminTablesPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={createMutation.isPending}
+                  disabled={createMutation.isPending || !isValid}
                   className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-indigo-600/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {createMutation.isPending ? "Đang tạo..." : "Tạo ngay"}

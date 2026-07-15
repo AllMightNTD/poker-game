@@ -3,36 +3,57 @@
 import httpClient from "@/core/api/http-client";
 import { AlertCircle, Send } from "lucide-react";
 import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { FormTextArea } from "@/components/ui/form";
+
+const systemBroadcastSchema = z.object({
+  message: z
+    .string()
+    .min(1, "Vui lòng nhập nội dung thông báo")
+    .max(200, "Nội dung thông báo tối đa 200 ký tự")
+    .transform((val) => val.trim()),
+});
+
+type SystemBroadcastValues = z.infer<typeof systemBroadcastSchema>;
 
 export default function AdminSystemPage() {
-  const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const handleBroadcast = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!message || !message.trim()) {
-      alert("Vui lòng nhập nội dung thông báo");
-      return;
-    }
-    
-    setSending(true);
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<SystemBroadcastValues>({
+    resolver: zodResolver(systemBroadcastSchema),
+    defaultValues: {
+      message: "",
+    },
+  });
+
+  const messageValue = useWatch({ control, name: "message" }) || "";
+
+  const onSubmit = async (data: SystemBroadcastValues) => {
     setStatus(null);
     try {
       const res = await httpClient.post("/api/v1/admin/system/broadcast", {
-        message: message.trim()
+        message: data.message,
       });
       if (res.data?.success) {
         setStatus({ type: "success", text: "Thông báo đã được phát thành công tới toàn bộ người chơi online!" });
-        setMessage("");
+        reset({ message: "" });
       } else {
         setStatus({ type: "error", text: res.data?.message || "Không thể phát thông báo" });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setStatus({ type: "error", text: "Có lỗi xảy ra khi kết nối máy chủ" });
-    } finally {
-      setSending(false);
+      setStatus({ 
+        type: "error", 
+        text: e.response?.data?.message || "Có lỗi xảy ra khi kết nối máy chủ" 
+      });
     }
   };
 
@@ -55,19 +76,18 @@ export default function AdminSystemPage() {
           </div>
         </div>
 
-        <form onSubmit={handleBroadcast} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Nội dung thông báo</label>
-            <textarea
-              required
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1">
+            <FormTextArea
+              label="Nội dung thông báo"
+              placeholder="Nhập thông báo hệ thống tại đây (tối đa 200 ký tự)..."
               rows={4}
               maxLength={200}
-              placeholder="Nhập thông báo hệ thống tại đây (tối đa 200 ký tự)..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none font-medium"
+              error={errors.message?.message}
+              disabled={isSubmitting}
+              {...register("message")}
             />
-            <div className="text-right text-xs text-slate-600">{message.length}/200 ký tự</div>
+            <div className="text-right text-xs text-slate-600">{messageValue.length}/200 ký tự</div>
           </div>
 
           {status && (
@@ -82,10 +102,10 @@ export default function AdminSystemPage() {
 
           <button
             type="submit"
-            disabled={sending || !message.trim()}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 shadow-lg shadow-indigo-600/15"
+            disabled={isSubmitting || !messageValue.trim()}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 shadow-lg shadow-indigo-600/15 cursor-pointer disabled:cursor-not-allowed"
           >
-            <Send size={16} /> {sending ? "Đang gửi..." : "Phát thông báo"}
+            <Send size={16} /> {isSubmitting ? "Đang gửi..." : "Phát thông báo"}
           </button>
         </form>
       </div>

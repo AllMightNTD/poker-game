@@ -3,6 +3,7 @@
 import httpClient from "@/core/api/http-client";
 import { Ban, ShieldAlert, ShieldCheck, LogOut, BarChart3, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { FormInput } from "@/components/ui/form";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -274,12 +275,12 @@ export default function AdminUsersPage() {
               <div className="border-t border-slate-800 pt-4 space-y-3">
                 <h3 className="text-sm font-medium text-slate-400">Trục xuất khỏi bàn chơi</h3>
                 <div className="flex gap-2">
-                  <input
+                  <FormInput
                     type="text"
                     placeholder="Nhập ID bàn đấu"
                     value={kickRoomId}
                     onChange={(e) => setKickRoomId(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 placeholder-slate-600"
+                    className="flex-1"
                   />
                   <button
                     onClick={() => handleForceKick(selectedUser.id)}

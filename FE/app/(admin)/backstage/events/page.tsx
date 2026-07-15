@@ -17,6 +17,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { DateTimePicker } from "@/components/ui/DateTimePicker";
+import { FormInput, FormTextArea, FormSelect, FormCheckbox } from "@/components/ui/form";
 
 interface PromoEvent {
   id: string;
@@ -358,71 +359,46 @@ export default function AdminEventsPage() {
 
             <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5 col-span-2">
-                  <label className="text-xs font-semibold text-slate-400">Tiêu đề chính (Title)</label>
-                  <input
-                    type="text"
-                    placeholder="Ví dụ: Weekly Freeroll $5,000 GTD"
-                    {...register("title")}
-                    className={`w-full bg-slate-950 border rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 ${
-                      errors.title ? "border-red-500" : "border-slate-850"
-                    }`}
-                  />
-                  {errors.title && <p className="text-xs text-red-500">{errors.title.message}</p>}
-                </div>
+                <FormInput
+                  label="Tiêu đề chính (Title)"
+                  required
+                  placeholder="Ví dụ: Weekly Freeroll $5,000 GTD"
+                  error={errors.title?.message}
+                  className="col-span-2"
+                  {...register("title")}
+                />
 
-                <div className="space-y-1.5 col-span-2">
-                  <label className="text-xs font-semibold text-slate-400">Tiêu đề phụ (Subtitle)</label>
-                  <input
-                    type="text"
-                    placeholder="Ví dụ: Giải đấu miễn phí mỗi Chủ Nhật"
-                    {...register("subtitle")}
-                    className={`w-full bg-slate-950 border rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 ${
-                      errors.subtitle ? "border-red-500" : "border-slate-850"
-                    }`}
-                  />
-                  {errors.subtitle && <p className="text-xs text-red-500">{errors.subtitle.message}</p>}
-                </div>
+                <FormInput
+                  label="Tiêu đề phụ (Subtitle)"
+                  required
+                  placeholder="Ví dụ: Giải đấu miễn phí mỗi Chủ Nhật"
+                  error={errors.subtitle?.message}
+                  className="col-span-2"
+                  {...register("subtitle")}
+                />
 
-                <div className="space-y-1.5 col-span-2">
-                  <label className="text-xs font-semibold text-slate-400">Mô tả sự kiện</label>
-                  <textarea
-                    rows={3}
-                    placeholder="Nhập thông tin mô tả chi tiết giải thưởng, điều kiện..."
-                    {...register("description")}
-                    className={`w-full bg-slate-950 border rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 resize-none ${
-                      errors.description ? "border-red-500" : "border-slate-850"
-                    }`}
-                  />
-                  {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
-                </div>
+                <FormTextArea
+                  label="Mô tả sự kiện"
+                  required
+                  placeholder="Nhập thông tin mô tả chi tiết giải thưởng, điều kiện..."
+                  error={errors.description?.message}
+                  className="col-span-2"
+                  rows={3}
+                  {...register("description")}
+                />
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-400">Nhãn (Badge)</label>
-                  <input
-                    type="text"
-                    placeholder="Ví dụ: Sự Kiện Hot, Khuyến Mãi"
-                    {...register("badge")}
-                    className={`w-full bg-slate-950 border rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 ${
-                      errors.badge ? "border-red-500" : "border-slate-850"
-                    }`}
-                  />
-                  {errors.badge && <p className="text-xs text-red-500">{errors.badge.message}</p>}
-                </div>
+                <FormInput
+                  label="Nhãn (Badge)"
+                  placeholder="Ví dụ: Sự Kiện Hot, Khuyến Mãi"
+                  error={errors.badge?.message}
+                  {...register("badge")}
+                />
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-400">Icon đại diện</label>
-                  <select
-                    {...register("iconType")}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                  >
-                    {ICON_PRESETS.map((i) => (
-                      <option key={i.type} value={i.type}>
-                        {i.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <FormSelect
+                  label="Icon đại diện"
+                  options={ICON_PRESETS.map((i) => ({ value: i.type, label: i.label }))}
+                  {...register("iconType")}
+                />
 
                 <div className="space-y-1.5 col-span-2">
                   <label className="text-xs font-semibold text-slate-400">Template màu nền banner</label>
@@ -432,7 +408,7 @@ export default function AdminEventsPage() {
                         key={p.name}
                         type="button"
                         onClick={() => setValue("colorGradient", p.class)}
-                        className={`p-3 rounded-lg text-left text-xs font-semibold transition-all border ${
+                        className={`p-3 rounded-lg text-left text-xs font-semibold transition-all border cursor-pointer ${
                           currentColorGradient === p.class
                             ? "border-indigo-500 bg-slate-850/50"
                             : "border-slate-850 bg-slate-950 hover:bg-slate-850/20"
@@ -445,15 +421,12 @@ export default function AdminEventsPage() {
                   </div>
                 </div>
 
-                <div className="space-y-1.5 col-span-2">
-                  <label className="text-xs font-semibold text-slate-400">Đường dẫn hành động (Action Link - Tùy chọn)</label>
-                  <input
-                    type="text"
-                    placeholder="Ví dụ: /poker-game hoặc https://..."
-                    {...register("linkUrl")}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
+                <FormInput
+                  label="Đường dẫn hành động (Action Link - Tùy chọn)"
+                  placeholder="Ví dụ: /poker-game hoặc https://..."
+                  className="col-span-2"
+                  {...register("linkUrl")}
+                />
 
                 <DateTimePicker
                   label="Thời gian bắt đầu"
@@ -468,16 +441,10 @@ export default function AdminEventsPage() {
                 />
 
                 <div className="col-span-2 pt-2">
-                  <label className="flex items-center gap-2 cursor-pointer bg-slate-950 px-4 py-2.5 rounded-lg border border-slate-850/60 select-none">
-                    <input
-                      type="checkbox"
-                      {...register("isActive")}
-                      className="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 bg-slate-900 w-4 h-4 cursor-pointer"
-                    />
-                    <span className="text-xs font-semibold text-slate-300">
-                      Kích hoạt ngay (Hiển thị lên sảnh)
-                    </span>
-                  </label>
+                  <FormCheckbox
+                    label="Kích hoạt ngay (Hiển thị lên sảnh)"
+                    {...register("isActive")}
+                  />
                 </div>
               </div>
 

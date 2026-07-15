@@ -6,21 +6,27 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Save, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { FormInput, FormTextArea } from "@/components/ui/form";
 
 const CATEGORIES = ["Strategy", "Tournament", "News", "Lifestyle"];
 
-interface FormState {
-  title: string;
-  excerpt: string;
-  thumbnail: string;
-  category: string;
-  tags: string;
-  content: string;
-  is_published: boolean;
-}
+const blogFormSchema = z.object({
+  title: z.string().min(1, "Tiêu đề không được để trống"),
+  excerpt: z.string().optional().or(z.literal("")),
+  thumbnail: z.string().optional().or(z.literal("")),
+  category: z.string(),
+  tags: z.string().optional().or(z.literal("")),
+  content: z.string().min(1, "Nội dung không được để trống"),
+  is_published: z.boolean(),
+});
 
-const INITIAL: FormState = {
+type BlogFormValues = z.infer<typeof blogFormSchema>;
+
+const INITIAL: BlogFormValues = {
   title: "",
   excerpt: "",
   thumbnail: "",
@@ -36,6 +42,9 @@ export default function AdminBlogEditorPage() {
   const editId = searchParams.get("id");
   const isEditing = !!editId;
 
+  const [preview, setPreview] = useState(false);
+  const [saved, setSaved] = useState(false);
+
   // 1. Fetch existing blog data when editing
   const { data: existingBlog } = useQuery({
     queryKey: ["admin-blog-edit", editId],
@@ -47,8 +56,28 @@ export default function AdminBlogEditorPage() {
     enabled: isEditing,
   });
 
-  // 2. Derive form default from fetched blog (avoids setState-in-effect lint error)
-  const derivedInitial = useMemo<FormState>(() => {
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    reset,
+    formState: { errors, isValid, isSubmitting },
+  } = useForm<BlogFormValues>({
+    resolver: zodResolver(blogFormSchema),
+    defaultValues: INITIAL,
+    mode: "onChange",
+  });
+
+  // Watch form fields for custom rendering/interactions
+  const titleValue = useWatch({ control, name: "title" }) || "";
+  const contentValue = useWatch({ control, name: "content" }) || "";
+  const thumbnailValue = useWatch({ control, name: "thumbnail" }) || "";
+  const categoryValue = useWatch({ control, name: "category" }) || "Strategy";
+  const isPublishedValue = useWatch({ control, name: "is_published" }) ?? true;
+
+  // 2. Sync form to fetched data when available
+  const derivedInitial = useMemo<BlogFormValues>(() => {
     if (!existingBlog) return INITIAL;
     return {
       title: existingBlog.title ?? "",
@@ -61,37 +90,29 @@ export default function AdminBlogEditorPage() {
     };
   }, [existingBlog]);
 
-  // 3. Local UI state — sync once when derivedInitial becomes non-empty
-  const [form, setForm] = useState<FormState>(INITIAL);
-  const [synced, setSynced] = useState(false);
-  const [preview, setPreview] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  // Sync form to fetched data exactly once (render-phase conditional call — safe per React rules)
-  if (existingBlog && !synced) {
-    setForm(derivedInitial);
-    setSynced(true);
-  }
-
-  const set = (key: keyof FormState, value: string | boolean) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
-
-  const buildPayload = () => ({
-    title: form.title.trim(),
-    excerpt: form.excerpt.trim() || undefined,
-    thumbnail: form.thumbnail.trim() || undefined,
-    category: form.category,
-    tags: form.tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean),
-    content: form.content.trim(),
-    is_published: form.is_published,
-  });
+  useEffect(() => {
+    if (existingBlog) {
+      reset(derivedInitial);
+    }
+  }, [existingBlog, derivedInitial, reset]);
 
   const saveMutation = useMutation({
-    mutationFn: async () => {
-      const payload = buildPayload();
+    mutationFn: async (data: BlogFormValues) => {
+      const payload = {
+        title: data.title.trim(),
+        excerpt: data.excerpt?.trim() || undefined,
+        thumbnail: data.thumbnail?.trim() || undefined,
+        category: data.category,
+        tags: data.tags
+          ? data.tags
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [],
+        content: data.content.trim(),
+        is_published: data.is_published,
+      };
+
       if (isEditing) {
         await httpClient.put(`/api/v1/blogs/admin/${editId}`, payload);
       } else {
@@ -106,10 +127,12 @@ export default function AdminBlogEditorPage() {
     },
   });
 
-  const isValid = form.title.trim().length > 0 && form.content.trim().length > 0;
+  const onSubmit = (data: BlogFormValues) => {
+    saveMutation.mutate(data);
+  };
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
@@ -132,8 +155,9 @@ export default function AdminBlogEditorPage() {
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => setPreview((p) => !p)}
-            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg text-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg text-sm transition-colors cursor-pointer"
             id="btn-toggle-preview"
           >
             {preview ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -141,10 +165,10 @@ export default function AdminBlogEditorPage() {
           </button>
 
           <button
-            onClick={() => saveMutation.mutate()}
-            disabled={!isValid || saveMutation.isPending || saved}
+            type="submit"
+            disabled={!isValid || saveMutation.isPending || saved || isSubmitting}
             id="btn-save-blog"
-            className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 disabled:opacity-40 text-black font-bold rounded-lg text-sm transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 disabled:opacity-40 text-black font-bold rounded-lg text-sm transition-all cursor-pointer disabled:cursor-not-allowed"
           >
             {saveMutation.isPending ? (
               <Loader2 size={15} className="animate-spin" />
@@ -169,12 +193,12 @@ export default function AdminBlogEditorPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Main content area */}
         <div className="lg:col-span-2 space-y-4">
-          <input
+          <FormInput
             id="blog-title"
-            value={form.title}
-            onChange={(e) => set("title", e.target.value)}
             placeholder="Tiêu đề bài viết..."
-            className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-lg font-semibold text-slate-100 placeholder-slate-600 focus:outline-none focus:border-yellow-500/60 transition-colors"
+            error={errors.title?.message}
+            className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-lg font-semibold text-slate-100 placeholder-slate-600 focus:outline-none focus:border-yellow-500/60 focus:ring-0 transition-colors"
+            {...register("title")}
           />
 
           {preview ? (
@@ -185,16 +209,16 @@ export default function AdminBlogEditorPage() {
                 prose-headings:font-black prose-headings:uppercase prose-headings:text-white
                 prose-a:text-yellow-400 prose-p:text-slate-300 prose-strong:text-white
                 prose-code:bg-white/10 prose-code:text-yellow-300 prose-code:rounded prose-code:px-1"
-              dangerouslySetInnerHTML={{ __html: form.content || "<p class='text-slate-600'>Preview sẽ hiển thị ở đây...</p>" }}
+              dangerouslySetInnerHTML={{ __html: contentValue || "<p class='text-slate-600'>Preview sẽ hiển thị ở đây...</p>" }}
             />
           ) : (
-            <textarea
+            <FormTextArea
               id="blog-content"
-              value={form.content}
-              onChange={(e) => set("content", e.target.value)}
               placeholder={`Nội dung bài viết (HTML được hỗ trợ)...\n\nVí dụ nhúng trình phát lại ván bài:\n[hand-replayer id="123456789"]`}
               rows={22}
-              className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-yellow-500/60 resize-y transition-colors font-mono leading-relaxed"
+              error={errors.content?.message}
+              className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-300 placeholder-slate-600 focus:outline-none focus:border-yellow-500/60 resize-y transition-colors font-mono leading-relaxed"
+              {...register("content")}
             />
           )}
         </div>
@@ -205,17 +229,18 @@ export default function AdminBlogEditorPage() {
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Xuất bản</h3>
             <button
-              onClick={() => set("is_published", !form.is_published)}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all text-sm font-medium ${
-                form.is_published
+              type="button"
+              onClick={() => setValue("is_published", !isPublishedValue, { shouldValidate: true })}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all text-sm font-medium cursor-pointer ${
+                isPublishedValue
                   ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
                   : "border-slate-700 bg-slate-800 text-slate-500"
               }`}
               id="btn-toggle-published"
             >
               <span className="flex items-center gap-2">
-                {form.is_published ? <Eye size={14} /> : <EyeOff size={14} />}
-                {form.is_published ? "Công khai" : "Nháp"}
+                {isPublishedValue ? <Eye size={14} /> : <EyeOff size={14} />}
+                {isPublishedValue ? "Công khai" : "Nháp"}
               </span>
               <span className="text-xs opacity-70">click để đổi</span>
             </button>
@@ -228,9 +253,10 @@ export default function AdminBlogEditorPage() {
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat}
-                  onClick={() => set("category", cat)}
-                  className={`py-2 px-3 rounded-lg text-xs font-medium border transition-all ${
-                    form.category === cat
+                  type="button"
+                  onClick={() => setValue("category", cat, { shouldValidate: true })}
+                  className={`py-2 px-3 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                    categoryValue === cat
                       ? "border-yellow-500/50 bg-yellow-500/10 text-yellow-400"
                       : "border-slate-700 text-slate-500 hover:text-slate-300"
                   }`}
@@ -244,30 +270,30 @@ export default function AdminBlogEditorPage() {
           {/* Tags */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Tags</h3>
-            <input
+            <FormInput
               id="blog-tags"
-              value={form.tags}
-              onChange={(e) => set("tags", e.target.value)}
               placeholder="preflop, bluff, strategy..."
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-yellow-500/40"
+              className="bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-yellow-500/40"
+              error={errors.tags?.message}
+              {...register("tags")}
             />
-            <p className="text-slate-700 text-xs mt-1.5">Cách nhau bằng dấu phẩy</p>
+            <p className="text-slate-700 text-[10px] mt-1.5">Cách nhau bằng dấu phẩy</p>
           </div>
 
           {/* Thumbnail */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Ảnh bìa (URL)</h3>
-            <input
+            <FormInput
               id="blog-thumbnail"
-              value={form.thumbnail}
-              onChange={(e) => set("thumbnail", e.target.value)}
               placeholder="https://images.unsplash.com/..."
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-yellow-500/40"
+              className="bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-yellow-500/40"
+              error={errors.thumbnail?.message}
+              {...register("thumbnail")}
             />
-            {form.thumbnail && (
+            {thumbnailValue && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={form.thumbnail}
+                src={thumbnailValue}
                 alt="thumbnail preview"
                 className="mt-3 w-full h-32 object-cover rounded-lg opacity-70"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -278,13 +304,13 @@ export default function AdminBlogEditorPage() {
           {/* Excerpt */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Tóm tắt (excerpt)</h3>
-            <textarea
+            <FormTextArea
               id="blog-excerpt"
-              value={form.excerpt}
-              onChange={(e) => set("excerpt", e.target.value)}
               placeholder="Mô tả ngắn gọn về bài viết..."
               rows={3}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-yellow-500/40 resize-none"
+              className="bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-yellow-500/40 resize-none"
+              error={errors.excerpt?.message}
+              {...register("excerpt")}
             />
           </div>
 
@@ -299,6 +325,6 @@ export default function AdminBlogEditorPage() {
           </div>
         </div>
       </div>
-    </div>
+    </form>
   );
 }

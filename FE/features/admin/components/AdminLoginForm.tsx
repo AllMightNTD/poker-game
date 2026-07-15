@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import Cookies from "js-cookie";
+import { FormInput } from "@/components/ui/form";
 
 const adminLoginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
@@ -32,6 +33,11 @@ export const AdminLoginForm = () => {
     formState: { errors, isSubmitting },
   } = useForm<AdminLoginValues>({
     resolver: zodResolver(adminLoginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      twoFactorToken: "",
+    },
   });
 
   const onSubmit = async (data: AdminLoginValues) => {
@@ -40,7 +46,6 @@ export const AdminLoginForm = () => {
       const res = await httpClient.post("/api/v1/admin/login", data);
 
       if (res.data?.access_token) {
-        // TODO: chuyển sang HTTP-only cookie khi lên production
         localStorage.setItem("admin_token", res.data.access_token);
         localStorage.setItem("admin_info", JSON.stringify(res.data.admin));
         Cookies.set("admin_token", res.data.access_token, { expires: 1, path: "/" });
@@ -50,9 +55,6 @@ export const AdminLoginForm = () => {
       setError(err.response?.data?.message || "Sai thông tin đăng nhập.");
     }
   };
-
-  const inputBase =
-    "w-full pl-11 pr-4 py-2.5 rounded-lg text-sm text-slate-100 placeholder:text-slate-500 bg-slate-800/60 border border-slate-700 outline-none transition-colors focus:border-slate-400 focus:ring-1 focus:ring-slate-400";
 
   return (
     <div className="w-full max-w-sm mx-auto p-8 rounded-2xl bg-slate-900 border border-slate-800">
@@ -75,53 +77,35 @@ export const AdminLoginForm = () => {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Email */}
-        <div className="space-y-1">
-          <div className="relative">
-            <Mail size={16} className="absolute inset-y-0 left-3.5 my-auto text-slate-500" />
-            <input
-              {...register("email")}
-              type="email"
-              placeholder="Email quản trị"
-              className={inputBase}
-            />
-          </div>
-          {errors.email && (
-            <p className="text-xs text-red-400 ml-1">{errors.email.message}</p>
-          )}
-        </div>
+        <FormInput
+          {...register("email")}
+          type="email"
+          placeholder="Email quản trị"
+          leftIcon={<Mail size={16} />}
+          error={errors.email?.message}
+          disabled={isSubmitting}
+        />
 
         {/* Password */}
-        <div className="space-y-1">
-          <div className="relative">
-            <Lock size={16} className="absolute inset-y-0 left-3.5 my-auto text-slate-500" />
-            <input
-              {...register("password")}
-              type="password"
-              placeholder="Mật khẩu"
-              className={inputBase}
-            />
-          </div>
-          {errors.password && (
-            <p className="text-xs text-red-400 ml-1">{errors.password.message}</p>
-          )}
-        </div>
+        <FormInput
+          {...register("password")}
+          type="password"
+          placeholder="Mật khẩu"
+          leftIcon={<Lock size={16} />}
+          error={errors.password?.message}
+          disabled={isSubmitting}
+        />
 
         {/* 2FA */}
-        <div className="space-y-1">
-          <div className="relative">
-            <ShieldAlert size={16} className="absolute inset-y-0 left-3.5 my-auto text-slate-500" />
-            <input
-              {...register("twoFactorToken")}
-              type="text"
-              maxLength={6}
-              placeholder="Mã 2FA (nếu có)"
-              className={inputBase}
-            />
-          </div>
-          {errors.twoFactorToken && (
-            <p className="text-xs text-red-400 ml-1">{errors.twoFactorToken.message}</p>
-          )}
-        </div>
+        <FormInput
+          {...register("twoFactorToken")}
+          type="text"
+          maxLength={6}
+          placeholder="Mã 2FA (nếu có)"
+          leftIcon={<ShieldAlert size={16} />}
+          error={errors.twoFactorToken?.message}
+          disabled={isSubmitting}
+        />
 
         <button
           type="submit"
