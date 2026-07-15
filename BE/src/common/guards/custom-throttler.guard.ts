@@ -9,17 +9,23 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
   } {
     if (context.getType() === 'ws') {
       const client = context.switchToWs().getClient();
+      const headers = client.handshake?.headers || {};
+      const xForwardedFor = headers['x-forwarded-for'];
+      const clientIp =
+        typeof xForwardedFor === 'string'
+          ? xForwardedFor.split(',')[0].trim()
+          : client.handshake?.address ||
+          client.conn?.remoteAddress ||
+          '127.0.0.1';
+
       const req = {
         ...client,
-        ip:
-          client.handshake?.address ||
-          client.conn?.remoteAddress ||
-          '127.0.0.1',
+        ip: clientIp,
       };
       return {
         req,
         res: {
-          header: () => {}, // Mock header method to prevent "res.header is not a function"
+          header: () => { }, // Mock header method to prevent "res.header is not a function"
         },
       };
     }
