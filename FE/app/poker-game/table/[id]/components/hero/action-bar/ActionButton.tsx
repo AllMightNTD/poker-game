@@ -11,6 +11,7 @@ interface ActionButtonsProps {
     raiseOrBetLabel: string;
     isRaiseMode: boolean;
     raiseAmount: number;
+    isAllIn: boolean;
     maxRaise: number;
     onFold: () => void;
     onCheck: () => void;
@@ -28,12 +29,15 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
     raiseAmount,
     maxRaise,
     onFold,
+    isAllIn,
     onCheck,
     onCall,
     onRaiseButtonClick,
     onAllInClick,
     canRaise,
 }) => {
+    console.log('isAllIn', isAllIn);
+
     return (
         <div className="w-full flex items-stretch gap-2 bg-[#0a0a0a]/90 backdrop-blur-md p-2 rounded-2xl border border-[#F4B942]/30 shadow-2xl">
             <button
