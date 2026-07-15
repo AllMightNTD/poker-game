@@ -10,7 +10,6 @@ interface ActionButtonsProps {
     isCallAllIn: boolean;
     raiseOrBetLabel: string;
     isRaiseMode: boolean;
-    isAllIn: boolean;
     raiseAmount: number;
     maxRaise: number;
     onFold: () => void;
@@ -26,7 +25,6 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
     isCallAllIn,
     raiseOrBetLabel,
     isRaiseMode,
-    isAllIn,
     raiseAmount,
     maxRaise,
     onFold,
