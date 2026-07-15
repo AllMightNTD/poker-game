@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { AdminGuard } from '../admin/guards/admin.guard';
 import { BlogsService } from './blogs.service';
+import { BlogsCrawlerService } from '../blogs-crawler/blogs-crawler.service';
 import { CreateBlogDto, UpdateBlogDto } from './dto/blog.dto';
 
 // ---------------------------------------------------------------------------
@@ -28,7 +29,10 @@ import { CreateBlogDto, UpdateBlogDto } from './dto/blog.dto';
 @ApiTags('📰 Blogs')
 @Controller('blogs')
 export class BlogsController {
-  constructor(private readonly blogsService: BlogsService) {}
+  constructor(
+    private readonly blogsService: BlogsService,
+    private readonly blogsCrawlerService: BlogsCrawlerService,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -110,6 +114,18 @@ export class BlogsController {
   @ApiParam({ name: 'id', type: String, description: 'Blog UUID' })
   async delete(@Param('id') id: string) {
     return this.blogsService.delete(id);
+  }
+
+  @Post('admin/trigger-crawl')
+  @UseGuards(AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '[Admin] Trigger crawl poker news immediately' })
+  async triggerCrawl() {
+    // Run async so it doesn't block the HTTP response
+    this.blogsCrawlerService.crawlPokerNews().catch(err => {
+      console.error('Manual crawl failed:', err);
+    });
+    return { message: 'Crawl triggered successfully' };
   }
 
   // ---------------------------------------------------------------------------

@@ -1,12 +1,12 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import Parser from 'rss-parser';
+import { Repository } from 'typeorm';
 import { Blog } from '../entities/blog.entity';
 import { CrawlLog } from '../entities/crawl-log.entity';
 
@@ -15,7 +15,8 @@ export class BlogsCrawlerService {
   private readonly logger = new Logger(BlogsCrawlerService.name);
   private readonly rssParser = new Parser();
   private readonly rssUrls = [
-    'https://www.pokernews.com/rss/news.xml',
+    'https://www.cardplayer.com/poker-news.rss',
+    'https://www.pokerstrategy.com/rss/news/',
   ];
 
   constructor(
@@ -24,7 +25,7 @@ export class BlogsCrawlerService {
     @InjectRepository(CrawlLog)
     private readonly crawlLogRepository: Repository<CrawlLog>,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   // Chạy Cron Job tự động mỗi 6 tiếng
   @Cron(CronExpression.EVERY_6_HOURS)
@@ -51,13 +52,21 @@ export class BlogsCrawlerService {
     const genAI = new GoogleGenerativeAI(apiKey);
     // Sử dụng gemini-2.5-flash để đạt hiệu năng tối đa và tối ưu hóa chi phí
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       generationConfig: { responseMimeType: 'application/json' },
     });
 
     for (const rssUrl of this.rssUrls) {
       try {
-        const feed = await this.rssParser.parseURL(rssUrl);
+        const rssResponse = await axios.get(rssUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/xml, text/xml, */*'
+          },
+          timeout: 10000,
+        });
+
+        const feed = await this.rssParser.parseString(rssResponse.data);
         // Chỉ xử lý 5 bài báo mới nhất mỗi đợt quét
         const items = feed.items.slice(0, 5);
 
@@ -116,8 +125,8 @@ export class BlogsCrawlerService {
           }
 
           // Fallback sang RSS contentSnippet/description nếu không cào được nội dung đầy đủ
-          const sourceText = contentHtml && contentHtml.length > 200 
-            ? contentHtml 
+          const sourceText = contentHtml && contentHtml.length > 200
+            ? contentHtml
             : (item.contentSnippet || item.content || originalTitle);
 
           // 3. Gọi Gemini API dịch và cấu trúc bài viết
@@ -148,14 +157,14 @@ export class BlogsCrawlerService {
 
             const result = await model.generateContent(prompt);
             const responseText = result.response.text();
-            
+
             const parsedData = JSON.parse(responseText);
 
             // 4. Sinh Slug an toàn và Lưu vào CSDL
             const baseSlug = this.slugify(parsedData.title);
             let uniqueSlug = baseSlug;
             let counter = 1;
-            
+
             while (await this.blogRepository.findOne({ where: { slug: uniqueSlug } })) {
               uniqueSlug = `${baseSlug}-${counter}`;
               counter++;
@@ -189,7 +198,7 @@ export class BlogsCrawlerService {
 
           } catch (geminiError) {
             this.logger.error(`Failed to process article with Gemini or save to DB: ${originalTitle}`, geminiError.stack);
-            
+
             // Ghi log thất bại
             await this.crawlLogRepository.save(
               this.crawlLogRepository.create({
@@ -200,6 +209,9 @@ export class BlogsCrawlerService {
               })
             );
           }
+
+          // Delay 15 giây giữa các request để bypass giới hạn 5 RPM (requests per minute) của Gemini Free Tier
+          await new Promise(resolve => setTimeout(resolve, 15000));
         }
       } catch (rssError) {
         this.logger.error(`Failed to parse RSS feed: ${rssUrl}`, rssError.stack);
