@@ -2,6 +2,7 @@
 
 import { FormInput, FormTextArea } from "@/components/ui/form";
 import httpClient from "@/core/api/http-client";
+import { PokerHandPickerModal, PokerHandReplayer } from "@/features/blogs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -44,6 +45,72 @@ export default function AdminBlogEditorPage() {
 
   const [preview, setPreview] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+
+  const insertHandReplayer = (handId: string) => {
+    const textarea = document.getElementById("blog-content") as HTMLTextAreaElement;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const shortcode = `[hand-replayer id="${handId}"]`;
+
+    const before = text.substring(0, start);
+    const after = text.substring(end, text.length);
+
+    const newValue = before + shortcode + after;
+    setValue("content", newValue, { shouldValidate: true });
+
+    // Focus & position cursor back to textarea
+    setTimeout(() => {
+      textarea.focus();
+      textarea.selectionStart = textarea.selectionEnd = start + shortcode.length;
+    }, 50);
+
+    setIsPickerOpen(false);
+  };
+
+  function renderPreviewContent(raw: string): React.ReactNode[] {
+    const SHORTCODE_RE = /\[hand-replayer id="([^"]+)"\]/g;
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = SHORTCODE_RE.exec(raw)) !== null) {
+      const before = raw.slice(lastIndex, match.index);
+      if (before) {
+        parts.push(
+          <div
+            key={`html-${lastIndex}`}
+            className="prose prose-invert prose-sm max-w-none
+              prose-headings:font-black prose-headings:uppercase prose-headings:text-white
+              prose-a:text-yellow-400 prose-p:text-slate-300 prose-strong:text-white
+              prose-code:bg-white/10 prose-code:text-yellow-300 prose-code:rounded prose-code:px-1"
+            dangerouslySetInnerHTML={{ __html: before }}
+          />
+        );
+      }
+      parts.push(<PokerHandReplayer key={`replayer-${match[1]}`} handId={match[1]} />);
+      lastIndex = match.index + match[0].length;
+    }
+
+    const tail = raw.slice(lastIndex);
+    if (tail) {
+      parts.push(
+        <div
+          key="html-tail"
+          className="prose prose-invert prose-sm max-w-none
+            prose-headings:font-black prose-headings:uppercase prose-headings:text-white
+            prose-a:text-yellow-400 prose-p:text-slate-300 prose-strong:text-white
+            prose-code:bg-white/10 prose-code:text-yellow-300 prose-code:rounded prose-code:px-1"
+          dangerouslySetInnerHTML={{ __html: tail }}
+        />
+      );
+    }
+
+    return parts;
+  }
 
   // 1. Fetch existing blog data when editing
   const { data: existingBlog } = useQuery({
@@ -197,9 +264,10 @@ export default function AdminBlogEditorPage() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="min-h-[500px] bg-slate-900 border border-slate-700 rounded-xl p-6 prose prose-invert prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: titleValue || "<p class='text-slate-600'>Preview sẽ hiển thị ở đây...</p>" }}
-            />
+              className="bg-slate-900 border border-slate-700 rounded-xl p-6 text-slate-100 font-bold text-2xl"
+            >
+              {titleValue || "Chưa có tiêu đề"}
+            </motion.div>
           ) : (
             <FormInput
               id="blog-title"
@@ -214,12 +282,10 @@ export default function AdminBlogEditorPage() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="min-h-[500px] bg-slate-900 border border-slate-700 rounded-xl p-6 prose prose-invert prose-sm max-w-none
-                prose-headings:font-black prose-headings:uppercase prose-headings:text-white
-                prose-a:text-yellow-400 prose-p:text-slate-300 prose-strong:text-white
-                prose-code:bg-white/10 prose-code:text-yellow-300 prose-code:rounded prose-code:px-1"
-              dangerouslySetInnerHTML={{ __html: contentValue || "<p class='text-slate-600'>Preview sẽ hiển thị ở đây...</p>" }}
-            />
+              className="min-h-[500px] bg-slate-900 border border-slate-700 rounded-xl p-6 space-y-4"
+            >
+              {renderPreviewContent(contentValue || "<p class='text-slate-600'>Preview sẽ hiển thị ở đây...</p>")}
+            </motion.div>
           ) : (
             <FormTextArea
               id="blog-content"
@@ -324,14 +390,28 @@ export default function AdminBlogEditorPage() {
           {/* Shortcode helper */}
           <div className="bg-blue-900/20 border border-blue-700/30 rounded-xl p-4">
             <h3 className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">🃏 Shortcode Replayer</h3>
-            <p className="text-xs text-slate-500 mb-2">Chèn vào content để nhúng trình phát ván bài:</p>
+            <p className="text-xs text-slate-500 mb-3">Chèn vào content để nhúng trình phát ván bài:</p>
+            
+            <button
+              type="button"
+              onClick={() => setIsPickerOpen(true)}
+              className="w-full mb-3 flex items-center justify-center gap-2 py-2 px-4 bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-bold rounded-lg transition-all cursor-pointer"
+            >
+              Chọn ván bài từ hệ thống
+            </button>
+
             <code className="block bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-yellow-300 font-mono select-all">
               {`[hand-replayer id="HAND_ID"]`}
             </code>
-            <p className="text-xs text-slate-600 mt-2">Thay HAND_ID bằng ID ván bài từ Admin &gt; Lịch sử ván bài.</p>
           </div>
         </div>
       </div>
+
+      <PokerHandPickerModal
+        isOpen={isPickerOpen}
+        onClose={() => setIsPickerOpen(false)}
+        onSelect={insertHandReplayer}
+      />
     </form>
   );
 }
