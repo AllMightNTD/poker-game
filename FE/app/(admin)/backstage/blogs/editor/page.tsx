@@ -1,16 +1,16 @@
 "use client";
 
+import { FormInput, FormTextArea } from "@/components/ui/form";
 import httpClient from "@/core/api/http-client";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save, Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Loader2, Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { FormInput, FormTextArea } from "@/components/ui/form";
 
 const CATEGORIES = ["Strategy", "Tournament", "News", "Lifestyle"];
 
@@ -105,9 +105,9 @@ export default function AdminBlogEditorPage() {
         category: data.category,
         tags: data.tags
           ? data.tags
-              .split(",")
-              .map((t) => t.trim())
-              .filter(Boolean)
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
           : [],
         content: data.content.trim(),
         is_published: data.is_published,
@@ -193,13 +193,22 @@ export default function AdminBlogEditorPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Main content area */}
         <div className="lg:col-span-2 space-y-4">
-          <FormInput
-            id="blog-title"
-            placeholder="Tiêu đề bài viết..."
-            error={errors.title?.message}
-            className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-lg font-semibold text-slate-100 placeholder-slate-600 focus:outline-none focus:border-yellow-500/60 focus:ring-0 transition-colors"
-            {...register("title")}
-          />
+          {preview ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="min-h-[500px] bg-slate-900 border border-slate-700 rounded-xl p-6 prose prose-invert prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: titleValue || "<p class='text-slate-600'>Preview sẽ hiển thị ở đây...</p>" }}
+            />
+          ) : (
+            <FormInput
+              id="blog-title"
+              placeholder="Tiêu đề bài viết..."
+              error={errors.title?.message}
+              className="px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-lg font-semibold text-slate-100 placeholder-slate-600 focus:outline-none focus:border-yellow-500/60 focus:ring-0 transition-colors"
+              {...register("title")} />
+          )}
+
 
           {preview ? (
             <motion.div
@@ -231,11 +240,10 @@ export default function AdminBlogEditorPage() {
             <button
               type="button"
               onClick={() => setValue("is_published", !isPublishedValue, { shouldValidate: true })}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all text-sm font-medium cursor-pointer ${
-                isPublishedValue
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                  : "border-slate-700 bg-slate-800 text-slate-500"
-              }`}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border transition-all text-sm font-medium cursor-pointer ${isPublishedValue
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                : "border-slate-700 bg-slate-800 text-slate-500"
+                }`}
               id="btn-toggle-published"
             >
               <span className="flex items-center gap-2">
@@ -255,11 +263,10 @@ export default function AdminBlogEditorPage() {
                   key={cat}
                   type="button"
                   onClick={() => setValue("category", cat, { shouldValidate: true })}
-                  className={`py-2 px-3 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
-                    categoryValue === cat
-                      ? "border-yellow-500/50 bg-yellow-500/10 text-yellow-400"
-                      : "border-slate-700 text-slate-500 hover:text-slate-300"
-                  }`}
+                  className={`py-2 px-3 rounded-lg text-xs font-medium border transition-all cursor-pointer ${categoryValue === cat
+                    ? "border-yellow-500/50 bg-yellow-500/10 text-yellow-400"
+                    : "border-slate-700 text-slate-500 hover:text-slate-300"
+                    }`}
                 >
                   {cat}
                 </button>

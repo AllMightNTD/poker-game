@@ -15,8 +15,8 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
         typeof xForwardedFor === 'string'
           ? xForwardedFor.split(',')[0].trim()
           : client.handshake?.address ||
-          client.conn?.remoteAddress ||
-          '127.0.0.1';
+            client.conn?.remoteAddress ||
+            '127.0.0.1';
 
       const req = {
         ...client,
@@ -25,7 +25,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
       return {
         req,
         res: {
-          header: () => { }, // Mock header method to prevent "res.header is not a function"
+          header: () => {}, // Mock header method to prevent "res.header is not a function"
         },
       };
     }
