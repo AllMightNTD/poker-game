@@ -52,7 +52,7 @@ httpClient.interceptors.response.use(
       const isAdminApi = originalRequest?.url?.includes("/api/v1/admin") || originalRequest?.url?.includes("/api/v1/users");
       
       if (isAdminApi) {
-        Cookies.remove("admin_token");
+        Cookies.remove("admin_token", { path: "/" });
         if (typeof window !== "undefined") {
           localStorage.removeItem("admin_token");
           localStorage.removeItem("admin_info");
@@ -65,7 +65,7 @@ httpClient.interceptors.response.use(
       const refreshToken = Cookies.get("refreshToken");
       
       if (!refreshToken) {
-        Cookies.remove("accessToken");
+        Cookies.remove("accessToken", { path: "/" });
         if (typeof window !== "undefined") {
           window.location.href = "/login";
         }
@@ -82,17 +82,17 @@ httpClient.interceptors.response.use(
         const newRefreshToken = refreshResponse.data.refresh_token || refreshResponse.data.refreshToken;
 
         if (newAccessToken) {
-          Cookies.set("accessToken", newAccessToken, { expires: 15 / 1440 }); // 15 minutes
+          Cookies.set("accessToken", newAccessToken, { expires: 15 / 1440, path: "/" }); // 15 minutes
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         }
         if (newRefreshToken) {
-          Cookies.set("refreshToken", newRefreshToken, { expires: 30 }); // 30 days
+          Cookies.set("refreshToken", newRefreshToken, { expires: 30, path: "/" }); // 30 days
         }
 
         return httpClient(originalRequest);
       } catch (refreshError) {
-        Cookies.remove("accessToken");
-        Cookies.remove("refreshToken");
+        Cookies.remove("accessToken", { path: "/" });
+        Cookies.remove("refreshToken", { path: "/" });
         if (typeof window !== "undefined") {
           window.location.href = "/login";
         }

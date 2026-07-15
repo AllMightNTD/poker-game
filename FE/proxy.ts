@@ -9,14 +9,18 @@ export function proxy(request: NextRequest) {
   const isAuthPath = /^\/(login|register)\/?$/.test(path);
   const isRootPath = path === '/';
 
-  // Protect root page
-  if (isRootPath && !token) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  // Redirect root page based on auth status
+  if (isRootPath) {
+    if (token) {
+      return NextResponse.redirect(new URL('/poker-game', request.url));
+    } else {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
   }
 
   // Prevent re-visiting login/register when already logged in
   if (isAuthPath && token) {
-    return NextResponse.redirect(new URL('/', request.url));
+    return NextResponse.redirect(new URL('/poker-game', request.url));
   }
 
   // --- Admin Logic ---

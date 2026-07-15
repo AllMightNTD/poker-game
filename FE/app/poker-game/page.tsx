@@ -2,6 +2,7 @@
 
 import { useSocket } from "@/core/providers/SocketProvider";
 import { UserProvider, useCurrentUser } from "@/core/providers/user-provider";
+import { useLogout } from "@/features/auth/hooks/use-logout";
 import api from "@/lib/axios";
 import {
   keepPreviousData,
@@ -64,6 +65,7 @@ function mapRoomsResponse(data: any) {
 function PokerGameLobby() {
   const router = useRouter();
   const { currentUser, isLoadingUser } = useCurrentUser();
+  const { logout } = useLogout();
   const { socket, isConnected } = useSocket();
   const queryClient = useQueryClient();
 
@@ -514,12 +516,7 @@ function PokerGameLobby() {
                     <div className="border-t border-white/5 my-1.5" />
 
                     <button
-                      onClick={() => {
-                        api.post("/api/v1/auth/logout").finally(() => {
-                          localStorage.removeItem("token");
-                          router.push("/login");
-                        });
-                      }}
+                      onClick={logout}
                       className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
                     >
                       <LogOut size={14} />

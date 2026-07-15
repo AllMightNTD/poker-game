@@ -330,8 +330,8 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       case "classic_green":
       default:
         return {
-          gradient: "bg-[radial-gradient(ellipse_at_center,_#0d5e68_0%,_#0b4c54_50%,_#022428_100%)]",
-          line: "border-cyan-400/20 shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+          gradient: "bg-[radial-gradient(ellipse_at_center,_#1b4332_0%,_#112a20_60%,_#08140f_100%)]",
+          line: "border-[#F4B942]/20 shadow-[0_0_15px_rgba(244,185,66,0.15)]"
         };
     }
   };

@@ -16,7 +16,9 @@ export function useLogout() {
     } catch {
       // Ignore network errors — always clear FE session
     } finally {
-      Cookies.remove("accessToken");
+      Cookies.remove("accessToken", { path: "/" });
+      Cookies.remove("refreshToken", { path: "/" });
+      localStorage.removeItem("token");
       localStorage.removeItem(REMEMBER_EMAIL_KEY);
       router.push("/login");
       setIsLoggingOut(false);

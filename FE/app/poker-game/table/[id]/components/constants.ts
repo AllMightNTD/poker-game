@@ -1,69 +1,67 @@
-export const getSeatPositions = (maxPlayers: number, heroSeatNumber?: number) => {
-  // If maxPlayers is 6, we use the custom hand-tuned layout matching poker_room.png 98%
-  if (maxPlayers === 6) {
-    const customLayout = [
-      { top: 12, left: 80 },   // Pos 1: Top-Right
-      { top: 50, left: 94 },   // Pos 2: Right
-      { top: 84, left: 78 },   // Pos 3: Bottom-Right
-      { top: 92, left: 50 },   // Pos 4: Bottom-Center (Hero)
-      { top: 84, left: 22 },   // Pos 5: Bottom-Left
-      { top: 50, left: 6 },    // Pos 6: Left
-      { top: 12, left: 20 },   // Pos 7: Top-Left
-    ];
-    
-    // If there is a Hero, we rotate so Hero is at Bottom-Center (Pos 4, index 3 of customLayout)
-    if (heroSeatNumber && heroSeatNumber > 0) {
-      const heroIndex = heroSeatNumber - 1;
-      const result = [];
-      for (let i = 0; i < 6; i++) {
-        const dist = (i - heroIndex + 6) % 6;
-        if (dist === 0) result.push(customLayout[3]); // Hero -> Pos 4
-        else if (dist === 1) result.push(customLayout[4]); // Pos 5
-        else if (dist === 2) result.push(customLayout[5]); // Pos 6
-        else if (dist === 3) result.push(customLayout[6]); // Pos 7
-        else if (dist === 4) result.push(customLayout[1]); // Pos 2
-        else result.push(customLayout[2]); // Pos 3
-      }
-      return result;
-    } else {
-      // Spectator default layout: fill Bottom-Center and distribute other seats
-      return [
-        customLayout[6], // Seat 1 -> Top-Left
-        customLayout[5], // Seat 2 -> Left
-        customLayout[4], // Seat 3 -> Bottom-Left
-        customLayout[3], // Seat 4 -> Bottom-Center
-        customLayout[2], // Seat 5 -> Bottom-Right
-        customLayout[1], // Seat 6 -> Right
-      ];
-    }
-  }
+export const getSeatPositions = (maxPlayers: number, heroSeatNumber?: number, isVertical?: boolean) => {
+  // Hand-tuned coordinates for 6-max table (symmetric hexagon)
+  const horizontalLayout6 = [
+    { top: 86, left: 50 },   // Hero (Bottom-Center)
+    { top: 76, left: 16 },   // Bottom-Left
+    { top: 38, left: 12 },   // Top-Left
+    { top: 12, left: 50 },   // Top-Center
+    { top: 38, left: 88 },   // Top-Right
+    { top: 76, left: 84 },   // Bottom-Right
+  ];
 
-  // Fallback for other player sizes (e.g. 8, 9, 2)
-  const positions = [];
-  const bottomIndex = Math.floor(maxPlayers / 2);
-  let offset = 0;
-  
+  const verticalLayout6 = [
+    { top: 88, left: 50 },   // Hero
+    { top: 72, left: 14 },
+    { top: 30, left: 14 },
+    { top: 10, left: 50 },
+    { top: 30, left: 86 },
+    { top: 72, left: 86 },
+  ];
+
+  // Hand-tuned coordinates for 9-max table (symmetric nonagon)
+  const horizontalLayout9 = [
+    { top: 86, left: 50 },   // Hero (Bottom-Center)
+    { top: 76, left: 24 },   // Bottom-Left
+    { top: 52, left: 10 },   // Left-Lower
+    { top: 26, left: 18 },   // Left-Upper
+    { top: 12, left: 36 },   // Top-Left
+    { top: 12, left: 64 },   // Top-Right
+    { top: 26, left: 82 },   // Right-Upper
+    { top: 52, left: 90 },   // Right-Lower
+    { top: 76, left: 76 },   // Bottom-Right
+  ];
+
+  const verticalLayout9 = [
+    { top: 90, left: 50 },   // Hero
+    { top: 76, left: 16 },
+    { top: 54, left: 10 },
+    { top: 32, left: 16 },
+    { top: 12, left: 32 },
+    { top: 12, left: 68 },
+    { top: 32, left: 84 },
+    { top: 54, left: 90 },
+    { top: 76, left: 84 },
+  ];
+
+  const use9Max = maxPlayers > 6;
+  const customLayout = use9Max 
+    ? (isVertical ? verticalLayout9 : horizontalLayout9)
+    : (isVertical ? verticalLayout6 : horizontalLayout6);
+
+  const numSeats = use9Max ? 9 : 6;
+
   if (heroSeatNumber && heroSeatNumber > 0) {
     const heroIndex = heroSeatNumber - 1;
-    offset = bottomIndex - heroIndex;
-  }
-
-  for (let i = 0; i < maxPlayers; i++) {
-    const visualIndex = (i + offset + maxPlayers) % maxPlayers;
-    let angle = -Math.PI / 2 + (visualIndex * 2 * Math.PI) / maxPlayers;
-
-    // Shift angle slightly if too close to dealer at the top
-    const diffToTop = Math.abs(angle + Math.PI / 2);
-    if (diffToTop < 0.2) {
-      angle += 0.3;
+    const result = [];
+    for (let i = 0; i < numSeats; i++) {
+      const dist = (i - heroIndex + numSeats) % numSeats;
+      result.push(customLayout[dist]);
     }
-
-    const left = 50 + 44 * Math.cos(angle);
-    const top = 54 + 36 * Math.sin(angle); // shift down to avoid dealer
-
-    positions.push({ top, left });
+    return result;
+  } else {
+    // Spectator default layout: return coordinates sequentially
+    return customLayout;
   }
-  return positions;
 };
 
 export const LOCALE = "vi-VN";

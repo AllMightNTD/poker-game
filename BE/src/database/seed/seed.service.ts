@@ -15,7 +15,7 @@ import { Wallet } from 'src/v1/entities/wallet.entity';
 export class SeedService {
   private readonly logger = new Logger(SeedService.name);
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(private readonly dataSource: DataSource) { }
 
   async seedAll() {
     this.logger.log('Starting minimal poker database seed...');
@@ -43,7 +43,7 @@ export class SeedService {
       });
 
       // Users
-      const passwordHash = await bcrypt.hash('123456', 10);
+      const passwordHash = await bcrypt.hash('Password@123', 10);
       const userRepo = this.dataSource.getRepository(User);
       const userRoleRepo = this.dataSource.getRepository(UserRole);
       const walletRepo = this.dataSource.getRepository(Wallet);

@@ -10,9 +10,17 @@ import { AuthService } from "../services/auth.service";
 const REMEMBER_EMAIL_KEY = "sociala_remembered_email";
 
 export const getLoginSchema = (t: any) => z.object({
-  email: z.string().min(1, t("validation.emptyEmail")).email(t("validation.invalidEmail")),
-  password: z.string().min(6, t("validation.passwordMin")),
-});
+  email: z.string().min(1, t("Email không được bỏ trống")).email(t("Email không hợp lệ")),
+  password: z
+    .string()
+    .min(1, "Mật khẩu không được bỏ trống")
+    .min(6, "Mật khẩu tối thiểu 6 ký tự")
+    .max(32, "Mật khẩu tối đa 32 ký tự")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
+      "Mật khẩu phải có chữ hoa, chữ thường và số"
+    ),
+})
 
 export type LoginFormValues = z.infer<ReturnType<typeof getLoginSchema>>;
 
@@ -62,11 +70,11 @@ export function useLogin(t: any) {
       const refreshToken = result?.metadata?.refresh_token || result?.refresh_token || result?.refreshToken;
 
       if (token) {
-        Cookies.set("accessToken", token, { expires: 15 / 1440 }); // 15 minutes
+        Cookies.set("accessToken", token, { expires: 15 / 1440, path: "/" }); // 15 minutes
       }
 
       if (refreshToken) {
-        Cookies.set("refreshToken", refreshToken, { expires: 30 }); // 30 days
+        Cookies.set("refreshToken", refreshToken, { expires: 30, path: "/" }); // 30 days
       }
 
       if (rememberMe) {

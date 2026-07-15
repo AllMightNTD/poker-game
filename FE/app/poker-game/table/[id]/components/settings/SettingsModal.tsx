@@ -51,6 +51,7 @@ export const SettingsModal = () => {
     tableId,
     showToast,
     setIsProvablyFairOpen,
+    leaveTable,
   } = usePokerGame();
 
   return (
@@ -246,10 +247,22 @@ export const SettingsModal = () => {
 
               {/* Info block */}
               <div className="border-t border-slate-850 my-2 pt-3 space-y-3">
-                <div className="text-[10px] text-slate-500 leading-relaxed font-semibold">
-                  ID bàn: <span className="font-mono text-slate-400 select-all">{tableId}</span>
-                  <br />
-                  Loại trò chơi: Texas Hold&apos;em No Limit Cash Game
+                <div className="text-[10px] text-slate-500 leading-relaxed font-semibold flex justify-between items-center">
+                  <div>
+                    ID bàn: <span className="font-mono text-slate-400 select-all">{tableId}</span>
+                    <br />
+                    Loại trò chơi: Texas Hold&apos;em No Limit Cash Game
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSettingsOpen(false);
+                      leaveTable();
+                    }}
+                    className="px-3 py-1.5 rounded-lg border border-red-500/20 bg-red-950/20 hover:bg-red-950/40 text-red-400 hover:text-red-300 text-[10px] font-black uppercase tracking-wider transition-colors"
+                  >
+                    Rời bàn
+                  </button>
                 </div>
                 
                 <button

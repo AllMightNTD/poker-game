@@ -38,7 +38,7 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly pokerStateService: PokerStateService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   async generateAndSendOtp(user: User): Promise<string> {
     const redis = this.pokerStateService.getRedisClient();
@@ -312,7 +312,7 @@ export class AuthService {
     }
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Player không tồn tại');
     }
 
     if (user.status !== UserStatus.ACTIVE) {
@@ -336,7 +336,7 @@ export class AuthService {
         );
       }
       throw new UnauthorizedException(
-        `Sai email hoặc mật khẩu. Bạn còn ${5 - attempts} lần thử.`,
+        `Sai mật khẩu. Bạn còn ${5 - attempts} lần thử.`,
       );
     }
 
@@ -449,11 +449,7 @@ export class AuthService {
     await redis.set(`reset:cooldown:${email}`, '1', 'EX', 60);
 
     if (!user) {
-      // Return success to avoid email enumeration (OWASP)
-      return {
-        message:
-          'Nếu địa chỉ email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi.',
-      };
+      throw new UnauthorizedException('Địa chỉ email không tồn tại');
     }
 
     // Generate secure token

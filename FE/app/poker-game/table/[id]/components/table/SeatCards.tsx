@@ -40,7 +40,7 @@ const SeatCards: React.FC<SeatCardsProps> = React.memo(({ cards, isFolded, isHer
       initial={false}
       animate={isFolded ? { y: -60, scale: 0.3, opacity: 0 } : { y: 0, scale: 1, opacity: 1 }}
       transition={{ duration: 0.5, ease: "anticipate" }}
-      className={`absolute -top-[22px] md:-top-[40px] left-1/2 -translate-x-1/2 flex -space-x-2.5 md:-space-x-6 z-30 pointer-events-none`}
+      className={`absolute -top-[22px] md:-top-[40px] left-1/2 -translate-x-1/2 flex -space-x-2.5 md:-space-x-6 z-20 pointer-events-none`}
     >
       <AnimatePresence>
         {!isFolded && cards.map((card, cIdx) => (
