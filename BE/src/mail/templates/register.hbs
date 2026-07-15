@@ -4,165 +4,110 @@
     <meta name='viewport' content='width=device-width, initial-scale=1.0' />
     <title>Xác Thực Tài Khoản - CG Poker</title>
     <style>
+      /* Reset styles dành riêng cho Email Clients */
+      body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+      table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+      img { -ms-interpolation-mode: bicubic; }
+
       body {
         margin: 0;
         padding: 0;
-        background-color: #0b0c16;
+        width: 100% !important;
+        height: 100% !important;
+        background-color: #081326;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         color: #e2e8f0;
       }
-      .email-wrapper {
-        width: 100%;
-        background-color: #0b0c16;
-        padding: 40px 0;
-      }
-      .container {
-        max-width: 600px;
-        margin: 0 auto;
-        background: linear-gradient(135deg, #13172d 0%, #1c203e 100%);
-        border: 2px solid #c5a880;
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-      }
-      .header {
-        background: linear-gradient(90deg, #d93838 0%, #8b0000 100%);
-        padding: 30px;
-        text-align: center;
-        border-bottom: 2px solid #c5a880;
-      }
-      .header h1 {
-        margin: 0;
-        font-size: 26px;
-        font-weight: 800;
-        color: #ffffff;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-        letter-spacing: 1px;
-      }
-      .content {
-        padding: 40px 30px;
-        line-height: 1.6;
-      }
-      .welcome-text {
-        font-size: 18px;
-        color: #ffd700;
-        font-weight: bold;
-        text-align: center;
-        margin-bottom: 25px;
-      }
-      .body-text {
-        font-size: 15px;
-        color: #cbd5e1;
-        margin-bottom: 20px;
-        text-align: center;
-      }
-      .otp-box {
-        background-color: #0d0f1f;
-        border: 1px dashed #ffd700;
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
-        margin: 30px 0;
-        box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
-      }
-      .otp-label {
-        font-size: 13px;
-        color: #94a3b8;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        margin-bottom: 8px;
-        display: block;
-      }
-      .otp-code {
-        font-size: 36px;
-        font-weight: 800;
-        color: #ffd700;
-        letter-spacing: 8px;
-        text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
-        margin: 10px 0;
-      }
-      .otp-expiry {
-        font-size: 12px;
-        color: #cbd5e1;
-        opacity: 0.8;
-      }
-      .btn-wrapper {
-        text-align: center;
-        margin: 30px 0;
-      }
-      .button {
-        display: inline-block;
-        padding: 16px 36px;
-        background: linear-gradient(135deg, #d93838 0%, #a61c1c 100%);
-        color: #ffffff !important;
-        text-decoration: none;
-        font-size: 16px;
-        font-weight: bold;
-        border-radius: 8px;
-        border: 1px solid #ffd700;
-        box-shadow: 0 4px 15px rgba(217, 56, 56, 0.4), 0 0 5px rgba(255, 215, 0, 0.2);
-      }
-      .footer {
-        background-color: #0d0f1f;
-        padding: 25px;
-        text-align: center;
-        font-size: 12px;
-        color: #64748b;
-        border-top: 1px solid #1e293b;
-      }
-      .footer a {
-        color: #ffd700;
-        text-decoration: none;
-      }
-      .casino-badge {
-        font-size: 12px;
-        color: #ffd700;
-        border: 1px solid #ffd700;
-        padding: 3px 8px;
-        border-radius: 4px;
-        display: inline-block;
-        margin-top: 10px;
-        text-transform: uppercase;
-        font-weight: bold;
+
+      /* Kỹ thuật Responsive bằng Media Queries */
+      @media screen and (max-width: 600px) {
+        .container {
+          width: 100% !important;
+          max-width: 100% !important;
+          border-radius: 0px !important; /* Tràn màn hình trên mobile cho đẹp */
+          border-left: none !important;
+          border-right: none !important;
+        }
+        .content {
+          padding: 30px 20px !important;
+        }
+        .header {
+          padding: 25px 20px !important;
+        }
+        .header h1 {
+          font-size: 20px !important;
+        }
+        .otp-code {
+          font-size: 28px !important;
+          letter-spacing: 4px !important;
+        }
+        .welcome-text {
+          font-size: 16px !important;
+        }
+        .body-text {
+          font-size: 14px !important;
+        }
       }
     </style>
   </head>
   <body>
-    <div class='email-wrapper'>
-      <div class='container'>
-        <!-- Header -->
-        <div class='header'>
-          <h1>♠️ CG POKER CLASSIC ♦️</h1>
-          <span class='casino-badge'>Sảnh Đấu Thượng Lưu</span>
-        </div>
-
-        <!-- Content -->
-        <div class='content'>
-          <div class='welcome-text'>Chào mừng người chơi {{username}}!</div>
+    <!-- Wrapper chính bao ngoài cùng -->
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #081326; table-layout: fixed;">
+      <tr>
+        <td align="center" style="padding: 40px 0 20px 0;" class="content">
           
-          <div class='body-text'>
-            Cảm ơn bạn đã đăng ký gia nhập cổng game bài đỉnh cao <strong>CG Poker</strong>. 
-            Để kích hoạt tài khoản và nhận ngay phần quà khởi đầu <strong>50,000,000 chips</strong>, 
-            vui lòng xác thực tài khoản bằng mã OTP dưới đây.
-          </div>
+          <!-- Box nội dung chính (Container) -->
+          <table border="0" cellpadding="0" cellspacing="0" width="600" class="container" style="background-color: #081326; border: 1px solid #16294A; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); border-collapse: separate;">
+            
+            <!-- Header -->
+            <tr>
+              <td align="center" class="header" style="background-color: #0B1B33; padding: 35px; border-bottom: 1px solid #16294A;">
+                <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #facc15; letter-spacing: 1.5px; text-transform: uppercase;">♠️ CG POKER CLASSIC ♦️</h1>
+              </td>
+            </tr>
 
-          <!-- OTP Box -->
-          <div class='otp-box'>
-            <span class='otp-label'>Mã Xác Thực OTP</span>
-            <div class='otp-code'>{{otp}}</div>
-            <div class='otp-expiry'>Hiệu lực trong vòng <strong>15 phút</strong></div>
-          </div>
-        </div>
+            <!-- Content -->
+            <tr>
+              <td class="content" style="padding: 40px 30px; line-height: 1.6;">
+                <div class="welcome-text" style="font-size: 18px; color: #ffffff; font-weight: bold; text-align: center; margin-bottom: 25px;">
+                  Chào mừng người chơi {{username}}!
+                </div>
+                
+                <div class="body-text" style="font-size: 15px; color: #94a3b8; margin-bottom: 20px; text-align: center;">
+                  Cảm ơn bạn đã đăng ký gia nhập cổng game bài đỉnh cao <strong style="color: #facc15; font-weight: 600;">CG Poker</strong>. 
+                  Để kích hoạt tài khoản vui lòng xác thực tài khoản bằng mã OTP dưới đây.
+                </div>
 
-        <!-- Footer -->
-        <div class='footer'>
-          <p>Email này được gửi tự động từ hệ thống CG Poker. Vui lòng không trả lời thư này.</p>
-          <p>
-            Hỗ trợ khách hàng 24/7:
-            <a href='mailto:support@cgpoker.com'>support@cgpoker.com</a>
-          </p>
-        </div>
-      </div>
-    </div>
+                <!-- OTP Box -->
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                  <tr>
+                    <td align="center" style="padding: 10px 0;">
+                      <div style="background-color: #0B1B33; border: 1px solid #1e3a5f; border-radius: 12px; padding: 24px; text-align: center; width: 85%;">
+                        <span style="font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; display: block; font-weight: 600;">Mã Xác Thực OTP</span>
+                        <div class="otp-code" style="font-size: 38px; font-weight: 800; color: #facc15; letter-spacing: 8px; margin: 12px 0;">{{otp}}</div>
+                        <div style="font-size: 12px; color: #94a3b8;">Hiệu lực trong vòng <strong style="color: #facc15;">15 phút</strong></div>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td class="footer" style="background-color: #0B1B33; padding: 25px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #16294A; line-height: 1.5;">
+                <p style="margin: 0 0 8px 0;">Email này được gửi tự động từ hệ thống CG Poker. Vui lòng không trả lời thư này.</p>
+                <p style="margin: 0;">
+                  Hỗ trợ khách hàng 24/7: 
+                  <a href="mailto:support@cgpoker.com" style="color: #facc15; text-decoration: none; font-weight: 600;">support@cgpoker.com</a>
+                </p>
+              </td>
+            </tr>
+
+          </table>
+          
+        </td>
+      </tr>
+    </table>
   </body>
 </html>

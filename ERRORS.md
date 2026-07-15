@@ -83,3 +83,17 @@
 
 ---
 
+## [2026-07-15 10:30] - Lỗi ép kiểu UUID thành Number trong API joinSeat
+
+- **Type**: Logic
+- **Severity**: High
+- **File**: `BE/src/v1/controllers/rooms.controller.ts:234`
+- **Agent**: AgentGame
+- **Root Cause**: Chuyển đổi UUID string thành kiểu Number (`Number(userId)`) khiến `user_id` bị nhận giá trị `NaN` khi truyền qua sự kiện socket `user_joined_seat`.
+- **Fix Applied**: Thay đổi `Number(userId)` thành `userId` để giữ nguyên dạng UUID string.
+- **Prevention**: Không ép kiểu sang Number đối với các trường ID dạng UUID string.
+- **Status**: Fixed
+
+---
+
+

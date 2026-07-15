@@ -231,7 +231,7 @@ export class RoomsController {
       this.lobbyGateway.server.to(`table_${roomId}`).emit('user_joined_seat', {
         room_id: Number(roomId),
         seat_number: body.seat_number,
-        user_id: Number(userId),
+        user_id: userId,
         display_name: body.display_name,
         chips: body.buy_in_chips,
       });
