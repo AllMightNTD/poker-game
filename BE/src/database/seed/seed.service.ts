@@ -15,7 +15,7 @@ import { Wallet } from 'src/v1/entities/wallet.entity';
 export class SeedService {
   private readonly logger = new Logger(SeedService.name);
 
-  constructor(private readonly dataSource: DataSource) { }
+  constructor(private readonly dataSource: DataSource) {}
 
   async seedAll() {
     this.logger.log('Starting minimal poker database seed...');

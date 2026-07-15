@@ -88,7 +88,8 @@ export class PokerLobbyGateway
         `Socket Client connected: ${client.id} (User: ${decoded.sub})`,
       );
     } catch (err) {
-      const isExpired = err.name === 'TokenExpiredError' || err.message?.includes('expired');
+      const isExpired =
+        err.name === 'TokenExpiredError' || err.message?.includes('expired');
       if (isExpired) {
         this.logger.warn(
           `Socket Connection rejected: JWT expired for client ${client.id}`,

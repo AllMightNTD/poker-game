@@ -38,7 +38,7 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly pokerStateService: PokerStateService,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   async generateAndSendOtp(user: User): Promise<string> {
     const redis = this.pokerStateService.getRedisClient();
