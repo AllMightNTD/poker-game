@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AppV1Route } from '../app-v1.route';
 import { AuthModule } from '../auth/auth.module';
 import { BlogsModule } from '../blogs/blogs.module';
+import { BlogsCrawlerModule } from '../blogs-crawler/blogs-crawler.module';
 import { ClubsModule } from '../clubs/clubs.module';
 import { GamificationModule } from '../gamification/gamification.module';
 import { JwtRefreshStrategy } from '../strategy/jwt-refresh.strategy';
@@ -28,6 +29,7 @@ import { PokerLobbyModule } from './poker-lobby.module';
     UserModule,
     PokerLobbyModule,
     BlogsModule,
+    BlogsCrawlerModule,
     ClubsModule,
     GamificationModule,
     AdminModule,

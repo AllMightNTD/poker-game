@@ -28,6 +28,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.717.0",
     "@faker-js/faker": "^10.4.0",
+    "@google/generative-ai": "^0.24.1",
     "@nest-lab/throttler-storage-redis": "^1.2.0",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/bullmq": "^10.1.1",
@@ -51,6 +52,7 @@
     "bull": "^4.16.5",
     "bullmq": "^5.66.1",
     "cache-manager": "^7.2.7",
+    "cheerio": "^1.2.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "express-intlayer": "^7.5.7",
@@ -67,6 +69,7 @@
     "passport-jwt": "^4.0.1",
     "redis": "^4.7.0",
     "reflect-metadata": "^0.2.0",
+    "rss-parser": "^3.13.0",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1",
     "typeorm": "^0.3.30",
