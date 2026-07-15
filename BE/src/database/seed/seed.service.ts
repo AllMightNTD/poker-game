@@ -43,7 +43,7 @@ export class SeedService {
       });
 
       // Users
-      const passwordHash = await bcrypt.hash('123456', 10);
+      const passwordHash = await bcrypt.hash('Password@123', 10);
       const userRepo = this.dataSource.getRepository(User);
       const userRoleRepo = this.dataSource.getRepository(UserRole);
       const walletRepo = this.dataSource.getRepository(Wallet);

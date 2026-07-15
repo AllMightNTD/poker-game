@@ -8,16 +8,16 @@ import { useLogin } from "../hooks/use-login";
 export function LoginForm() {
   const t = (key: string) => {
     const translations: Record<string, string> = {
-      welcomeBackDescription: "WELCOME BACK",
-      discoverMore: "Continue your poker journey",
-      yourEmailAddress: "Email Address",
-      password: "Password",
-      rememberMe: "Remember Me",
-      forgotPassword: "Forgot Password?",
-      loginButton: "LOGIN",
-      dontHaveAccount: "Don't have an account?",
-      registerNow: "REGISTER NOW",
-      orContinueWith: "OR CONTINUE WITH",
+      welcomeBackDescription: "CHÀO MỪNG TRỞ LẠI",
+      discoverMore: "Tiếp tục hành trình poker của bạn",
+      yourEmailAddress: "Địa chỉ Email",
+      password: "Mật khẩu",
+      rememberMe: "Ghi nhớ đăng nhập",
+      forgotPassword: "Quên mật khẩu?",
+      loginButton: "ĐĂNG NHẬP",
+      dontHaveAccount: "Bạn chưa có tài khoản?",
+      registerNow: "ĐĂNG KÝ NGAY",
+      orContinueWith: "HOẶC TIẾP TỤC VỚI",
     };
     return translations[key] || key;
   };

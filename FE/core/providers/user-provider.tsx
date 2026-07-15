@@ -24,7 +24,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const user = res.data?.metadata || res.data;
       setCurrentUser(user);
     } catch {
-      Cookies.remove("accessToken");
+      Cookies.remove("accessToken", { path: "/" });
+      Cookies.remove("refreshToken", { path: "/" });
       router.push("/login");
     } finally {
       setIsLoadingUser(false);

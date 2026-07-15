@@ -1,6 +1,6 @@
 import { useCurrentUser } from '@/core/providers/user-provider';
 import api from '@/lib/axios';
-import { Coins, User, X } from 'lucide-react';
+import { Coins, User, X, UserPlus } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useAnimationRegistry } from '../effects/AnimationRegistryContext';
@@ -148,7 +148,7 @@ const Seat: React.FC<SeatProps> = ({
   seatNumber,
   player = null,
 }) => {
-  const { isMobile } = useResponsive();
+  const { isMobile, isTablet } = useResponsive();
   const { ownerId, smallBlind, players, sitRequests, maxPlayers } = usePokerGame();
   const { currentUser } = useCurrentUser();
 
@@ -157,7 +157,7 @@ const Seat: React.FC<SeatProps> = ({
 
   const isOwner = currentUser?.id === ownerId;
   const heroSeatNumber = useMemo(() => players.find(p => p.isHero)?.seatIndex, [players]);
-  const positions = useMemo(() => getSeatPositions(maxPlayers || 6, heroSeatNumber), [maxPlayers, heroSeatNumber]);
+  const positions = useMemo(() => getSeatPositions(maxPlayers || 6, heroSeatNumber, isMobile || isTablet), [maxPlayers, heroSeatNumber, isMobile, isTablet]);
   const pos = positions[seatNumber - 1] || positions[0];
   const positionStyle = { top: `${pos.top}%`, left: `${pos.left}%` };
   const actionEndTime = null;
@@ -237,10 +237,14 @@ const Seat: React.FC<SeatProps> = ({
                 if (isPendingOrSeated) return;
                 setIsBuyInOpen(true);
               }}
-              className={`w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full border-2 border-dashed border-[#F4B942]/40 bg-black/60 flex flex-col items-center justify-center transition-all shadow-[0_0_12px_rgba(244,185,66,0.15)] backdrop-blur-md animate-pulse ${isPendingOrSeated ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-[#F4B942] hover:bg-black/75 hover:shadow-[0_0_20px_rgba(244,185,66,0.6)] hover:scale-105 group hover:animate-none'}`}
+              className={`w-11 h-11 md:w-14 md:h-14 mx-auto rounded-full border border-[#E7C678]/20 bg-gradient-to-b from-[#1b1712]/45 to-[#0b0806]/60 flex flex-col items-center justify-center transition-all duration-300 shadow-[inset_0_2px_6px_rgba(0,0,0,0.8),_0_2px_8px_rgba(0,0,0,0.5)] backdrop-blur-[2px] ${
+                isPendingOrSeated 
+                  ? 'opacity-40 cursor-not-allowed' 
+                  : 'cursor-pointer hover:border-[#E7C678]/80 hover:from-[#2e261e]/60 hover:to-[#17120e]/80 hover:shadow-[0_0_15px_rgba(231,198,120,0.35),_inset_0_1px_2px_rgba(255,255,255,0.15)] hover:scale-105 group'
+              }`}
             >
-              <span className="text-[#F4B942]/70 group-hover:text-[#F4B942] text-[18px] font-bold leading-none mb-0.5">+</span>
-              <span className="text-[7px] md:text-[8px] font-black text-[#F4B942]/70 group-hover:text-[#F4B942] uppercase tracking-widest text-center leading-none">SIT<br />HERE</span>
+              <UserPlus className="w-4 h-4 md:w-5 md:h-5 text-[#E7C678]/45 group-hover:text-[#E7C678]/80 transition-colors duration-300 mb-0.5" />
+              <span className="text-[7px] md:text-[8px] font-bold text-[#E7C678]/40 group-hover:text-[#E7C678]/80 transition-colors duration-300 uppercase tracking-[0.15em] leading-none">SIT</span>
             </div>
           )}
         </div>
@@ -283,7 +287,7 @@ const Seat: React.FC<SeatProps> = ({
         {/* Avatar + Timer Ring */}
         <div
           onClick={() => setIsHudOpen(true)}
-          className="relative shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-200"
+          className="relative z-30 shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-200"
         >
           {player.isActive && <SeatTimerRing endTime={actionEndTime} size={ringSize} maxTime={30000} />}
           <SeatAvatar
@@ -317,6 +321,7 @@ const Seat: React.FC<SeatProps> = ({
           isMobile={isMobile}
           status={player.lastAction || ''}
           isBot={!!player.isBot}
+          isActive={player.isActive}
         />
 
         {/* Hole Cards */}

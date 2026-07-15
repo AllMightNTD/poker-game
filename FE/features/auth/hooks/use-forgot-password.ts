@@ -1,6 +1,6 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AuthService } from "../services/auth.service";
 
@@ -18,6 +18,7 @@ export function useForgotPassword(t: any) {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(getForgotPasswordSchema(t)),
@@ -27,7 +28,7 @@ export function useForgotPassword(t: any) {
     try {
       setErrorMessage("");
       const result = await AuthService.forgotPassword(data);
-      
+
       setSuccessMessage(
         result?.message || t("api.successMessage")
       );
@@ -36,6 +37,7 @@ export function useForgotPassword(t: any) {
       setErrorMessage(
         error.response?.data?.message || t("api.requestFailed")
       );
+      reset();
     }
   };
 

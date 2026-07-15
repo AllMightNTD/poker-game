@@ -1,5 +1,6 @@
 import { useSocket } from "@/core/providers/SocketProvider";
 import { memo, useEffect, useRef } from "react";
+import { User, Menu, MessageSquare, ScrollText } from "lucide-react";
 import { AnimationManager } from "../effects/AnimationManager";
 import { ActionBar } from "../hero/ActionBar";
 import { usePokerGame } from "../hooks/usePokerGame";
@@ -11,8 +12,10 @@ import Seat from "./Seat";
 import { AnimationRegistryProvider, useAnimationRegistry } from "../effects/AnimationRegistryContext";
 import { useGameAnimation } from "../effects/useGameAnimation";
 import { ThrowableOverlay } from "../effects/ThrowableOverlay";
+import { useResponsive } from "../hooks/useResponsive";
 
 const PokerTableInner = memo(function PokerTableInner() {
+  const { isMobile, isTablet } = useResponsive();
   const {
     tableRef,
     tableBackground,
@@ -29,6 +32,16 @@ const PokerTableInner = memo(function PokerTableInner() {
     rabbitCards,
     triggerRabbitHunt,
     cardDeckStyle,
+    tableName,
+    smallBlind,
+    bigBlind,
+    currentHighestBet,
+    showChat,
+    setShowChat,
+    showHistory,
+    setShowHistory,
+    setIsSettingsOpen,
+    formatChipsVal,
   } = usePokerGame();
 
   const felt = getFeltStyles(tableBackground);
@@ -45,24 +58,100 @@ const PokerTableInner = memo(function PokerTableInner() {
   }, [tableRef, registerTableContainer]);
 
   return (
-    /* Environment layer - Dark Casino Room */
-    <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-[radial-gradient(ellipse_at_center,_#1a2421_0%,_#0a100c_100%)]">
+    /* Environment layer - Translucent over base TableBackground */
+    <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-transparent">
+      
+      {/* ── Floating Cash Game Info (Top Left) ── */}
+      <div className="absolute top-[3%] left-[4%] z-30 bg-black/45 backdrop-blur-md border border-[#E7C678]/15 p-3 rounded-lg text-left pointer-events-auto select-text hidden md:block shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
+        <div className="text-[10px] font-black text-[#E7C678] tracking-[0.2em] uppercase mb-1">
+          CASH GAME
+        </div>
+        <div className="text-[11px] font-bold text-white/95 tracking-wide">
+          BLINDS: ${formatChipsVal(smallBlind)} / ${formatChipsVal(bigBlind)}
+        </div>
+        <div className="text-[9px] font-semibold text-white/40 tracking-wider uppercase mt-0.5">
+          TABLE: {tableName || "7 - Vegas CG"}
+        </div>
+      </div>
+
+      {/* Mobile/Tablet Menu Button (Top Left) */}
+      <div className="absolute top-[3%] left-[4%] z-30 block md:hidden pointer-events-auto">
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          className="px-3 py-1.5 bg-gradient-to-b from-[#1b1712] to-[#0b0806] border border-[#C99C3D]/40 rounded-lg text-[9px] font-black text-[#E7C678] tracking-widest uppercase shadow-md active:scale-95 transition-all"
+        >
+          MENU
+        </button>
+      </div>
+
+      {/* ── Floating Header Buttons (Top Right) ── */}
+      <div className="absolute top-[3%] right-[4%] z-30 flex items-center gap-2 pointer-events-auto">
+        {/* User Menu Button */}
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-b from-[#1b1712] to-[#0b0806] border border-[#C99C3D]/45 rounded-lg text-[9px] font-black text-[#E7C678] tracking-widest uppercase shadow-md hover:border-[#E7C678] hover:from-[#2e261e] hover:to-[#17120e] transition-all duration-200"
+        >
+          <User size={12} className="text-[#E7C678]" />
+          {!isMobile && <span>User Menu</span>}
+          <Menu size={10} className="text-[#E7C678] ml-0.5" />
+        </button>
+
+        {/* Chat Button */}
+        <button
+          onClick={() => setShowChat(!showChat)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-[9px] font-black tracking-widest uppercase shadow-md transition-all duration-200 ${
+            showChat
+              ? "bg-emerald-950/80 border-emerald-500/60 text-emerald-400"
+              : "bg-gradient-to-b from-[#1b1712] to-[#0b0806] border-[#C99C3D]/45 text-[#E7C678] hover:border-[#E7C678] hover:from-[#2e261e] hover:to-[#17120e]"
+          }`}
+        >
+          <MessageSquare size={12} />
+          {!isMobile && <span>Chat</span>}
+        </button>
+
+        {/* History Button */}
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-[9px] font-black tracking-widest uppercase shadow-md transition-all duration-200 ${
+            showHistory
+              ? "bg-amber-950/80 border-amber-500/60 text-amber-400"
+              : "bg-gradient-to-b from-[#1b1712] to-[#0b0806] border-[#C99C3D]/45 text-[#E7C678] hover:border-[#E7C678] hover:from-[#2e261e] hover:to-[#17120e]"
+          }`}
+        >
+          <ScrollText size={12} />
+          {!isMobile && <span>History</span>}
+        </button>
+      </div>
+
       {/* ── The Responsive table canvas ── */}
       <div
         ref={tableRef}
-        className="relative w-full max-w-[1024px] mx-2 md:mx-6 aspect-[1.6/1] sm:aspect-[1.8/1] md:aspect-[2.2/1] shrink-0 bg-gradient-to-b from-[#1c110b] to-[#0b0604] rounded-[100px] sm:rounded-[140px] md:rounded-[180px] p-[8px] sm:p-[12px] md:p-[16px] shadow-[0_30px_70px_rgba(0,0,0,0.95),_inset_0_4px_6px_rgba(255,255,255,0.1),_inset_0_-4px_6px_rgba(0,0,0,0.8)] flex items-center justify-center"
+        className={`relative w-full shrink-0 bg-gradient-to-b from-[#3a3530] via-[#1e1b18] to-[#0f0e0c] p-[8px] sm:p-[12px] md:p-[16px] shadow-[0_40px_100px_rgba(0,0,0,0.98),_inset_0_4px_8px_rgba(255,255,255,0.12),_inset_0_-4px_8px_rgba(0,0,0,0.95)] flex items-center justify-center transition-all duration-300
+          ${isMobile || isTablet
+            ? 'aspect-[1/1.55] max-w-[420px] sm:max-w-[480px] mx-4 my-2 rounded-[55px] sm:rounded-[70px]'
+            : 'aspect-[1.8/1] md:aspect-[2.2/1] max-w-[1024px] mx-6 rounded-[100px] sm:rounded-[140px] md:rounded-[180px]'
+          }`}
       >
-        {/* Wood ring/race-track */}
-        <div className="w-full h-full bg-gradient-to-b from-[#4d2d18] via-[#331c0e] to-[#1c0f07] rounded-[92px] sm:rounded-[128px] md:rounded-[164px] p-[6px] sm:p-[8px] md:p-[10px] shadow-[0_4px_10px_rgba(0,0,0,0.6),_inset_0_2px_4px_rgba(255,255,255,0.2)] flex items-center justify-center">
+        {/* Wood ring/race-track - Ebony Wood style */}
+        <div 
+          className={`w-full h-full bg-gradient-to-b from-[#141210] via-[#0b0a09] to-[#050404] p-[8px] sm:p-[10px] md:p-[12px] shadow-[0_8px_20px_rgba(0,0,0,0.9),_inset_0_2px_4px_rgba(255,255,255,0.08),_inset_0_-2px_4px_rgba(0,0,0,0.9)] flex items-center justify-center border-t border-[#3a3530]/40 border-b border-[#0f0e0c]/40
+            ${isMobile || isTablet ? 'rounded-[49px] sm:rounded-[62px]' : 'rounded-[92px] sm:rounded-[128px] md:rounded-[164px]'}`}
+        >
           {/* Inner felt surface */}
           <div
-            className={`w-full h-full rounded-[86px] sm:rounded-[120px] md:rounded-[154px] relative overflow-hidden shadow-[inset_0_8px_25px_rgba(0,0,0,0.8)] ${felt.gradient}`}
+            className={`w-full h-full relative overflow-hidden shadow-[inset_0_8px_30px_rgba(0,0,0,0.9)] transition-all duration-300 ${felt.gradient}
+              ${isMobile || isTablet ? 'rounded-[43px] sm:rounded-[54px]' : 'rounded-[86px] sm:rounded-[120px] md:rounded-[154px]'}`}
           >
             {/* Subtle radial light at center for realistic felt texture */}
-            <div className="absolute inset-0 opacity-50 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.15)_0%,_transparent_60%)] pointer-events-none" />
+            <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.12)_0%,_transparent_60%)] pointer-events-none" />
 
             {/* Gold trim inner border ring (Betting Line) */}
-            <div className={`absolute inset-6 sm:inset-10 md:inset-12 rounded-[70px] sm:rounded-[100px] md:rounded-[140px] border-2 ${felt.line} pointer-events-none opacity-80`} />
+            <div 
+              className={`absolute border-2 ${felt.line} pointer-events-none opacity-80 transition-all duration-300
+                ${isMobile || isTablet 
+                  ? 'inset-5 rounded-[26px] sm:rounded-[36px]' 
+                  : 'inset-6 sm:inset-10 md:inset-12 rounded-[70px] sm:rounded-[100px] md:rounded-[140px]'}`} 
+            />
             
             {/* Table visual center registration point */}
             <div ref={registerCenter} className="absolute top-[38%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none opacity-0" />
@@ -75,38 +164,15 @@ const PokerTableInner = memo(function PokerTableInner() {
             animContainerRef.current = el;
             setAnimationContainer(el);
           }} 
-          className="absolute inset-0 pointer-events-none z-50 overflow-hidden rounded-[100px] sm:rounded-[140px] md:rounded-[180px]" 
+          className={`absolute inset-0 pointer-events-none z-50 overflow-hidden
+            ${isMobile || isTablet ? 'rounded-[55px] sm:rounded-[70px]' : 'rounded-[100px] sm:rounded-[140px] md:rounded-[180px]'}`} 
         />
 
         {socket && <AnimationManager socket={socket} />}
         <ThrowableOverlay />
 
-        {/* Dealer Illustration */}
-        <div className="absolute -top-[14%] left-1/2 -translate-x-1/2 w-[15%] md:w-[13%] aspect-[216/204] z-10 pointer-events-none drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/dealer_transparent.png" alt="Dealer" className="w-full h-full object-contain" />
-        </div>
-
-        {/* Chips Tray */}
-        <div className="absolute top-[8%] left-1/2 -translate-x-1/2 w-[12%] md:w-[10%] aspect-[174/44] z-20 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/chips_tray_transparent.png" alt="Chips Tray" className="w-full h-full object-contain" />
-        </div>
-
-        {/* Deck Shooter */}
-        <div className="absolute top-[7.5%] left-[41.5%] -translate-x-1/2 w-[3.5%] md:w-[3%] aspect-[54/65] z-20 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/deck_shooter_transparent.png" alt="Deck Shooter" className="w-full h-full object-contain" />
-        </div>
-
-        {/* Discard Shoe */}
-        <div className="absolute top-[7.5%] left-[58.5%] -translate-x-1/2 w-[7.5%] md:w-[6.5%] aspect-[112/85] z-20 pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/discard_shoe_transparent.png" alt="Discard Shoe" className="w-full h-full object-contain" />
-        </div>
-
-        {/* Center HUD: Pot + Community Cards + Stage */}
-        <div className="absolute flex flex-col items-center justify-center text-center space-y-2 md:space-y-4 z-20 top-[26%] left-1/2 -translate-x-1/2">
+        {/* Center HUD: Pot + Community Cards + Stage/Bet */}
+        <div className="absolute flex flex-col items-center justify-center text-center space-y-2 md:space-y-3 z-20 top-[26%] left-1/2 -translate-x-1/2">
           {waitingMessage && (
             <div className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-sm shadow-xl transition-all duration-300 ${waitingMessage.starting ? 'bg-amber-500/90 text-amber-950 animate-pulse' : 'bg-black/60 text-white/80'}`}>
               {waitingMessage.text}
@@ -114,7 +180,15 @@ const PokerTableInner = memo(function PokerTableInner() {
           )}
           <PotDisplay />
           <CommunityCards />
-          <BoardStage />
+          
+          {/* Round Bet chip indicator (BET: $120 style) */}
+          {currentHighestBet > 0 ? (
+            <div className="bg-[#0b2418]/90 border border-[#E7C678]/25 text-[#E7C678] font-black py-1 px-4 rounded-lg text-[10px] md:text-xs tracking-[0.12em] shadow-[inset_0_1px_3px_rgba(0,0,0,0.5),_0_2px_6px_rgba(0,0,0,0.3)] backdrop-blur-[2px]">
+              BET: ${formatChipsVal(String(currentHighestBet))}
+            </div>
+          ) : (
+            <BoardStage />
+          )}
 
           {gameStage === 'ended' && communityCards.length > 0 && communityCards.length < 5 && !rabbitCards && (
             <button
@@ -134,11 +208,11 @@ const PokerTableInner = memo(function PokerTableInner() {
                 {rabbitCards.map((card, idx) => (
                   <div key={`rabbit-${idx}`} className="relative opacity-90 scale-90 border border-amber-500/30 rounded-lg overflow-hidden shadow-[0_0_10px_rgba(245,158,11,0.2)]">
                     <PokerCard
-                      suit={card.suit}
-                      rank={card.rank}
-                      isFaceUp={true}
-                      size="md"
-                      deckStyle={cardDeckStyle}
+                       suit={card.suit}
+                       rank={card.rank}
+                       isFaceUp={true}
+                       size="md"
+                       deckStyle={cardDeckStyle}
                     />
                   </div>
                 ))}
@@ -187,7 +261,12 @@ const PokerTableInner = memo(function PokerTableInner() {
       </div>
 
       {/* ── Action HUD Fixed at Bottom ── */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-full max-w-[600px] px-4 z-40 pointer-events-auto">
+      <div className={`fixed left-1/2 -translate-x-1/2 w-full z-40 pointer-events-auto transition-all duration-300
+        ${isMobile || isTablet 
+          ? "bottom-2 max-w-[420px] px-3" 
+          : "bottom-0 max-w-[700px] px-0 pb-1"
+        }`}
+      >
         <ActionBar />
       </div>
     </div>

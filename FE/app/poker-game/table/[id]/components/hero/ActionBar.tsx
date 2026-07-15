@@ -147,6 +147,7 @@ export const ActionBar: React.FC = () => {
         isRaiseMode={controller.isRaiseMode}
         isAllIn={controller.isAllIn}
         raiseAmount={raiseAmount}
+        maxRaise={maxRaise}
         canRaise={maxRaise >= minRaise && maxRaise > callAmount}
         onFold={() => doAction("fold")}
         onCheck={() => doAction("check")}
@@ -154,6 +155,11 @@ export const ActionBar: React.FC = () => {
         onRaiseButtonClick={() =>
           controller.isRaiseMode ? doAction("raise") : controller.openRaiseMode()
         }
+        onAllInClick={() => {
+          setRaiseAmount(maxRaise);
+          handleUserAction("raise", maxRaise);
+          controller.closeRaiseMode();
+        }}
       />
     </div>
   );

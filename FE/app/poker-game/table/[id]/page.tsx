@@ -5,7 +5,6 @@ import { UserProvider } from "@/core/providers/user-provider";
 import { HeroPanel } from "./components/hero/HeroPanel";
 import { PokerGameProvider } from "./components/hooks/usePokerGame";
 import { TableBackground } from "./components/layout/TableBackground";
-import { TableHeader } from "./components/layout/TableHeader";
 import { PokerTable } from "./components/table/PokerTable";
 import { Toast } from "./components/ui/Toast";
 import { RitVoteModal } from "./components/ui/RitVoteModal";
@@ -36,9 +35,6 @@ function PokerTableRoom() {
       {/* 🗳️ RIT Vote Modal */}
       <RitVoteModal />
 
-      {/* 🏆 Header */}
-      <TableHeader />
-
       {/* 🚀 Main: 3 columns on desktop, full-width on mobile/tablet */}
       <div className="flex-1 flex overflow-hidden relative min-h-0">
 
@@ -55,8 +51,10 @@ function PokerTableRoom() {
             <PokerTable />
           </div>
 
-          {/* Hero Panel — below table, above action bar */}
-          <HeroPanel />
+          {/* Only render HeroPanel on mobile, hide on desktop/tablet to let the table occupy full screen */}
+          <div className="block md:hidden">
+            <HeroPanel />
+          </div>
         </main>
 
         {/* RIGHT — History sidebar (xl+) or bottom sheet (mobile/tablet) */}

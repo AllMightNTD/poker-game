@@ -6,16 +6,16 @@ import { AlertCircle, AtSign, Lock, Mail } from "lucide-react";
 import Link from "next/link";
 
 const uiText: Record<string, string> = {
-  createYourAccount: "CREATE ACCOUNT",
-  join: "Join the ultimate poker experience",
-  yourUsername: "Username",
-  yourEmailAddress: "Email Address",
-  password: "Password",
-  confirmPassword: "Confirm Password",
-  acceptTerm: "I accept the Terms and Conditions",
-  registerButton: "REGISTER",
-  alreadyHaveAccount: "Already have an account?",
-  login: "LOGIN",
+  createYourAccount: "TẠO TÀI KHOẢN",
+  join: "Tham gia trải nghiệm poker đỉnh cao",
+  yourUsername: "Tên đăng nhập",
+  yourEmailAddress: "Địa chỉ Email",
+  password: "Mật khẩu",
+  confirmPassword: "Xác nhận mật khẩu",
+  acceptTerm: "Tôi đồng ý với Điều khoản và Điều kiện",
+  registerButton: "ĐĂNG KÝ",
+  alreadyHaveAccount: "Đã có tài khoản?",
+  login: "ĐĂNG NHẬP",
 };
 
 export default function RegisterPage() {

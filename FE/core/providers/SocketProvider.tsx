@@ -44,14 +44,16 @@ export const SocketProvider = ({
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003",
       {
         transports: ["websocket"],
-        auth: {
-          token,
+        auth: (cb) => {
+          cb({
+            token: Cookies.get("accessToken"),
+          });
         },
         withCredentials: true,
         reconnection: true,
-        reconnectionAttempts: Infinity,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 10000,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 5000,
+        reconnectionDelayMax: 30000,
         randomizationFactor: 0.5,
       }
     );
@@ -68,10 +70,20 @@ export const SocketProvider = ({
         console.error(`[${new Date().toISOString()}] Socket disconnected. Reason: ${reason}`);
       }
       if (reason === "io server disconnect") {
-        // the disconnection was initiated by the server, you need to reconnect manually
-        socketInstance.connect();
+        const currentToken = Cookies.get("accessToken");
+        if (currentToken) {
+          console.log("Attempting manual reconnect after server disconnect...");
+          socketInstance.connect();
+        } else {
+          console.warn("Stopping reconnection because no accessToken found.");
+        }
       }
       setIsConnected(false);
+    });
+
+    socketInstance.on("auth:error", (data) => {
+      console.error(`[${new Date().toISOString()}] Socket authentication error:`, data);
+      socketInstance.disconnect();
     });
 
     socketInstance.io.on("reconnect_attempt", (attempt) => {

@@ -19,7 +19,8 @@ import { PokerLobbyService } from '../services/poker-lobby.service';
 import { PokerStateService } from '../services/poker-state.service';
 import { PokerGameService } from '../services/poker-game.service';
 import { corsOriginFn } from '../../config/cors.config';
-import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
+import { CustomThrottlerGuard } from '../../common/guards/custom-throttler.guard';
 
 @WebSocketGateway({
   cors: {
@@ -36,7 +37,7 @@ import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
     whitelist: true,
   }),
 )
-@UseGuards(ThrottlerGuard)
+@UseGuards(CustomThrottlerGuard)
 @Throttle({ default: { limit: 20, ttl: 60000 } }) // 20 actions / minute max for web sockets
 export class PokerLobbyGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
@@ -87,11 +88,21 @@ export class PokerLobbyGateway
         `Socket Client connected: ${client.id} (User: ${decoded.sub})`,
       );
     } catch (err) {
-      this.logger.error(`SOCKET CONNECTION AUTH ERROR: ${err.message}`);
-      client.emit('error', {
+      const isExpired =
+        err.name === 'TokenExpiredError' || err.message?.includes('expired');
+      if (isExpired) {
+        this.logger.warn(
+          `Socket Connection rejected: JWT expired for client ${client.id}`,
+        );
+      } else {
+        this.logger.error(`SOCKET CONNECTION AUTH ERROR: ${err.message}`);
+      }
+
+      client.emit('auth:error', {
+        code: isExpired ? 'JWT_EXPIRED' : 'AUTH_FAILED',
         message: 'Xác thực Socket thất bại: ' + err.message,
       });
-      client.disconnect();
+      client.disconnect(true);
     }
   }
 
