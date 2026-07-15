@@ -12,8 +12,25 @@ const quicksand = Quicksand({
 });
 
 export const metadata: Metadata = {
-  title: "PKCG",
-  description: "Poker Game CG",
+  title: {
+    default: "PKCG - Cổng Game Poker Online Uy Tín Hàng Đầu Việt Nam",
+    template: "%s | PKCG",
+  },
+  description: "Trải nghiệm PKCG - Cổng game bài Poker online đỉnh cao. Tham gia ngay các bàn đấu Texas Hold'em, Omaha kịch tính cùng hàng ngàn game thủ. Giao dịch nhanh chóng, bảo mật tuyệt đối.",
+  keywords: ["poker online", "poker viet nam", "texas holdem", "omaha plo", "game bai poker", "pkcg", "poker cg"],
+  openGraph: {
+    title: "PKCG - Cổng Game Poker Online Uy Tín Hàng Đầu Việt Nam",
+    description: "Trải nghiệm PKCG - Cổng game bài Poker online đỉnh cao. Tham gia ngay các bàn đấu Texas Hold'em, Omaha kịch tính cùng hàng ngàn game thủ.",
+    url: "https://pkcg.com",
+    siteName: "PKCG",
+    locale: "vi_VN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PKCG - Cổng Game Poker Online Uy Tín Hàng Đầu Việt Nam",
+    description: "Trải nghiệm PKCG - Cổng game bài Poker online đỉnh cao. Tham gia ngay các bàn đấu Texas Hold'em, Omaha kịch tính cùng hàng ngàn game thủ.",
+  },
 };
 
 export default function RootLayout({
@@ -22,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={quicksand.className}>
+    <html lang="vi" className={quicksand.className}>
       <body>
         <ReactQueryProvider>
           <ToastProvider>
