@@ -1,8 +1,7 @@
 "use client";
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import api from "@/lib/axios";
-import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 interface UserContextType {
   currentUser: any;
@@ -24,8 +23,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const user = res.data?.metadata || res.data;
       setCurrentUser(user);
     } catch {
-      Cookies.remove("accessToken", { path: "/" });
-      Cookies.remove("refreshToken", { path: "/" });
       router.push("/login");
     } finally {
       setIsLoadingUser(false);

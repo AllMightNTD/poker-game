@@ -1,22 +1,10 @@
 "use client";
 
+import { useCurrentAdmin } from "@/core/providers/admin-provider";
 import { Bell, Search } from "lucide-react";
-import { useEffect, useState } from "react";
 
 export const AdminHeader = () => {
-  const [admin, setAdmin] = useState<{ user_name: string; role: string } | null>(null);
-
-  useEffect(() => {
-    const info = localStorage.getItem("admin_info");
-    if (info) {
-      try {
-        const parsed = JSON.parse(info);
-        Promise.resolve().then(() => {
-          setAdmin(parsed);
-        });
-      } catch { }
-    }
-  }, []);
+  const { currentAdmin: admin } = useCurrentAdmin();
 
   return (
     <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-40">

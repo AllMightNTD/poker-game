@@ -67,14 +67,9 @@ export function useLogin(t: any) {
       });
 
       const token = result?.metadata?.access_token || result?.access_token || result?.accessToken;
-      const refreshToken = result?.metadata?.refresh_token || result?.refresh_token || result?.refreshToken;
 
       if (token) {
         Cookies.set("accessToken", token, { expires: 15 / 1440, path: "/" }); // 15 minutes
-      }
-
-      if (refreshToken) {
-        Cookies.set("refreshToken", refreshToken, { expires: 30, path: "/" }); // 30 days
       }
 
       if (rememberMe) {

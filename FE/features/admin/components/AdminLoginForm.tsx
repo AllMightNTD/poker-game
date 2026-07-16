@@ -1,5 +1,6 @@
 "use client";
 
+import { FormInput } from "@/components/ui/form";
 import httpClient from "@/core/api/http-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Gamepad2, Lock, Mail, ShieldAlert } from "lucide-react";
@@ -7,8 +8,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import Cookies from "js-cookie";
-import { FormInput } from "@/components/ui/form";
 
 const adminLoginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
@@ -45,10 +44,7 @@ export const AdminLoginForm = () => {
     try {
       const res = await httpClient.post("/api/v1/admin/login", data);
 
-      if (res.data?.access_token) {
-        localStorage.setItem("admin_token", res.data.access_token);
-        localStorage.setItem("admin_info", JSON.stringify(res.data.admin));
-        Cookies.set("admin_token", res.data.access_token, { expires: 1, path: "/" });
+      if (res.data?.admin_access_token) {
         router.push("/backstage/dashboard");
       }
     } catch (err: any) {

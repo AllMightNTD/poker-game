@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 export function proxy(request: NextRequest) {
   const token = request.cookies.get('accessToken')?.value;
-  const adminToken = request.cookies.get('admin_token')?.value;
+  const adminToken = request.cookies.get('admin_access_token')?.value;
   const path = request.nextUrl.pathname;
 
   // List of auth pages for player

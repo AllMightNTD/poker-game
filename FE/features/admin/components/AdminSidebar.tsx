@@ -1,8 +1,10 @@
 "use client";
 
-import { BookOpen, Gamepad2, LayoutDashboard, LogOut, Settings, ShieldAlert, Users, WalletCards, History, BarChart3, Megaphone, Trophy, Activity, AlertTriangle } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, BookOpen, Gamepad2, History, LayoutDashboard, LogOut, Megaphone, Settings, ShieldAlert, Trophy, Users, WalletCards } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+
+import { httpClient } from "../../../core/api/http-client";
 
 const SIDEBAR_ITEMS = [
   { name: "Tổng quan", href: "/backstage/dashboard", icon: LayoutDashboard },
@@ -24,10 +26,14 @@ export const AdminSidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
 
-  const handleLogout = () => {
-    localStorage.removeItem("admin_token");
-    localStorage.removeItem("admin_info");
-    document.cookie = "admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  const handleLogout = async () => {
+    try {
+      await httpClient.post("/api/v1/admin/logout");
+    } catch (err) {
+      console.error("Admin logout error:", err);
+    }
+    document.cookie = "admin_access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = "admin_refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     router.push("/backstage/login");
   };
 

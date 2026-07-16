@@ -381,7 +381,7 @@ export class AuthService {
     }
 
     const tokenEntity = await this.refreshTokenRepository.findOne({
-      where: { id: tokenId, user: { id: undefined } }, // Just ID is enough to fetch
+      where: { id: tokenId }, // Tìm kiếm không giới hạn revoked_at để phục vụ Reuse Detection
       relations: ['user'],
     });
 
@@ -389,8 +389,18 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token not found');
     }
 
-    if (tokenEntity.revoked_at || tokenEntity.expires_at < new Date()) {
-      throw new UnauthorizedException('Refresh token expired or revoked');
+    // Phát hiện tái sử dụng (Reuse Detection)
+    if (tokenEntity.revoked_at !== null) {
+      // Thu hồi tất cả các token khác của user này
+      await this.logout(tokenEntity.user_id);
+      throw new UnauthorizedException(
+        'Refresh token has already been used. Revoking all active user sessions.',
+      );
+    }
+
+    // Kiểm tra hết hạn
+    if (tokenEntity.expires_at < new Date()) {
+      throw new UnauthorizedException('Refresh token has expired');
     }
 
     const isTokenValid = await bcrypt.compare(
@@ -402,23 +412,32 @@ export class AuthService {
     }
 
     const user = tokenEntity.user;
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
     const payload = { sub: user.id, username: user.user_name };
     const newAccessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
 
-    // Optional: Token Rotation
+    // Xoay vòng Refresh Token (RTR)
+    tokenEntity.revoked_at = new Date();
+    await this.refreshTokenRepository.save(tokenEntity);
+
     const newPlainRefreshToken = crypto.randomBytes(64).toString('hex');
     const newTokenHash = await bcrypt.hash(newPlainRefreshToken, 10);
     const newExpiresAt = new Date();
     newExpiresAt.setDate(newExpiresAt.getDate() + 30);
 
-    // Update existing token or create new one and revoke old (for now we update it for simplicity)
-    tokenEntity.token_hash = newTokenHash;
-    tokenEntity.expires_at = newExpiresAt;
-    await this.refreshTokenRepository.save(tokenEntity);
+    const newRefreshTokenEntity = this.refreshTokenRepository.create({
+      user_id: user.id,
+      token_hash: newTokenHash,
+      expires_at: newExpiresAt,
+    });
+    await this.refreshTokenRepository.save(newRefreshTokenEntity);
 
     return {
       access_token: newAccessToken,
-      refresh_token: `${tokenEntity.id}.${newPlainRefreshToken}`,
+      refresh_token: `${newRefreshTokenEntity.id}.${newPlainRefreshToken}`,
     };
   }
 

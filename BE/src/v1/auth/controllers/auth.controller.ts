@@ -5,6 +5,7 @@ import {
   HttpStatus,
   Post,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -15,6 +16,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Response } from 'express';
 import { AuthGuard } from '../../guards/auth.guard';
 import {
   LoginDto,
@@ -131,8 +133,30 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Sai email hoặc mật khẩu' })
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.login(loginDto);
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    res.cookie('accessToken', result.access_token, {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 15 * 60 * 1000, // 15m
+    });
+
+    res.cookie('refreshToken', result.refresh_token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30d
+    });
+
+    return result;
   }
 
   @Post('forgot-password')
@@ -196,8 +220,30 @@ export class AuthController {
     status: 401,
     description: 'Refresh token không hợp lệ hoặc đã hết hạn',
   })
-  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
-    return this.authService.refreshToken(refreshTokenDto);
+  async refreshToken(
+    @Body() refreshTokenDto: RefreshTokenDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.refreshToken(refreshTokenDto);
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    res.cookie('accessToken', result.access_token, {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 15 * 60 * 1000, // 15m
+    });
+
+    res.cookie('refreshToken', result.refresh_token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30d
+    });
+
+    return result;
   }
 
   @Post('logout')
@@ -211,7 +257,24 @@ export class AuthController {
   })
   @ApiResponse({ status: 200, description: 'Đăng xuất thành công' })
   @ApiResponse({ status: 401, description: 'Chưa đăng nhập' })
-  async logout(@Req() req) {
-    return this.authService.logout(req.user.sub);
+  async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
+    const result = await this.authService.logout(req.user.sub);
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    res.clearCookie('accessToken', {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+    });
+
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+    });
+
+    return result;
   }
 }

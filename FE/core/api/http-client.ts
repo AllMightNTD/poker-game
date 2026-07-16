@@ -26,7 +26,7 @@ httpClient.interceptors.request.use(
 
     if (!isNoAuthEndpoint) {
       const isAdminApi = config.url?.includes("/api/v1/admin") || config.url?.includes("/api/v1/users");
-      const token = isAdminApi ? Cookies.get("admin_token") : Cookies.get("accessToken");
+      const token = isAdminApi ? Cookies.get("admin_access_token") : Cookies.get("accessToken");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -50,53 +50,56 @@ httpClient.interceptors.response.use(
 
     if (err.response?.status === 401 && !isNoAuthEndpoint && !originalRequest._retry) {
       const isAdminApi = originalRequest?.url?.includes("/api/v1/admin") || originalRequest?.url?.includes("/api/v1/users");
-      
-      if (isAdminApi) {
-        Cookies.remove("admin_token", { path: "/" });
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("admin_token");
-          localStorage.removeItem("admin_info");
-          window.location.href = "/backstage/login";
-        }
-        return Promise.reject(err);
-      }
 
       originalRequest._retry = true;
-      const refreshToken = Cookies.get("refreshToken");
-      
-      if (!refreshToken) {
-        Cookies.remove("accessToken", { path: "/" });
-        if (typeof window !== "undefined") {
-          window.location.href = "/login";
-        }
-        return Promise.reject(err);
-      }
 
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-        const refreshResponse = await axios.post(`${apiUrl}/api/v1/auth/refresh-token`, {
-          refreshToken,
-        });
+      if (isAdminApi) {
+        try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+          const refreshResponse = await axios.post(
+            `${apiUrl}/api/v1/admin/refresh-token`,
+            {},
+            { withCredentials: true }
+          );
 
-        const newAccessToken = refreshResponse.data.access_token || refreshResponse.data.accessToken;
-        const newRefreshToken = refreshResponse.data.refresh_token || refreshResponse.data.refreshToken;
+          const newAccessToken = refreshResponse.data.admin_access_token;
 
-        if (newAccessToken) {
-          Cookies.set("accessToken", newAccessToken, { expires: 15 / 1440, path: "/" }); // 15 minutes
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        }
-        if (newRefreshToken) {
-          Cookies.set("refreshToken", newRefreshToken, { expires: 30, path: "/" }); // 30 days
-        }
+          if (newAccessToken) {
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          }
 
-        return httpClient(originalRequest);
-      } catch (refreshError) {
-        Cookies.remove("accessToken", { path: "/" });
-        Cookies.remove("refreshToken", { path: "/" });
-        if (typeof window !== "undefined") {
-          window.location.href = "/login";
+          return httpClient(originalRequest);
+        } catch (refreshError) {
+          Cookies.remove("admin_access_token", { path: "/" });
+          if (typeof window !== "undefined") {
+            window.location.href = "/backstage/login";
+          }
+          return Promise.reject(refreshError);
         }
-        return Promise.reject(refreshError);
+      } else {
+        // --- Player Refresh Token flow (HttpOnly) ---
+        try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+          const refreshResponse = await axios.post(
+            `${apiUrl}/api/v1/auth/refresh-token`,
+            {},
+            { withCredentials: true }
+          );
+
+          const newAccessToken = refreshResponse.data.access_token || refreshResponse.data.accessToken;
+
+          if (newAccessToken) {
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          }
+
+          return httpClient(originalRequest);
+        } catch (refreshError) {
+          Cookies.remove("accessToken", { path: "/" });
+          if (typeof window !== "undefined") {
+            window.location.href = "/login";
+          }
+          return Promise.reject(refreshError);
+        }
       }
     }
     return Promise.reject(err);

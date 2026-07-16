@@ -1,12 +1,12 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
-  ForbiddenException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
+import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { ROLES_KEY } from '../decorators/admin-roles.decorator';
 
@@ -19,7 +19,11 @@ export class AdminGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const token = this.extractTokenFromHeader(request);
+    let token = this.extractTokenFromCookie(request);
+
+    if (!token) {
+      token = this.extractTokenFromHeader(request);
+    }
 
     if (!token) {
       throw new UnauthorizedException('Admin token missing');
@@ -27,6 +31,7 @@ export class AdminGuard implements CanActivate {
 
     try {
       const payload = await this.jwtService.verifyAsync(token);
+      console.log(payload);
 
       if (!payload.is_admin) {
         throw new ForbiddenException('You are not authorized as an admin');
@@ -50,6 +55,22 @@ export class AdminGuard implements CanActivate {
     }
 
     return true;
+  }
+
+  private extractTokenFromCookie(request: Request): string | undefined {
+    const cookieHeader = request.headers.cookie;
+    if (!cookieHeader) return undefined;
+
+    const cookies = cookieHeader.split(';').reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.split('=').map((c) => c.trim());
+        if (key) acc[key] = value;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+
+    return cookies['admin_access_token'];
   }
 
   private extractTokenFromHeader(request: Request): string | undefined {
