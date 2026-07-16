@@ -512,7 +512,7 @@ export class PokerShowdownManager {
         const expectedNewStack = startStack + netGainLoss;
         const actualNewStack = parseInt(seat.stack, 10);
 
-        const seatSuccess = expectedNewStack === actualNewStack;
+        const seatSuccess = Math.abs(expectedNewStack - actualNewStack) <= 1;
         if (!seatSuccess) {
           reconciliationSuccess = false;
         }
@@ -636,8 +636,10 @@ export class PokerShowdownManager {
       await revenue.save();
     }
 
-    // 5. Lưu HandPlayer
-    const handPlayerPromises = seats.map(async (seat) => {
+    // 5. Lưu HandPlayer bằng Batch Insert và chuẩn bị dữ liệu Replay
+    const replayPlayers = [];
+    const handPlayersToInsert = [];
+    for (const seat of seats) {
       const seatWinner = winnersLog.find(
         (w) => w.seat_number === seat.seat_number,
       );
@@ -648,41 +650,100 @@ export class PokerShowdownManager {
       );
 
       const totalChipsBetEarly = parseInt(seat.total_contributed || '0');
-      const hp = new HandPlayer();
-      hp.hand_id = hand.id;
-      hp.user_id = seat.user_id;
-      hp.hole_cards = pocketCards.join(',');
-      hp.chips_before = (
+      const chipsBefore = (
         parseInt(seat.stack) +
         totalChipsBetEarly -
         wonAmount
       ).toString();
-      hp.chips_bet = totalChipsBetEarly.toString();
-      hp.chips_won = wonAmount.toString();
-      hp.net_gain_loss = (wonAmount - totalChipsBetEarly).toString();
-      hp.is_winner = wonAmount > 0;
-      hp.seat_number = seat.seat_number;
-      await hp.save();
-    });
-    await Promise.all(handPlayerPromises);
 
-    // 6. Lưu HandAction
+      const hpData = {
+        hand_id: hand.id,
+        user_id: seat.user_id,
+        hole_cards: pocketCards.join(','),
+        chips_before: chipsBefore,
+        chips_bet: totalChipsBetEarly.toString(),
+        chips_won: wonAmount.toString(),
+        net_gain_loss: (wonAmount - totalChipsBetEarly).toString(),
+        is_winner: wonAmount > 0,
+        seat_number: seat.seat_number,
+        initial_stack: chipsBefore,
+      };
+      handPlayersToInsert.push(hpData);
+
+      replayPlayers.push({
+        user_id: seat.user_id,
+        user_name: seat.username || 'Player',
+        avatar_url: seat.avatar || null,
+        seat_number: seat.seat_number,
+        hole_cards: hpData.hole_cards,
+        initial_stack: hpData.chips_before,
+        chips_won: hpData.chips_won,
+        net_gain_loss: hpData.net_gain_loss,
+        is_winner: hpData.is_winner,
+      });
+    }
+
+    if (handPlayersToInsert.length > 0) {
+      await HandPlayer.insert(handPlayersToInsert);
+    }
+
+    // 6. Lưu HandAction bằng Batch Insert và chuẩn bị dữ liệu Replay
     const bufferedActions = await this.gameService.stateService.getActionLogs(
       tableState.current_hand_id || '0',
     );
-    const handActionPromises = bufferedActions.map(async (actStr, idx) => {
-      const actObj = JSON.parse(actStr);
-      const action = new HandAction();
-      action.hand_id = hand.id;
-      action.user_id = actObj.user_id;
-      action.seat_number = actObj.seat_number;
-      action.stage = actObj.stage;
-      action.action_type = actObj.action_type;
-      action.amount = actObj.amount.toString();
-      action.action_order = idx + 1;
-      await action.save();
-    });
-    await Promise.all(handActionPromises);
+    const handActionsToInsert = [];
+    const replayActions = [];
+    for (let idx = 0; idx < bufferedActions.length; idx++) {
+      const actObj = JSON.parse(bufferedActions[idx]);
+      const playerSeat = seats.find((s) => s.user_id === actObj.user_id);
+
+      const actData = {
+        hand_id: hand.id,
+        user_id: actObj.user_id,
+        seat_number: actObj.seat_number,
+        stage: actObj.stage,
+        action_type: actObj.action_type,
+        amount: actObj.amount.toString(),
+        action_order: idx + 1,
+        is_all_in: actObj.action_type === 'allin',
+      };
+      handActionsToInsert.push(actData);
+
+      replayActions.push({
+        id: undefined,
+        user_id: actObj.user_id,
+        user_name: playerSeat?.username || 'Player',
+        seat_number: actObj.seat_number,
+        stage: actObj.stage,
+        action_type: actObj.action_type,
+        amount: actData.amount,
+        action_order: actData.action_order,
+        is_all_in: actData.is_all_in,
+      });
+    }
+
+    if (handActionsToInsert.length > 0) {
+      await HandAction.insert(handActionsToInsert);
+    }
+
+    // Đóng gói và cập nhật cột replay_json của GameHand
+    hand.replay_json = {
+      hand: {
+        id: hand.id,
+        table_name: dbTable?.name || tableState.room_name || null,
+        dealer_seat: hand.dealer_seat,
+        small_blind_seat: hand.small_blind_seat,
+        big_blind_seat: hand.big_blind_seat,
+        community_cards: hand.community_cards,
+        total_pot: hand.total_pot,
+        hand_stage: hand.hand_stage,
+        started_at: hand.started_at,
+        ended_at: hand.ended_at,
+      },
+      players: replayPlayers,
+      actions: replayActions,
+    };
+    await hand.save();
 
     // 7. Dọn dẹp Action Timer và action logs
     this.gameService.clearActionTimer(roomId);

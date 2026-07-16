@@ -10,6 +10,13 @@ import { AntiCollusionService } from '../services/anti-collusion.service';
 import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
 import { AuditLog } from '../entities/audit_log.entity';
 import { GameHand } from '../entities/game_hand.entity';
+jest.mock('../../common/guards/custom-throttler.guard', () => ({
+  CustomThrottlerGuard: class MockCustomThrottlerGuard {
+    canActivate() {
+      return true;
+    }
+  },
+}));
 
 // ── Mock Database Entities ──
 jest.mock('../entities/poker_table.entity', () => ({
@@ -51,6 +58,7 @@ jest.mock('../entities/hand_player.entity', () => {
   class MockHandPlayer {
     static findOne = jest.fn().mockResolvedValue(null);
     static create = jest.fn().mockImplementation(() => new MockHandPlayer());
+    static insert = jest.fn().mockResolvedValue(true);
     save = jest.fn().mockResolvedValue(this);
   }
   return { HandPlayer: MockHandPlayer };
@@ -60,6 +68,7 @@ jest.mock('../entities/hand_action.entity', () => {
   class MockHandAction {
     static findOne = jest.fn().mockResolvedValue(null);
     static create = jest.fn().mockImplementation(() => new MockHandAction());
+    static insert = jest.fn().mockResolvedValue(true);
     save = jest.fn().mockResolvedValue(this);
   }
   return { HandAction: MockHandAction };

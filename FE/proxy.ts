@@ -6,7 +6,21 @@ export function proxy(request: NextRequest) {
   const adminToken = request.cookies.get('admin_token')?.value;
   const path = request.nextUrl.pathname;
 
-  const isAuthPath = /^\/(login|register)\/?$/.test(path);
+  // List of auth pages for player
+  const playerAuthPaths = [
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/verify-otp',
+    '/resend-otp',
+  ];
+
+  // Check if player is accessing any player auth page (exact match or dynamic sub-path like /reset-password/token)
+  const isPlayerAuthPath = playerAuthPaths.some(authPath => 
+    path === authPath || path.startsWith(authPath + '/')
+  );
+
   const isRootPath = path === '/';
 
   // Redirect root page based on auth status
@@ -18,8 +32,8 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // Prevent re-visiting login/register when already logged in
-  if (isAuthPath && token) {
+  // Prevent re-visiting player auth pages when already logged in
+  if (isPlayerAuthPath && token) {
     return NextResponse.redirect(new URL('/poker-game', request.url));
   }
 

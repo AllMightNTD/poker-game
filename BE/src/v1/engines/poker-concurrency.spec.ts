@@ -7,6 +7,14 @@ import { PokerStateService } from '../services/poker-state.service';
 
 import { ThrottlerGuard } from '@nestjs/throttler';
 
+jest.mock('../../common/guards/custom-throttler.guard', () => ({
+  CustomThrottlerGuard: class MockCustomThrottlerGuard {
+    canActivate() {
+      return true;
+    }
+  },
+}));
+
 // Mock Services
 class MockPokerStateService {
   private locks = new Map<string, boolean>();

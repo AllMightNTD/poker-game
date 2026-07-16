@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Repository } from 'typeorm';
 import { Blog } from '../entities/blog.entity';
 import { GameHand } from '../entities/game_hand.entity';
@@ -245,6 +246,10 @@ export class BlogsService {
       throw new NotFoundException(`Hand ${handId} not found`);
     }
 
+    if (hand.replay_json) {
+      return hand.replay_json;
+    }
+
     const players = await this.handPlayerRepository.find({
       where: { hand_id: handId },
       relations: ['user'],
@@ -294,11 +299,24 @@ export class BlogsService {
     };
   }
 
-  /**
-   * Call Gemini REST API to generate AI coaching commentary for a hand.
-   * Requires GEMINI_API_KEY in environment variables.
-   */
   async getAiCoachAnalysis(handId: string) {
+    const hand = await this.gameHandRepository.findOne({
+      where: { id: handId },
+    });
+    if (!hand) {
+      throw new NotFoundException(`Hand ${handId} not found`);
+    }
+
+    if (hand.ai_analysis) {
+      return {
+        hand_id: handId,
+        analysis: hand.ai_analysis,
+        cached: true,
+        model: 'gemini-3.5-flash',
+        generated_at: hand.updated_at.toISOString(),
+      };
+    }
+
     const handData = await this.getHandDetail(handId);
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
 
@@ -309,55 +327,82 @@ export class BlogsService {
     }
 
     const prompt = [
-      `You are an expert poker coach. Analyse the following Texas Hold'em hand history and provide concise tactical commentary for each betting round.`,
+      `Bạn là một huấn luyện viên (coach) Poker chuyên nghiệp đẳng cấp quốc tế. Hãy phân tích lịch sử ván bài Texas Hold'em sau đây và đưa ra nhận xét chiến thuật chi tiết cho từng vòng cược bằng tiếng Việt, sử dụng các thuật ngữ Poker tiếng Anh chuẩn (ví dụ: preflop, flop, turn, river, c-bet, 3-bet, check-raise, range bài, fold, call, bet sizing, pot odds).`,
       ``,
-      `== HAND SUMMARY ==`,
-      `Community cards: ${handData.hand.community_cards ?? 'none revealed'}`,
+      `== TÓM TẮT VÁN BÀI ==`,
+      `Community cards (Bài chung): ${handData.hand.community_cards ?? 'Chưa chia'}`,
       `Total pot: ${handData.hand.total_pot} chips`,
       ``,
-      `== PLAYERS ==`,
+      `== DANH SÁCH NGƯỜI CHƠI ==`,
       ...handData.players.map(
         (p) =>
-          `Seat ${p.seat_number} (${p.user_name}): hole_cards=${p.hole_cards ?? '??'}, initial_stack=${p.initial_stack}, net=${p.net_gain_loss} [${p.is_winner ? 'WINNER' : 'loser'}]`,
+          `Seat ${p.seat_number} (${p.user_name}): bài tẩy=${p.hole_cards ?? '??'}, stack ban đầu=${p.initial_stack}, thắng/thua=${p.net_gain_loss} [${p.is_winner ? 'THẮNG' : 'THUA'}]`,
       ),
       ``,
-      `== ACTION TIMELINE ==`,
+      `== DIỄN BIẾN CHI TIẾT (ACTION TIMELINE) ==`,
       ...handData.actions.map(
         (a) =>
-          `[${a.stage.toUpperCase()}] Seat ${a.seat_number} (${a.user_name}): ${a.action_type}${Number(a.amount) > 0 ? ' ' + a.amount + ' chips' : ''}`,
+          `[${a.stage.toUpperCase()}] Seat ${a.seat_number} (${a.user_name}): hành động=${a.action_type}${Number(a.amount) > 0 ? ', lượng=' + a.amount + ' chips' : ''}`,
       ),
       ``,
-      `Provide commentary in 3-5 bullet points, one per betting round (Preflop, Flop, Turn, River). Focus on key decision points, mistakes, and what the optimal play would have been. Be direct and concise.`,
+      `Hãy bình luận một cách trực diện, súc tích và mang tính chuyên môn cao. Chỉ rõ lỗi sai lớn nhất hoặc pha xử lý xuất sắc nhất.`,
     ].join('\n');
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-    const response = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
-      }),
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-3.5-flash',
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT' as any,
+          properties: {
+            overall_score: { type: 'INTEGER' as any },
+            summary: { type: 'STRING' as any },
+            rounds: {
+              type: 'OBJECT' as any,
+              properties: {
+                preflop: { type: 'STRING' as any },
+                flop: { type: 'STRING' as any },
+                turn: { type: 'STRING' as any },
+                river: { type: 'STRING' as any },
+              },
+              required: ['preflop'],
+            },
+            key_mistake: { type: 'STRING' as any },
+          },
+          required: ['overall_score', 'summary', 'rounds'],
+        },
+      },
     });
 
-    if (!response.ok) {
-      const errBody = await response.text();
-      throw new InternalServerErrorException(`Gemini API error: ${errBody}`);
+    try {
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
+
+      let cleanedText = responseText.trim();
+      const firstBrace = cleanedText.indexOf('{');
+      const lastBrace = cleanedText.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        cleanedText = cleanedText.slice(firstBrace, lastBrace + 1);
+      }
+
+      const parsedAnalysis = JSON.parse(cleanedText);
+
+      // Lưu vào database làm Cache
+      hand.ai_analysis = parsedAnalysis;
+      await this.gameHandRepository.save(hand);
+
+      return {
+        hand_id: handId,
+        analysis: parsedAnalysis,
+        cached: false,
+        model: 'gemini-3.5-flash',
+        generated_at: new Date().toISOString(),
+      };
+    } catch (err) {
+      throw new InternalServerErrorException(
+        `Failed to generate or save AI analysis: ${err.message}`,
+      );
     }
-
-    const result = (await response.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    const text =
-      result.candidates?.[0]?.content?.parts?.[0]?.text ??
-      'No analysis available.';
-
-    return {
-      hand_id: handId,
-      analysis: text,
-      model: 'gemini-1.5-flash',
-      generated_at: new Date().toISOString(),
-    };
   }
 }

@@ -248,14 +248,6 @@ export function BlogList() {
             STRATEGIES
           </span>
         </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="relative text-slate-400 max-w-xl font-medium"
-        >
-          Cuộn để đọc trọn vẹn từng bài viết — không cần chuyển trang.
-        </motion.p>
         <div className="max-w-6xl mx-auto px-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

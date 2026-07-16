@@ -85,6 +85,57 @@ export class GameHand extends BaseEntity {
   @UpdateDateColumn()
   updated_at: Date;
 
+  @Column({ type: 'json', nullable: true })
+  ai_analysis: {
+    overall_score: number;
+    summary: string;
+    rounds: {
+      preflop: string;
+      flop?: string;
+      turn?: string;
+      river?: string;
+    };
+    key_mistake?: string | null;
+  } | null;
+
+  @Column({ type: 'json', nullable: true })
+  replay_json: {
+    hand: {
+      id: string;
+      table_name: string | null;
+      dealer_seat: number | null;
+      small_blind_seat: number;
+      big_blind_seat: number;
+      community_cards: string | null;
+      total_pot: string;
+      hand_stage: string;
+      started_at: Date | string;
+      ended_at: Date | string | null;
+    };
+    players: Array<{
+      user_id: string;
+      user_name: string;
+      avatar_url: string | null;
+      seat_number: number;
+      hole_cards: string;
+      initial_stack: string;
+      chips_won: string;
+      net_gain_loss: string;
+      is_winner: boolean;
+    }>;
+    actions: Array<{
+      id?: string;
+      user_id: string;
+      user_name: string;
+      seat_number: number;
+      stage: string;
+      action_type: string;
+      amount: string | number;
+      action_order: number;
+      is_all_in: boolean;
+    }>;
+  } | null;
+
   // ---- Relations ----
 
   @ManyToOne(() => PokerTable, { onDelete: 'CASCADE' })
