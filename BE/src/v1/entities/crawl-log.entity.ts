@@ -3,36 +3,36 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  JoinColumn,
-  ManyToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
-import { Blog } from './blog.entity';
 
 @Entity('crawl_logs')
 export class CrawlLog extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ unique: true }) // <-- BẮT BUỘC để upsert(['title']) hoạt động
   title: string;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
+  @Column()
   source_url: string;
 
-  @Column({ type: 'varchar', length: 50 })
+  @Column()
   status: 'SUCCESS' | 'FAILED';
 
+  @Column({ type: 'int', default: 0 })
+  attempt_count: number; // <-- cột mới
+
   @Column({ type: 'text', nullable: true })
-  error_message: string;
+  error_message: string | null;
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
-  blog_id: string;
-
-  @ManyToOne(() => Blog, { onDelete: 'SET NULL', nullable: true })
-  @JoinColumn({ name: 'blog_id' })
-  blog: Blog;
+  @Column({ type: 'varchar', nullable: true })
+  blog_id: string | null;
 
   @CreateDateColumn()
-  processed_at: Date;
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
 }
