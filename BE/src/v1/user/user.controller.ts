@@ -1,4 +1,11 @@
-import { Controller, Get, Param, Request, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Request,
+  UseGuards,
+  Delete,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -13,16 +20,6 @@ import { Wallet } from '../entities/wallet.entity';
 @Controller('')
 export class UserController {
   constructor(private readonly userService: UserService) {}
-
-  @Get('/hello')
-  @ApiOperation({
-    summary: 'Health check (i18n)',
-    description: 'Kiểm tra server đang chạy và hỗ trợ đa ngôn ngữ.',
-  })
-  @ApiResponse({ status: 200, description: 'Lời chào' })
-  getHello() {
-    return 'Hello from API!';
-  }
 
   @Get('/me')
   @UseGuards(AuthGuard)
@@ -91,5 +88,29 @@ export class UserController {
   @ApiResponse({ status: 200, description: 'Chỉ số Poker' })
   async getUserStats(@Param('id') userId: string) {
     return this.userService.getUserPokerStats(userId);
+  }
+
+  @Get('/sessions')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Danh sách các phiên hoạt động',
+    description: 'Lấy toàn bộ các thiết bị/phiên đang đăng nhập của user này.',
+  })
+  @ApiResponse({ status: 200, description: 'Danh sách sessions' })
+  async getSessions(@Request() req) {
+    return this.userService.getActiveSessions(req.user.sub);
+  }
+
+  @Delete('/sessions/:id')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Đăng xuất một phiên/thiết bị từ xa',
+    description: 'Thu hồi refresh token của một phiên đăng nhập cụ thể.',
+  })
+  @ApiResponse({ status: 200, description: 'Thu hồi thành công' })
+  async revokeSession(@Param('id') sessionId: string, @Request() req) {
+    return this.userService.revokeSession(req.user.sub, sessionId);
   }
 }

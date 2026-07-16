@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import Cookies from "js-cookie";
 
 const adminLoginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
@@ -43,8 +44,13 @@ export const AdminLoginForm = () => {
     setError(null);
     try {
       const res = await httpClient.post("/api/v1/admin/login", data);
+      console.log('res', res.data?.admin_access_token);
 
       if (res.data?.admin_access_token) {
+        Cookies.set("admin_access_token", res.data.admin_access_token, {
+          path: "/",
+          expires: 2 / 24, // 2 hours (matching backend JWT lifetime)
+        });
         router.push("/backstage/dashboard");
       }
     } catch (err: any) {

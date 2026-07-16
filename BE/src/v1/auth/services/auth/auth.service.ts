@@ -294,7 +294,7 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, ipAddress?: string, deviceInfo?: string) {
     const { email, password } = loginDto;
 
     const user = await this.userRepository.findOne({
@@ -356,6 +356,8 @@ export class AuthService {
       user_id: user.id,
       token_hash: tokenHash,
       expires_at: expiresAt,
+      ip_address: ipAddress,
+      device_info: deviceInfo,
     });
     await this.refreshTokenRepository.save(refreshTokenEntity);
 
@@ -370,7 +372,11 @@ export class AuthService {
     };
   }
 
-  async refreshToken(refreshTokenDto: RefreshTokenDto) {
+  async refreshToken(
+    refreshTokenDto: RefreshTokenDto,
+    ipAddress?: string,
+    deviceInfo?: string,
+  ) {
     const { refreshToken } = refreshTokenDto;
 
     // Refresh token format: uuid.plaintext
@@ -432,6 +438,8 @@ export class AuthService {
       user_id: user.id,
       token_hash: newTokenHash,
       expires_at: newExpiresAt,
+      ip_address: ipAddress,
+      device_info: deviceInfo,
     });
     await this.refreshTokenRepository.save(newRefreshTokenEntity);
 

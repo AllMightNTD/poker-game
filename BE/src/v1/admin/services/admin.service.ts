@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -12,7 +16,7 @@ import { AdminRefreshTokenDto } from '../dto/admin-refresh-token.dto';
 export class AdminService {
   constructor(private readonly jwtService: JwtService) {}
 
-  async login(dto: AdminLoginDto) {
+  async login(dto: AdminLoginDto, ipAddress?: string, deviceInfo?: string) {
     const admin = await Admin.findOne({ where: { email: dto.email } });
     if (!admin) {
       throw new UnauthorizedException('Tài khoản không tồn tại');
@@ -27,7 +31,9 @@ export class AdminService {
       admin.role !== AdminRole.ADMIN &&
       admin.role !== AdminRole.SUPER_ADMIN
     ) {
-      throw new UnauthorizedException('Invalid admin role');
+      throw new UnauthorizedException(
+        'Bạn không có quyền truy cập vào hệ thống',
+      );
     }
 
     const payload = {
@@ -51,6 +57,8 @@ export class AdminService {
     tokenEntity.admin_id = admin.id;
     tokenEntity.token_hash = tokenHash;
     tokenEntity.expires_at = expiresAt;
+    tokenEntity.ip_address = ipAddress;
+    tokenEntity.device_info = deviceInfo;
     await tokenEntity.save();
 
     const refreshToken = `${tokenEntity.id}.${plainRefreshToken}`;
@@ -67,15 +75,19 @@ export class AdminService {
     };
   }
 
-  async refreshToken(dto: AdminRefreshTokenDto) {
+  async refreshToken(
+    dto: AdminRefreshTokenDto,
+    ipAddress?: string,
+    deviceInfo?: string,
+  ) {
     const { refreshToken } = dto;
     if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token is required');
+      throw new UnauthorizedException('Refresh token không tồn tại');
     }
 
     const [tokenId, plainToken] = refreshToken.split('.');
     if (!tokenId || !plainToken) {
-      throw new UnauthorizedException('Invalid refresh token format');
+      throw new UnauthorizedException('Định dạng refresh token không đúng');
     }
 
     const tokenEntity = await AdminRefreshToken.findOne({
@@ -84,7 +96,7 @@ export class AdminService {
     });
 
     if (!tokenEntity) {
-      throw new UnauthorizedException('Refresh token not found');
+      throw new UnauthorizedException('Refresh token không tồn tại');
     }
 
     // Phát hiện tái sử dụng (Reuse Detection)
@@ -94,13 +106,13 @@ export class AdminService {
         { revoked_at: new Date() },
       );
       throw new UnauthorizedException(
-        'Refresh token has already been used. Revoking all active admin sessions.',
+        'Refresh token đã được sử dụng. Thu hồi tất cả phiên admin đang hoạt động.',
       );
     }
 
     // Kiểm tra hết hạn
     if (tokenEntity.expires_at < new Date()) {
-      throw new UnauthorizedException('Refresh token has expired');
+      throw new UnauthorizedException('Refresh token đã hết hạn');
     }
 
     // Kiểm tra mã băm
@@ -109,19 +121,19 @@ export class AdminService {
       tokenEntity.token_hash,
     );
     if (!isHashValid) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('Refresh token không hợp lệ');
     }
 
     const admin = tokenEntity.admin;
     if (!admin) {
-      throw new UnauthorizedException('Admin account not found');
+      throw new UnauthorizedException('Tài khoản admin không tồn tại');
     }
 
     if (
       admin.role !== AdminRole.ADMIN &&
       admin.role !== AdminRole.SUPER_ADMIN
     ) {
-      throw new UnauthorizedException('Invalid admin role');
+      throw new UnauthorizedException('Role không hợp lệ');
     }
 
     const payload = {
@@ -148,6 +160,8 @@ export class AdminService {
     newTokenEntity.admin_id = admin.id;
     newTokenEntity.token_hash = newTokenHash;
     newTokenEntity.expires_at = newExpiresAt;
+    newTokenEntity.ip_address = ipAddress;
+    newTokenEntity.device_info = deviceInfo;
     await newTokenEntity.save();
 
     const newRefreshToken = `${newTokenEntity.id}.${newPlainRefreshToken}`;
@@ -167,7 +181,7 @@ export class AdminService {
   async getMe(adminId: string) {
     const admin = await Admin.findOne({ where: { id: adminId } });
     if (!admin) {
-      throw new UnauthorizedException('Admin not found');
+      throw new UnauthorizedException('Tài khoản admin không tồn tại');
     }
     return {
       id: admin.id,
@@ -182,6 +196,28 @@ export class AdminService {
       { admin_id: adminId, revoked_at: null },
       { revoked_at: new Date() },
     );
-    return { message: 'Logged out successfully' };
+    return { message: 'Đăng xuất thành công' };
+  }
+
+  async getActiveSessions(adminId: string) {
+    return AdminRefreshToken.createQueryBuilder('art')
+      .where('art.admin_id = :adminId', { adminId })
+      .andWhere('art.revoked_at IS NULL')
+      .andWhere('art.expires_at > :now', { now: new Date() })
+      .orderBy('art.created_at', 'DESC')
+      .getMany();
+  }
+
+  async revokeSession(adminId: string, sessionId: string) {
+    const result = await AdminRefreshToken.update(
+      { id: sessionId, admin_id: adminId, revoked_at: null },
+      { revoked_at: new Date() },
+    );
+    if (result.affected === 0) {
+      throw new NotFoundException(
+        'Phiên làm việc không tồn tại hoặc đã bị thu hồi',
+      );
+    }
+    return { success: true };
   }
 }

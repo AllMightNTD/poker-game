@@ -30,5 +30,15 @@ export const AuthService = {
     const response = await httpClient.post("/api/v1/auth/reset-password", data);
     return response.data;
   },
+
+  async getSessions() {
+    const response = await httpClient.get("/api/v1/user/sessions");
+    return response.data;
+  },
+
+  async revokeSession(id: string) {
+    const response = await httpClient.delete(`/api/v1/user/sessions/${id}`);
+    return response.data;
+  },
 };
 

@@ -18,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AuthGuard } from '../../guards/auth.guard';
+import { parseUserAgent } from '../../../common/utils/device-parser';
 import {
   LoginDto,
   RefreshTokenDto,
@@ -136,8 +137,18 @@ export class AuthController {
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
+    @Req() req: any,
   ) {
-    const result = await this.authService.login(loginDto);
+    const rawUserAgent = req.headers['user-agent'];
+    const parsedDevice = parseUserAgent(rawUserAgent);
+    const ipAddress =
+      req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress;
+
+    const result = await this.authService.login(
+      loginDto,
+      ipAddress,
+      parsedDevice,
+    );
     const isProduction = process.env.NODE_ENV === 'production';
 
     res.cookie('accessToken', result.access_token, {
@@ -223,8 +234,18 @@ export class AuthController {
   async refreshToken(
     @Body() refreshTokenDto: RefreshTokenDto,
     @Res({ passthrough: true }) res: Response,
+    @Req() req: any,
   ) {
-    const result = await this.authService.refreshToken(refreshTokenDto);
+    const rawUserAgent = req.headers['user-agent'];
+    const parsedDevice = parseUserAgent(rawUserAgent);
+    const ipAddress =
+      req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress;
+
+    const result = await this.authService.refreshToken(
+      refreshTokenDto,
+      ipAddress,
+      parsedDevice,
+    );
     const isProduction = process.env.NODE_ENV === 'production';
 
     res.cookie('accessToken', result.access_token, {

@@ -4,16 +4,34 @@ import React, { useEffect, useState } from "react";
 import { gamificationApi, PlayerStats, Achievement } from "@/features/gamification/api/gamification-api";
 import { UserProvider, useCurrentUser } from "@/core/providers/user-provider";
 import { LevelBadge } from "../poker-game/table/[id]/components/ui/LevelBadge";
-import { Coins, Trophy, Swords, Zap, Star } from "lucide-react";
+import { Coins, Trophy, Swords, Zap, Star, Laptop, Globe, Trash2, Clock } from "lucide-react";
 import { motion } from "framer-motion";
+import { AuthService } from "@/features/auth/services/auth.service";
 
 function ProfileContent() {
   const { currentUser } = useCurrentUser();
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+  const [sessionRefresh, setSessionRefresh] = useState(0);
 
+  const handleRevoke = async (id: string) => {
+    if (!confirm("Bạn có chắc chắn muốn đăng xuất thiết bị này từ xa?")) return;
+    try {
+      await AuthService.revokeSession(id);
+      setSessionRefresh((prev) => prev + 1);
+    } catch (err) {
+      console.error("Failed to revoke user session", err);
+      alert("Không thể thu hồi phiên đăng nhập.");
+    }
+  };
+
+  // Fetch gamification stats
   useEffect(() => {
+    if (!currentUser) return;
+    let active = true;
     const fetchStats = async () => {
       try {
         const [statsRes, achRes] = await Promise.all([
@@ -28,16 +46,43 @@ function ProfileContent() {
             return [];
           })
         ]);
-        setStats(statsRes);
-        setAchievements(achRes || []);
+        if (active) {
+          setStats(statsRes);
+          setAchievements(achRes || []);
+        }
       } catch (err) {
         console.error("Unexpected error in fetchStats", err);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
-    if (currentUser) fetchStats();
+    fetchStats();
+    return () => { active = false; };
   }, [currentUser]);
+
+  // Fetch active sessions
+  useEffect(() => {
+    if (!currentUser) return;
+    let active = true;
+    const controller = new AbortController();
+    AuthService.getSessions()
+      .then((data) => {
+        if (active) {
+          setSessions(data || []);
+          setLoadingSessions(false);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          console.error("Failed to load user sessions", err);
+          setLoadingSessions(false);
+        }
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [currentUser, sessionRefresh]);
 
   if (!currentUser || loading) {
     return (
@@ -155,6 +200,82 @@ function ProfileContent() {
               ))}
             </div>
           )}
+        </motion.div>
+
+        {/* Active Sessions */}
+        <motion.div 
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="bg-slate-900/60 backdrop-blur-sm rounded-3xl p-8 border border-slate-800"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-500/20 rounded-lg">
+                <Laptop className="text-indigo-400 w-6 h-6" />
+              </div>
+              <h2 className="text-2xl font-black text-white">Thiết bị hoạt động</h2>
+            </div>
+            <button
+              onClick={() => setSessionRefresh((prev) => prev + 1)}
+              className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition cursor-pointer"
+            >
+              Làm mới
+            </button>
+          </div>
+
+          <p className="text-slate-400 text-sm leading-relaxed mb-6">
+            Danh sách các thiết bị/trình duyệt đang đăng nhập vào tài khoản của bạn. Bạn có thể đăng xuất bất kỳ phiên hoạt động đáng ngờ nào từ xa.
+          </p>
+
+          <div className="space-y-4">
+            {loadingSessions ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500" />
+              </div>
+            ) : sessions.length === 0 ? (
+              <div className="text-center py-8 text-slate-500 text-sm border-2 border-dashed border-slate-800 rounded-xl">
+                Không tìm thấy phiên hoạt động nào.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {sessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className="flex items-center justify-between p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl hover:border-slate-700/60 transition group"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 group-hover:text-indigo-400 transition shrink-0">
+                        <Laptop size={20} />
+                      </div>
+                      <div className="space-y-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-200 truncate">
+                          {session.device_info || "Thiết bị không xác định"}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 font-mono">
+                          <span className="flex items-center gap-1">
+                            <Globe size={12} /> {session.ip_address || "No IP"}
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Clock size={12} /> {new Date(session.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleRevoke(session.id)}
+                      className="p-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 hover:text-rose-300 rounded-xl transition-colors cursor-pointer shrink-0 ml-3"
+                      title="Thu hồi phiên đăng nhập"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </motion.div>
       </div>
     </div>

@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   Req,
   Res,
@@ -11,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
+import { parseUserAgent } from '../../../common/utils/device-parser';
 import { AdminLoginDto } from '../dto/admin-login.dto';
 import { AdminRefreshTokenDto } from '../dto/admin-refresh-token.dto';
 import { AdminGuard } from '../guards/admin.guard';
@@ -36,8 +39,18 @@ export class AdminController {
   async login(
     @Body() loginDto: AdminLoginDto,
     @Res({ passthrough: true }) res: Response,
+    @Req() req: any,
   ) {
-    const result = await this.adminService.login(loginDto);
+    const rawUserAgent = req.headers['user-agent'];
+    const parsedDevice = parseUserAgent(rawUserAgent);
+    const ipAddress =
+      req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress;
+
+    const result = await this.adminService.login(
+      loginDto,
+      ipAddress,
+      parsedDevice,
+    );
 
     const isProduction = process.env.NODE_ENV === 'production';
 
@@ -73,8 +86,18 @@ export class AdminController {
   async refreshToken(
     @Body() dto: AdminRefreshTokenDto,
     @Res({ passthrough: true }) res: Response,
+    @Req() req: any,
   ) {
-    const result = await this.adminService.refreshToken(dto);
+    const rawUserAgent = req.headers['user-agent'];
+    const parsedDevice = parseUserAgent(rawUserAgent);
+    const ipAddress =
+      req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress;
+
+    const result = await this.adminService.refreshToken(
+      dto,
+      ipAddress,
+      parsedDevice,
+    );
 
     const isProduction = process.env.NODE_ENV === 'production';
 
@@ -145,5 +168,29 @@ export class AdminController {
   async getMe(@Req() req: any) {
     const adminId = req.admin.sub;
     return this.adminService.getMe(adminId);
+  }
+
+  @Get('sessions')
+  @UseGuards(AdminGuard)
+  @ApiOperation({
+    summary: 'Get Admin Active Sessions',
+    description: 'Returns all active device sessions for the current admin.',
+  })
+  @ApiResponse({ status: 200, description: 'List of active sessions' })
+  async getSessions(@Req() req: any) {
+    const adminId = req.admin.sub;
+    return this.adminService.getActiveSessions(adminId);
+  }
+
+  @Delete('sessions/:id')
+  @UseGuards(AdminGuard)
+  @ApiOperation({
+    summary: 'Revoke Admin Active Session',
+    description: 'Terminates a specific device session of this admin remotely.',
+  })
+  @ApiResponse({ status: 200, description: 'Session revoked' })
+  async revokeSession(@Req() req: any, @Param('id') sessionId: string) {
+    const adminId = req.admin.sub;
+    return this.adminService.revokeSession(adminId, sessionId);
   }
 }
