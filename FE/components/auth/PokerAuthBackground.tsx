@@ -3,7 +3,13 @@
 import { motion } from "framer-motion";
 import React from "react";
 
-export const PokerAuthBackground = ({ children }: { children: React.ReactNode }) => {
+export const PokerAuthBackground = ({
+  children,
+  showBranding = true,
+}: {
+  children: React.ReactNode;
+  showBranding?: boolean;
+}) => {
   return (
     <div className="min-h-screen w-full relative flex items-center justify-center bg-[#0a0a0a] overflow-hidden">
       {/* ── Background Casino Vibe ── */}
@@ -86,14 +92,16 @@ export const PokerAuthBackground = ({ children }: { children: React.ReactNode })
       <div className="relative z-10 w-full max-w-md px-6 py-10 sm:p-10 mx-4">
         <div className="relative z-20">
           {/* Logo / Branding Placeholder */}
-          <div className="flex flex-col items-center justify-center mb-8">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-b from-[#F4B942] to-[#B07D1B] flex items-center justify-center shadow-[0_0_20px_rgba(244,185,66,0.3)] mb-4 border-2 border-black">
-              <span className="text-black text-3xl font-black tracking-tighter">CG</span>
+          {showBranding && (
+            <div className="flex flex-col items-center justify-center mb-8">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-b from-[#F4B942] to-[#B07D1B] flex items-center justify-center shadow-[0_0_20px_rgba(244,185,66,0.3)] mb-4 border-2 border-black">
+                <span className="text-black text-3xl font-black tracking-tighter">CG</span>
+              </div>
+              <h1 className="text-2xl font-black text-white uppercase tracking-widest">
+                Poker <span className="text-[#F4B942]">Pro</span>
+              </h1>
             </div>
-            <h1 className="text-2xl font-black text-white uppercase tracking-widest">
-              Poker <span className="text-[#F4B942]">Pro</span>
-            </h1>
-          </div>
+          )}
 
           {children}
         </div>

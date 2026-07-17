@@ -1,9 +1,9 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, Lock, Mail } from "lucide-react";
+import { Lock, Mail } from "lucide-react";
 import Link from "next/link";
 import { useLogin } from "../hooks/use-login";
+import { FormInput, FormCheckbox, FormButton } from "@/components/ui/form";
 
 export function LoginForm() {
   const t = (key: string) => {
@@ -38,12 +38,8 @@ export function LoginForm() {
     window.location.href = `${backendUrl}/api/v1/auth/facebook`;
   };
 
-  const emailHasError = !!(errors.email || fieldErrors.email);
-  const passwordHasError = !!(errors.password || fieldErrors.password);
-
-  const inputBase =
-    "h-12 sm:h-13 w-full rounded-xl bg-[#0B1B33] border border-[#1E3A5F] pl-10 sm:pl-12 pr-4 text-sm text-white placeholder:text-slate-500 transition-colors focus:border-yellow-400/70 focus:ring-0 outline-none";
-  const inputError = "border-rose-500 focus:border-rose-400";
+  const emailError = errors.email?.message || fieldErrors.email;
+  const passwordError = errors.password?.message || fieldErrors.password;
 
   return (
     <div className="relative w-full max-w-md mx-auto">
@@ -61,105 +57,36 @@ export function LoginForm() {
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           {/* Email Input */}
-          <div className="space-y-1">
-            <div className="relative">
-              <Mail
-                className={`absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${emailHasError ? "text-rose-400" : "text-slate-500"
-                  }`}
-              />
-              <input
-                id="email"
-                type="email"
-                placeholder={t("yourEmailAddress")}
-                {...register("email", {
-                  onChange: () => clearFieldError("email"),
-                })}
-                className={`${inputBase} ${emailHasError ? inputError : ""}`}
-              />
-            </div>
-
-            <AnimatePresence mode="wait">
-              {emailHasError && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-rose-400 text-xs ml-1 flex items-center gap-1 mt-1"
-                >
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  {errors.email?.message || fieldErrors.email}
-                </motion.p>
-              )}
-            </AnimatePresence>
-          </div>
+          <FormInput
+            id="email"
+            type="email"
+            label={t("yourEmailAddress")}
+            leftIcon={<Mail className="w-4 h-4 text-slate-500" />}
+            error={emailError}
+            {...register("email", {
+              onChange: () => clearFieldError("email"),
+            })}
+          />
 
           {/* Password Input */}
-          <div className="space-y-1">
-            <div className="relative">
-              <Lock
-                className={`absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${passwordHasError ? "text-rose-400" : "text-slate-500"
-                  }`}
-              />
-              <input
-                id="password"
-                type="password"
-                placeholder={t("password")}
-                {...register("password", {
-                  onChange: () => clearFieldError("password"),
-                })}
-                className={`${inputBase} ${passwordHasError ? inputError : ""}`}
-              />
-            </div>
-
-            <AnimatePresence mode="wait">
-              {passwordHasError && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-rose-400 text-xs ml-1 flex items-center gap-1 mt-1"
-                >
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  {errors.password?.message || fieldErrors.password}
-                </motion.p>
-              )}
-            </AnimatePresence>
-          </div>
+          <FormInput
+            id="password"
+            type="password"
+            label={t("password")}
+            leftIcon={<Lock className="w-4 h-4 text-slate-500" />}
+            error={passwordError}
+            {...register("password", {
+              onChange: () => clearFieldError("password"),
+            })}
+          />
 
           {/* Remember Me + Forgot Password */}
           <div className="flex items-center justify-between py-1">
-            <button
-              type="button"
-              onClick={() => setRememberMe((v) => !v)}
-              className="flex items-center gap-2 outline-none"
-            >
-              <div
-                className={`w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors ${rememberMe
-                  ? "border-yellow-400 bg-yellow-400/15 text-yellow-400"
-                  : "border-slate-600 text-transparent"
-                  }`}
-              >
-                <svg
-                  viewBox="0 0 14 14"
-                  fill="none"
-                  className={`w-2.5 h-2.5 ${rememberMe ? "opacity-100" : "opacity-0"}`}
-                >
-                  <path
-                    d="M3 7.5L5.5 10L11 4"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              <span
-                className={`text-xs sm:text-sm ${rememberMe ? "text-yellow-300" : "text-slate-400"
-                  }`}
-              >
-                {t("rememberMe")}
-              </span>
-            </button>
+            <FormCheckbox
+              label={t("rememberMe")}
+              checked={rememberMe}
+              onChange={(e: any) => setRememberMe(e.target.checked)}
+            />
 
             <Link
               href="/forgot-password"
@@ -170,13 +97,17 @@ export function LoginForm() {
           </div>
 
           {/* Submit Button */}
-          <button
+          <FormButton
             type="submit"
-            disabled={isSubmitting}
-            className="h-12 sm:h-13 w-full rounded-xl bg-yellow-400 hover:bg-yellow-300 font-bold tracking-wide text-[#081326] text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed uppercase"
+            isLoading={isSubmitting}
+            variant="contained"
+            color="primary"
+            fullWidth
+            size="large"
+            className="h-12 sm:h-13 font-bold tracking-wide text-[#081326] text-sm uppercase"
           >
-            {isSubmitting ? "PROCESSING..." : t("loginButton")}
-          </button>
+            {t("loginButton")}
+          </FormButton>
 
           <p className="text-center text-xs text-slate-400 pt-1">
             {t("dontHaveAccount")}{" "}

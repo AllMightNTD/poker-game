@@ -1,7 +1,8 @@
 "use client";
 
+import { FormButton } from "@/components/ui/form";
 import httpClient from "@/core/api/http-client";
-import { Eye, X, ShieldCheck, ShieldAlert, RefreshCw } from "lucide-react";
+import { Eye, ShieldAlert, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { localShuffleDeck } from "../../../poker-game/table/[id]/components/utils/provablyFairVerify";
 
@@ -76,7 +77,7 @@ export default function AdminHandsPage() {
     setVerificationResult(null);
     try {
       const calculatedDeck = await localShuffleDeck(serverSeedHex, clientSeedStr, nonce);
-      
+
       let dbDeck: string[] = [];
       if (Array.isArray(dbDeckJsonOrStr)) {
         dbDeck = dbDeckJsonOrStr;
@@ -121,7 +122,7 @@ export default function AdminHandsPage() {
     if (!cardStr || cardStr.length < 2) return null;
     const value = cardStr.slice(0, -1);
     const suit = cardStr.slice(-1).toLowerCase();
-    
+
     let suitIcon = "";
     let colorClass = "text-slate-100";
     if (suit === "s") {
@@ -228,13 +229,16 @@ export default function AdminHandsPage() {
         </div>
         {hasMore && (
           <div className="p-4 border-t border-slate-800 text-center">
-            <button
+            <FormButton
               onClick={() => fetchHands(nextCursor)}
               disabled={loadingMore}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              isLoading={loadingMore}
+              variant="contained"
+              color="primary"
+              size="small"
             >
-              {loadingMore ? "Đang tải..." : "Tải thêm"}
-            </button>
+              Tải thêm
+            </FormButton>
           </div>
         )}
       </div>
@@ -357,7 +361,7 @@ export default function AdminHandsPage() {
                       <ShieldCheck size={18} className="text-indigo-400" />
                       Xác thực minh bạch (Provably Fair)
                     </h3>
-                    
+
                     {detail.provably_fair ? (
                       <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-5 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
@@ -385,7 +389,7 @@ export default function AdminHandsPage() {
 
                         {detail.hand.server_seed ? (
                           <div className="pt-2">
-                            <button
+                            <FormButton
                               onClick={() => handleVerifyProvablyFair(
                                 detail.hand.server_seed,
                                 detail.provably_fair.client_seed,
@@ -393,15 +397,13 @@ export default function AdminHandsPage() {
                                 detail.hand.shuffled_deck
                               )}
                               disabled={verifying}
-                              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white font-medium text-xs rounded-lg transition-colors flex items-center gap-2 shadow-lg"
+                              isLoading={verifying}
+                              variant="contained"
+                              color="primary"
+                              startIcon={<ShieldCheck size={14} />}
                             >
-                              {verifying ? (
-                                <RefreshCw size={14} className="animate-spin" />
-                              ) : (
-                                <ShieldCheck size={14} />
-                              )}
-                              {verifying ? 'Đang xác thực...' : 'Bắt đầu chạy xác thực bộ bài'}
-                            </button>
+                              Bắt đầu chạy xác thực bộ bài
+                            </FormButton>
                           </div>
                         ) : (
                           <p className="text-xs text-amber-500 bg-amber-950/20 border border-amber-900/50 p-3 rounded-lg">
@@ -411,11 +413,10 @@ export default function AdminHandsPage() {
 
                         {/* Verification Result Display */}
                         {verificationResult && (
-                          <div className={`p-4 rounded-xl border text-xs space-y-3 ${
-                            verificationResult.success 
-                              ? 'bg-emerald-950/20 border-emerald-800/60 text-emerald-400' 
-                              : 'bg-rose-950/20 border-rose-800/60 text-rose-400'
-                          }`}>
+                          <div className={`p-4 rounded-xl border text-xs space-y-3 ${verificationResult.success
+                            ? 'bg-emerald-950/20 border-emerald-800/60 text-emerald-400'
+                            : 'bg-rose-950/20 border-rose-800/60 text-rose-400'
+                            }`}>
                             <div className="flex items-center gap-2 font-semibold">
                               {verificationResult.success ? (
                                 <ShieldCheck size={16} className="text-emerald-400" />

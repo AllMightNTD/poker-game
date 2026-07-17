@@ -5,6 +5,7 @@ import { AlertCircle, CheckCircle2, Loader2, Mail, RefreshCw } from "lucide-reac
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useVerifyOtp } from "../hooks/use-verify-otp";
+import { FormInput, FormButton } from "@/components/ui/form";
 
 interface VerifyOtpFormProps {
   token: string | null;
@@ -231,26 +232,26 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
 
             <div className="pt-1 space-y-3">
               {!emailParam && (
-                <div className="relative">
-                  <input
-                    type="email"
-                    placeholder="Nhập email của bạn để gửi lại OTP"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-11 w-full rounded-xl bg-[#0B1B33] border border-[#1E3A5F] px-4 text-xs text-white placeholder:text-slate-500 transition-colors focus:border-yellow-400/70 outline-none text-center"
-                  />
-                </div>
+                <FormInput
+                  type="email"
+                  placeholder="Nhập email của bạn để gửi lại OTP"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={cooldown > 0 || isVerifying}
+                  size="small"
+                />
               )}
 
-              <button
-                type="button"
+              <FormButton
                 onClick={handleResend}
                 disabled={cooldown > 0 || isVerifying}
-                className="w-full h-11 sm:h-12 rounded-xl bg-gradient-to-b from-[#1E3A5F] to-[#0F223F] border border-[#2B548C] hover:border-yellow-400/40 text-slate-200 hover:text-white text-xs font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50 uppercase tracking-wider"
+                variant="outlined"
+                color="primary"
+                fullWidth
+                startIcon={<RefreshCw className={`w-3.5 h-3.5 ${cooldown > 0 ? "animate-spin" : ""}`} />}
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${cooldown > 0 ? "animate-spin" : ""}`} />
-                <span>{cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Gửi lại email kích hoạt"}</span>
-              </button>
+                {cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Gửi lại email kích hoạt"}
+              </FormButton>
             </div>
 
             <div className="text-center pt-1">
@@ -343,43 +344,39 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
               </AnimatePresence>
 
               <div className="space-y-3">
-                <button
-                  type="button"
+                <FormButton
                   onClick={handleManualVerify}
                   disabled={(!token && !email) || !isOtpComplete || isVerifying || isSuccess}
-                  className="h-11 sm:h-12 w-full rounded-xl bg-gradient-to-b from-[#F4B942] to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-[#081326] font-bold text-xs sm:text-sm transition-all shadow-[0_0_15px_rgba(244,185,66,0.2)] hover:shadow-[0_0_25px_rgba(244,185,66,0.4)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed uppercase"
+                  isLoading={isVerifying && !initialOtp}
+                  variant="contained"
+                  color="primary"
+                  fullWidth
+                  size="large"
                 >
-                  {isVerifying && !initialOtp ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>ĐANG KÍCH HOẠT...</span>
-                    </div>
-                  ) : (
-                    "XÁC NHẬN KÍCH HOẠT"
-                  )}
-                </button>
+                  XÁC NHẬN KÍCH HOẠT
+                </FormButton>
 
                 {!emailParam && (
-                  <div className="relative group pt-0.5">
-                    <input
-                      type="email"
-                      placeholder="Nhập email của bạn để gửi lại OTP"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="h-11 w-full rounded-xl bg-[#0B1B33] border border-[#1E3A5F] pl-4 pr-4 text-xs text-white placeholder:text-slate-500 transition-colors focus:border-yellow-400/70 outline-none"
-                    />
-                  </div>
+                  <FormInput
+                    type="email"
+                    placeholder="Nhập email của bạn để gửi lại OTP"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={cooldown > 0 || isVerifying || isSuccess}
+                    size="small"
+                  />
                 )}
 
-                <button
-                  type="button"
+                <FormButton
                   onClick={handleResend}
                   disabled={cooldown > 0 || isVerifying || isSuccess}
-                  className="w-full h-11 rounded-xl bg-[#0B1B33]/40 border border-[#1E3A5F] hover:border-yellow-400/40 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                  variant="outlined"
+                  color="primary"
+                  fullWidth
+                  startIcon={<RefreshCw className={`w-3.5 h-3.5 ${cooldown > 0 ? "animate-spin" : ""}`} />}
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${cooldown > 0 ? "animate-spin" : ""}`} />
-                  <span>{cooldown > 0 ? `GỬI LẠI SAU ${cooldown}S` : "GỬI LẠI OTP"}</span>
-                </button>
+                  {cooldown > 0 ? `GỬI LẠI SAU ${cooldown}S` : "GỬI LẠI OTP"}
+                </FormButton>
               </div>
 
               <div className="text-center pt-1">

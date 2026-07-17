@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Search, Eye, X, ShieldAlert, Ban, UserX } from "lucide-react";
 import httpClient from "@/core/api/http-client";
+import { FormInput, FormButton } from "@/components/ui/form";
 
 export default function FinancialAuditPage() {
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -110,14 +111,14 @@ export default function FinancialAuditPage() {
           </p>
         </div>
 
-        <div className="relative w-full md:w-64">
-          <Search size={16} className="absolute left-3 top-2.5 text-slate-500" />
-          <input
+        <div className="w-full md:w-64">
+          <FormInput
             type="text"
             placeholder="Tìm kiếm người chơi..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 pr-4 py-2 w-full bg-slate-900 border border-slate-800 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-slate-700 placeholder-slate-600 transition-colors"
+            leftIcon={<Search size={16} />}
+            size="small"
           />
         </div>
       </div>
@@ -252,31 +253,38 @@ export default function FinancialAuditPage() {
               <div className="space-y-3 pt-2">
                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Hành động xử lý của Admin</h3>
                 <div className="flex flex-col gap-2">
-                  <button
+                  <FormButton
                     onClick={() => handleBanBoth(selectedAlert.dumper.id, selectedAlert.dumper.username, selectedAlert.receiver.id, selectedAlert.receiver.username)}
                     disabled={actionLoading}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
+                    isLoading={actionLoading}
+                    variant="contained"
+                    color="error"
+                    startIcon={<Ban size={16} />}
+                    fullWidth
                   >
-                    <Ban size={16} />
                     Khóa cả hai tài khoản nghi vấn
-                  </button>
+                  </FormButton>
                   <div className="grid grid-cols-2 gap-2">
-                    <button
+                    <FormButton
                       onClick={() => handleBanUser(selectedAlert.dumper.id, selectedAlert.dumper.username)}
                       disabled={actionLoading}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 text-sm font-medium rounded-xl transition-colors border border-slate-700"
+                      isLoading={actionLoading}
+                      variant="outlined"
+                      color="error"
+                      startIcon={<UserX size={14} />}
                     >
-                      <UserX size={14} className="text-rose-400" />
                       Khóa Dumper
-                    </button>
-                    <button
+                    </FormButton>
+                    <FormButton
                       onClick={() => handleBanUser(selectedAlert.receiver.id, selectedAlert.receiver.username)}
                       disabled={actionLoading}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 text-sm font-medium rounded-xl transition-colors border border-slate-700"
+                      isLoading={actionLoading}
+                      variant="outlined"
+                      color="error"
+                      startIcon={<UserX size={14} />}
                     >
-                      <UserX size={14} className="text-rose-400" />
                       Khóa Receiver
-                    </button>
+                    </FormButton>
                   </div>
                 </div>
               </div>

@@ -17,7 +17,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { DateTimePicker } from "@/components/ui/DateTimePicker";
-import { FormInput, FormTextArea, FormSelect, FormCheckbox } from "@/components/ui/form";
+import { FormInput, FormTextArea, FormSelect, FormCheckbox, FormButton } from "@/components/ui/form";
 
 interface PromoEvent {
   id: string;
@@ -219,22 +219,25 @@ export default function AdminEventsPage() {
             Cấu hình danh sách banner hiển thị tại sảnh chính của CG Poker.
           </p>
         </div>
-        <button
+        <FormButton
           onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-indigo-600/10 cursor-pointer"
+          variant="contained"
+          color="primary"
+          startIcon={<Plus size={16} />}
         >
-          <Plus size={16} /> Thêm sự kiện mới
-        </button>
+          Thêm sự kiện mới
+        </FormButton>
       </div>
 
       {/* Filters */}
       <div className="flex gap-4">
-        <input
+        <FormInput
           type="text"
           placeholder="Tìm tên sự kiện, nhãn..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-80"
+          size="small"
+          className="!w-80"
         />
       </div>
 
@@ -449,19 +452,22 @@ export default function AdminEventsPage() {
               </div>
 
               <div className="pt-4 flex gap-3 border-t border-slate-800 mt-6">
-                <button
+                <FormButton
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-sm font-medium rounded-lg transition-colors border border-slate-750 cursor-pointer"
+                  variant="outlined"
+                  className="flex-1"
                 >
                   Hủy bỏ
-                </button>
-                <button
+                </FormButton>
+                <FormButton
                   type="submit"
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-indigo-600/10 cursor-pointer"
+                  variant="contained"
+                  color="primary"
+                  className="flex-1"
                 >
                   {editingEvent ? "Lưu thay đổi" : "Tạo sự kiện"}
-                </button>
+                </FormButton>
               </div>
             </form>
           </div>

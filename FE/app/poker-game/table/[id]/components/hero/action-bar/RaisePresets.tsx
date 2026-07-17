@@ -3,6 +3,8 @@
 import React from "react";
 import { QuickBetOption } from "../../types";
 
+import { FormButton, FormButtonGroup } from "@/components/ui/form";
+
 interface RaisePresetsProps {
     quickBets: QuickBetOption[];
     raiseAmount: number;
@@ -17,24 +19,22 @@ export const RaisePresets: React.FC<RaisePresetsProps> = ({
     onSelect,
 }) => {
     return (
-        <div className="flex gap-1 mt-1">
+        <FormButtonGroup fullWidth size="small" variant="outlined" color="primary" className="mt-1">
             {quickBets.map((opt) => {
                 const v = Math.round(opt.val);
                 const isSelected = raiseAmount === clamp(v);
                 return (
-                    <button
+                    <FormButton
                         key={opt.label}
                         onClick={() => onSelect(opt.val)}
-                        className={`flex-1 py-1 rounded text-[8px] font-black transition-all border
-              ${isSelected
-                                ? "bg-[#F4B942]/20 border-[#F4B942]/60 text-[#F4B942]"
-                                : "bg-[#0F4438]/40 border-[#F4B942]/10 text-[#F7EFDD]/40"
-                            }`}
+                        variant={isSelected ? "contained" : "outlined"}
+                        color="primary"
+                        sx={{ fontSize: '8px', py: 0.5, minWidth: 0 }}
                     >
                         {opt.label}
-                    </button>
+                    </FormButton>
                 );
             })}
-        </div>
+        </FormButtonGroup>
     );
 };

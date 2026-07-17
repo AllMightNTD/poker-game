@@ -3,7 +3,7 @@
 import httpClient from "@/core/api/http-client";
 import { Ban, ShieldAlert, ShieldCheck, LogOut, BarChart3, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { FormInput } from "@/components/ui/form";
+import { FormInput, FormButton } from "@/components/ui/form";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -200,13 +200,16 @@ export default function AdminUsersPage() {
         </div>
         {hasMore && (
           <div className="p-4 border-t border-slate-800 text-center">
-            <button
+            <FormButton
               onClick={() => fetchUsers(nextCursor)}
               disabled={loadingMore}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              isLoading={loadingMore}
+              variant="contained"
+              color="primary"
+              size="small"
             >
-              {loadingMore ? "Đang tải..." : "Tải thêm"}
-            </button>
+              Tải thêm
+            </FormButton>
           </div>
         )}
       </div>
@@ -282,12 +285,14 @@ export default function AdminUsersPage() {
                     onChange={(e) => setKickRoomId(e.target.value)}
                     className="flex-1"
                   />
-                  <button
+                  <FormButton
                     onClick={() => handleForceKick(selectedUser.id)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 text-slate-100 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-rose-600/10"
+                    variant="contained"
+                    color="error"
+                    startIcon={<LogOut size={14} />}
                   >
-                    <LogOut size={14} /> Trục xuất
-                  </button>
+                    Trục xuất
+                  </FormButton>
                 </div>
               </div>
             </div>

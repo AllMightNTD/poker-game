@@ -2,18 +2,19 @@
 
 import { useCurrentAdmin } from "@/core/providers/admin-provider";
 import { Bell, Search } from "lucide-react";
+import { FormInput } from "@/components/ui/form";
 
 export const AdminHeader = () => {
   const { currentAdmin: admin } = useCurrentAdmin();
 
   return (
     <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-40">
-      <div className="relative w-80">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-        <input
+      <div className="w-80">
+        <FormInput
           type="text"
           placeholder="Tìm kiếm UID, email, mã giao dịch..."
-          className="w-full bg-slate-800/60 border border-slate-700 rounded-lg py-2 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 outline-none focus:border-slate-500 transition-colors"
+          leftIcon={<Search size={16} />}
+          size="small"
         />
       </div>
 

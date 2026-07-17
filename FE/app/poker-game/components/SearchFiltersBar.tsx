@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Search, Grid, List } from "lucide-react";
+import { FormSelect, FormCheckbox } from "@/components/ui/form";
 
 interface SearchFiltersBarProps {
   searchQuery: string;
@@ -79,47 +80,41 @@ export const SearchFiltersBar: React.FC<SearchFiltersBarProps> = ({
           </div>
 
           {/* Game Type Filter Dropdown */}
-          <div className="relative shrink-0">
-            <select
-              value={selectedGameType}
-              onChange={(e) => setSelectedGameType(e.target.value)}
-              className="bg-[#08121a]/80 hover:bg-[#0c1a26] border border-white/5 rounded-full py-2 pl-4.5 pr-9 text-xs font-bold text-[#F7EFDD]/80 focus:outline-none focus:border-[#F4B942]/60 hover:text-white transition-all appearance-none cursor-pointer h-10 shadow-inner"
-            >
-              <option value="all">Mọi loại game</option>
-              <option value="NLH">Texas Hold&apos;em</option>
-              <option value="PLO">Omaha</option>
-            </select>
-            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#F7EFDD]/40 text-[9px]">▼</div>
-          </div>
+          <FormSelect
+            value={selectedGameType}
+            onChange={(e: any) => setSelectedGameType(e.target.value)}
+            className="w-40 shrink-0"
+            size="small"
+          >
+            <option value="all">Mọi loại game</option>
+            <option value="NLH">Texas Hold&apos;em</option>
+            <option value="PLO">Omaha</option>
+          </FormSelect>
 
           {/* Table Status Dropdown */}
-          <div className="relative shrink-0">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="bg-[#08121a]/80 hover:bg-[#0c1a26] border border-white/5 rounded-full py-2 pl-4.5 pr-9 text-xs font-bold text-[#F7EFDD]/80 focus:outline-none focus:border-[#F4B942]/60 hover:text-white transition-all appearance-none cursor-pointer h-10 shadow-inner"
-            >
-              <option value="all">Mọi trạng thái</option>
-              <option value="WAITING">Đang chờ</option>
-              <option value="RUNNING">Đang chơi</option>
-            </select>
-            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#F7EFDD]/40 text-[9px]">▼</div>
-          </div>
+          <FormSelect
+            value={selectedStatus}
+            onChange={(e: any) => setSelectedStatus(e.target.value)}
+            className="w-40 shrink-0"
+            size="small"
+          >
+            <option value="all">Mọi trạng thái</option>
+            <option value="WAITING">Đang chờ</option>
+            <option value="RUNNING">Đang chơi</option>
+          </FormSelect>
 
           {/* Max Players Dropdown */}
-          <div className="relative shrink-0">
-            <select
-              value={selectedMaxPlayers}
-              onChange={(e) => setSelectedMaxPlayers(e.target.value)}
-              className="bg-[#08121a]/80 hover:bg-[#0c1a26] border border-white/5 rounded-full py-2 pl-4.5 pr-9 text-xs font-bold text-[#F7EFDD]/80 focus:outline-none focus:border-[#F4B942]/60 hover:text-white transition-all appearance-none cursor-pointer h-10 shadow-inner"
-            >
-              <option value="all">Mọi số người</option>
-              <option value="9">9 Players (Full)</option>
-              <option value="6">6 Players (6-max)</option>
-              <option value="2">2 Players (Heads Up)</option>
-            </select>
-            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#F7EFDD]/40 text-[9px]">▼</div>
-          </div>
+          <FormSelect
+            value={selectedMaxPlayers}
+            onChange={(e: any) => setSelectedMaxPlayers(e.target.value)}
+            className="w-40 shrink-0"
+            size="small"
+          >
+            <option value="all">Mọi số người</option>
+            <option value="9">9 Players (Full)</option>
+            <option value="6">6 Players (6-max)</option>
+            <option value="2">2 Players (Heads Up)</option>
+          </FormSelect>
         </div>
 
         {/* View Mode Toggle (Grid/List) */}
@@ -176,25 +171,17 @@ export const SearchFiltersBar: React.FC<SearchFiltersBarProps> = ({
 
         {/* Boolean Toggle Checkboxes */}
         <div className="flex items-center gap-4 text-xs font-bold text-[#F7EFDD]/50">
-          <label className="flex items-center gap-2 cursor-pointer select-none hover:text-white transition-colors group">
-            <input
-              type="checkbox"
-              checked={hideFull}
-              onChange={(e) => setHideFull(e.target.checked)}
-              className="w-4 h-4 rounded-full border-white/15 bg-[#08121a] text-[#F4B942] focus:ring-0 focus:ring-offset-0 accent-[#F4B942] transition-colors cursor-pointer"
-            />
-            <span className="group-hover:text-[#F7EFDD]/80 transition-colors">Ẩn bàn đầy</span>
-          </label>
+          <FormCheckbox
+            label="Ẩn bàn đầy"
+            checked={hideFull}
+            onChange={(e: any) => setHideFull(e.target.checked)}
+          />
 
-          <label className="flex items-center gap-2 cursor-pointer select-none hover:text-white transition-colors group">
-            <input
-              type="checkbox"
-              checked={hidePrivate}
-              onChange={(e) => setHidePrivate(e.target.checked)}
-              className="w-4 h-4 rounded-full border-white/15 bg-[#08121a] text-[#F4B942] focus:ring-0 focus:ring-offset-0 accent-[#F4B942] transition-colors cursor-pointer"
-            />
-            <span className="group-hover:text-[#F7EFDD]/80 transition-colors">Ẩn bàn riêng tư</span>
-          </label>
+          <FormCheckbox
+            label="Ẩn bàn riêng tư"
+            checked={hidePrivate}
+            onChange={(e: any) => setHidePrivate(e.target.checked)}
+          />
         </div>
       </div>
     </div>

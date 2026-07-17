@@ -1,24 +1,18 @@
 "use client";
 
-import { FormInput } from "@/components/ui/form";
+import { FormButton, FormInput } from "@/components/ui/form";
 import httpClient from "@/core/api/http-client";
 import { zodResolver } from "@hookform/resolvers/zod";
+import Cookies from "js-cookie";
 import { Gamepad2, Lock, Mail, ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import Cookies from "js-cookie";
 
 const adminLoginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
   password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
-  twoFactorToken: z
-    .string()
-    .min(6, "Mã xác thực gồm 6 chữ số")
-    .max(6)
-    .optional()
-    .or(z.literal("")),
 });
 
 type AdminLoginValues = z.infer<typeof adminLoginSchema>;
@@ -36,15 +30,37 @@ export const AdminLoginForm = () => {
     defaultValues: {
       email: "",
       password: "",
-      twoFactorToken: "",
     },
   });
+
+  const getErrorMessage = (err: any): string => {
+    const data = err.response?.data;
+    if (!data) return "Sai thông tin đăng nhập.";
+
+    const message = data.message;
+    if (typeof message === "string") return message;
+
+    if (Array.isArray(message)) {
+      const first = message[0];
+      if (typeof first === "string") return first;
+      if (first && typeof first === "object") {
+        return first.error || first.message || JSON.stringify(first);
+      }
+    }
+
+    if (message && typeof message === "object") {
+      return message.error || message.message || JSON.stringify(message);
+    }
+
+    if (typeof data.error === "string") return data.error;
+
+    return "Sai thông tin đăng nhập.";
+  };
 
   const onSubmit = async (data: AdminLoginValues) => {
     setError(null);
     try {
       const res = await httpClient.post("/api/v1/admin/login", data);
-      console.log('res', res.data?.admin_access_token);
 
       if (res.data?.admin_access_token) {
         Cookies.set("admin_access_token", res.data.admin_access_token, {
@@ -54,7 +70,7 @@ export const AdminLoginForm = () => {
         router.push("/backstage/dashboard");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Sai thông tin đăng nhập.");
+      setError(getErrorMessage(err));
     }
   };
 
@@ -77,52 +93,39 @@ export const AdminLoginForm = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)}>
         {/* Email */}
-        <FormInput
-          {...register("email")}
-          type="email"
-          placeholder="Email quản trị"
-          leftIcon={<Mail size={16} />}
-          error={errors.email?.message}
-          disabled={isSubmitting}
-        />
+        <div className="grid grid-cols-1 gap-4">
+          <FormInput
+            {...register("email")}
+            type="email"
+            placeholder="Email quản trị"
+            leftIcon={<Mail size={16} />}
+            error={errors.email?.message}
+            disabled={isSubmitting}
+          />
 
-        {/* Password */}
-        <FormInput
-          {...register("password")}
-          type="password"
-          placeholder="Mật khẩu"
-          leftIcon={<Lock size={16} />}
-          error={errors.password?.message}
-          disabled={isSubmitting}
-        />
+          {/* Password */}
+          <FormInput
+            {...register("password")}
+            type="password"
+            placeholder="Mật khẩu"
+            leftIcon={<Lock size={16} />}
+            error={errors.password?.message}
+            disabled={isSubmitting}
+          />
 
-        {/* 2FA */}
-        <FormInput
-          {...register("twoFactorToken")}
-          type="text"
-          maxLength={6}
-          placeholder="Mã 2FA (nếu có)"
-          leftIcon={<ShieldAlert size={16} />}
-          error={errors.twoFactorToken?.message}
-          disabled={isSubmitting}
-        />
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full py-2.5 rounded-lg text-sm font-medium text-slate-900 bg-slate-200 hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-        >
-          {isSubmitting ? (
-            <span className="flex items-center justify-center gap-2">
-              <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-500/40 border-t-slate-700 animate-spin" />
-              Đang xác thực...
-            </span>
-          ) : (
-            "Đăng nhập"
-          )}
-        </button>
+          <FormButton
+            type="submit"
+            isLoading={isSubmitting}
+            variant="contained"
+            color="primary"
+            fullWidth
+            className="mt-2"
+          >
+            Đăng nhập
+          </FormButton>
+        </div>
       </form>
     </div>
   );

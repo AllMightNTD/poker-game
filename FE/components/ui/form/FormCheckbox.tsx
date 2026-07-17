@@ -1,34 +1,41 @@
-import React, { forwardRef } from "react";
-import { twMerge } from "tailwind-merge";
+"use client";
 
-export interface FormCheckboxProps extends React.InputHTMLAttributes<HTMLInputElement> {
+import React, { forwardRef } from "react";
+import Checkbox from "@mui/material/Checkbox";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import FormControl from "@mui/material/FormControl";
+import FormHelperText from "@mui/material/FormHelperText";
+
+export interface FormCheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   label: string;
   error?: string;
 }
 
 export const FormCheckbox = forwardRef<HTMLInputElement, FormCheckboxProps>(
-  ({ label, error, className, disabled, ...props }, ref) => {
+  ({ label, error, className, disabled, checked, defaultChecked, onChange, name, value, ...props }, ref) => {
     return (
-      <div className="space-y-1">
-        <label
-          className={twMerge(
-            "flex items-center gap-2 cursor-pointer bg-slate-950 px-4 py-2.5 rounded-lg border select-none transition-colors",
-            error ? "border-rose-500/50 bg-rose-950/5" : "border-slate-850/60 hover:bg-slate-900/40",
-            disabled ? "opacity-40 cursor-not-allowed" : "",
-            className
-          )}
-        >
-          <input
-            type="checkbox"
-            ref={ref}
-            disabled={disabled}
-            className="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-950 bg-slate-900 w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
-            {...props}
-          />
-          <span className="text-xs font-semibold text-slate-300">{label}</span>
-        </label>
-        {error && <p className="text-xs text-rose-500 font-medium ml-1">{error}</p>}
-      </div>
+      <FormControl error={!!error} className={className} component="fieldset" variant="standard">
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={checked}
+              defaultChecked={defaultChecked}
+              onChange={onChange as any}
+              name={name}
+              value={value}
+              disabled={disabled}
+              slotProps={{
+                input: {
+                  ref,
+                },
+              }}
+              {...(props as any)}
+            />
+          }
+          label={<span className="text-xs font-semibold text-slate-300 select-none">{label}</span>}
+        />
+        {error && <FormHelperText error>{error}</FormHelperText>}
+      </FormControl>
     );
   }
 );

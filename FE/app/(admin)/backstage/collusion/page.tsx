@@ -3,6 +3,7 @@
 import httpClient from "@/core/api/http-client";
 import { Ban, Eye, Search, ShieldAlert, UserMinus, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { FormInput, FormButton } from "@/components/ui/form";
 
 export default function AdminCollusionPage() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -121,23 +122,26 @@ export default function AdminCollusionPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search size={16} className="absolute left-3 top-2.5 text-slate-500" />
-            <input
+        <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full md:w-auto items-center">
+          <div className="flex-1 md:w-64">
+            <FormInput
               type="text"
               placeholder="Tìm kiếm username, IP..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 w-full bg-slate-900 border border-slate-800 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-slate-700 placeholder-slate-600 transition-colors"
+              leftIcon={<Search size={16} />}
+              size="small"
             />
           </div>
-          <button
+          <FormButton
             type="submit"
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium rounded-lg transition-colors shrink-0"
+            variant="contained"
+            color="primary"
+            size="medium"
+            className="shrink-0"
           >
             Tìm kiếm
-          </button>
+          </FormButton>
         </form>
       </div>
 
@@ -218,13 +222,16 @@ export default function AdminCollusionPage() {
 
         {hasMore && (
           <div className="p-4 border-t border-slate-800 text-center bg-slate-900/50">
-            <button
+            <FormButton
               onClick={() => fetchLogs(nextCursor)}
               disabled={loadingMore}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              isLoading={loadingMore}
+              variant="contained"
+              color="primary"
+              size="small"
             >
-              {loadingMore ? "Đang tải..." : "Tải thêm"}
-            </button>
+              Tải thêm
+            </FormButton>
           </div>
         )}
       </div>
@@ -311,36 +318,41 @@ export default function AdminCollusionPage() {
 
             {/* Action Buttons footer */}
             <div className="p-4 bg-slate-950 border-t border-slate-800 shrink-0 flex gap-3 justify-end">
-              <button
+              <FormButton
                 onClick={() => {
                   setSelectedLogId(null);
                   setDetail(null);
                 }}
                 disabled={actionLoading}
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+                variant="outlined"
+                className="text-slate-400 hover:text-slate-200"
               >
                 Đóng
-              </button>
+              </FormButton>
 
               {detail.room_id && (
-                <button
+                <FormButton
                   onClick={() => handleKickPlayer(detail.user_id, detail.user?.user_name || "Unknown", detail.room_id)}
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  isLoading={actionLoading}
+                  variant="contained"
+                  color="warning"
+                  startIcon={<UserMinus size={14} />}
                 >
-                  <UserMinus size={14} />
                   Kích khỏi bàn
-                </button>
+                </FormButton>
               )}
 
-              <button
+              <FormButton
                 onClick={() => handleBanUser(detail.user_id, detail.user?.user_name || "Unknown")}
                 disabled={actionLoading}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                isLoading={actionLoading}
+                variant="contained"
+                color="error"
+                startIcon={<Ban size={14} />}
               >
-                <Ban size={14} />
                 Khóa tài khoản
-              </button>
+              </FormButton>
             </div>
           </div>
         </div>

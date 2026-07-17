@@ -3,6 +3,7 @@
 import httpClient from "@/core/api/http-client";
 import { Check, Clock, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { FormButton } from "@/components/ui/form";
 
 export default function AdminFinancePage() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -153,13 +154,16 @@ export default function AdminFinancePage() {
         </div>
         {hasMore && (
           <div className="p-4 border-t border-slate-800 text-center">
-            <button
+            <FormButton
               onClick={() => fetchTxns(nextCursor)}
               disabled={loadingMore}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              isLoading={loadingMore}
+              variant="contained"
+              color="primary"
+              size="small"
             >
-              {loadingMore ? "Đang tải..." : "Tải thêm"}
-            </button>
+              Tải thêm
+            </FormButton>
           </div>
         )}
       </div>

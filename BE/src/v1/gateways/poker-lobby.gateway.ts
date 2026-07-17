@@ -1,5 +1,6 @@
 import { Logger, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { OnEvent } from '@nestjs/event-emitter';
 import {
   ConnectedSocket,
   MessageBody,
@@ -68,6 +69,28 @@ export class PokerLobbyGateway
         this.logger.error(`Error broadcasting lobby stats: ${err.message}`);
       }
     }, 8000);
+  }
+
+  @OnEvent('user.session.revoked')
+  async handleUserSessionRevoked(payload: {
+    userId: string;
+    sessionId: string;
+  }) {
+    this.logger.log(`[SESSION EVENT] Revoking user session: ${payload.userId}`);
+    if (!this.server) return;
+    try {
+      const sockets = await this.server
+        .in(`user_${payload.userId}`)
+        .fetchSockets();
+      for (const socket of sockets) {
+        socket.emit('auth:force_logout', {
+          message: 'Phiên đăng nhập của bạn đã bị thu hồi bởi quản trị viên.',
+        });
+        socket.disconnect(true);
+      }
+    } catch (err) {
+      this.logger.error(`Error in handleUserSessionRevoked: ${err.message}`);
+    }
   }
 
   async handleConnection(client: Socket) {

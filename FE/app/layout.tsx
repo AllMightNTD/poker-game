@@ -3,12 +3,14 @@ import { ReactQueryProvider } from "@/components/providers/ReactQueryProvider";
 import { SocketProvider } from "@/components/providers/SocketProvider";
 import { ToastProvider } from '@/core/providers/toast-provider';
 import type { Metadata } from "next";
-import { Quicksand } from "next/font/google";
+import { Roboto } from "next/font/google";
 import "./globals.css";
 
-const quicksand = Quicksand({
+const roboto = Roboto({
+  weight: ["100", "300", "400", "500", "700", "900"],
   subsets: ["vietnamese"],
   display: "swap",
+  variable: "--font-roboto",
 });
 
 export const metadata: Metadata = {
@@ -33,21 +35,28 @@ export const metadata: Metadata = {
   },
 };
 
+import MuiThemeProvider from "@/core/providers/mui-theme-provider";
+import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter';
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className={quicksand.className}>
+    <html lang="vi" className={`${roboto.variable} ${roboto.className}`}>
       <body>
-        <ReactQueryProvider>
-          <ToastProvider>
-            <SocketProvider>
-              {children}
-            </SocketProvider>
-          </ToastProvider>
-        </ReactQueryProvider>
+        <AppRouterCacheProvider>
+          <ReactQueryProvider>
+            <ToastProvider>
+              <SocketProvider>
+                <MuiThemeProvider>
+                  {children}
+                </MuiThemeProvider>
+              </SocketProvider>
+            </ToastProvider>
+          </ReactQueryProvider>
+        </AppRouterCacheProvider>
       </body>
     </html>
   );

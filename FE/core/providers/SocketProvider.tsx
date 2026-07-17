@@ -86,6 +86,17 @@ export const SocketProvider = ({
       socketInstance.disconnect();
     });
 
+    socketInstance.on("auth:force_logout", (data) => {
+      console.warn("Forced logout event received:", data);
+      Cookies.remove("accessToken", { path: "/" });
+      Cookies.remove("refreshToken", { path: "/" });
+      localStorage.removeItem("token");
+      localStorage.removeItem("sociala_remembered_email");
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+    });
+
     socketInstance.io.on("reconnect_attempt", (attempt) => {
       console.warn(`[${new Date().toISOString()}] Socket reconnecting... Attempt: ${attempt}`);
     });

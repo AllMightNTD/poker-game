@@ -1,12 +1,12 @@
 "use client";
 
-import { FormInput, FormTextArea } from "@/components/ui/form";
+import { FormButton, FormInput, FormTextArea } from "@/components/ui/form";
 import httpClient from "@/core/api/http-client";
 import { PokerHandPickerModal, PokerHandReplayer } from "@/features/blogs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, Eye, EyeOff, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Save } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -221,33 +221,35 @@ export default function AdminBlogEditorPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <FormButton
             type="button"
             onClick={() => setPreview((p) => !p)}
-            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg text-sm transition-colors cursor-pointer"
+            variant="text"
+            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:text-white"
             id="btn-toggle-preview"
+            startIcon={preview ? <EyeOff size={15} /> : <Eye size={15} />}
           >
-            {preview ? <EyeOff size={15} /> : <Eye size={15} />}
             {preview ? "Editor" : "Preview"}
-          </button>
+          </FormButton>
 
-          <button
+          <FormButton
             type="submit"
             disabled={!isValid || saveMutation.isPending || saved || isSubmitting}
+            isLoading={saveMutation.isPending}
             id="btn-save-blog"
-            className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 disabled:opacity-40 text-black font-bold rounded-lg text-sm transition-all cursor-pointer disabled:cursor-not-allowed"
+            variant="contained"
+            color="primary"
+            className="flex items-center gap-2"
           >
-            {saveMutation.isPending ? (
-              <Loader2 size={15} className="animate-spin" />
-            ) : saved ? (
+            {saved ? (
               "✅ Đã lưu!"
             ) : (
               <>
-                <Save size={15} />
+                <Save size={15} className="mr-1" />
                 {isEditing ? "Lưu thay đổi" : "Xuất bản"}
               </>
             )}
-          </button>
+          </FormButton>
         </div>
       </div>
 
@@ -391,14 +393,17 @@ export default function AdminBlogEditorPage() {
           <div className="bg-blue-900/20 border border-blue-700/30 rounded-xl p-4">
             <h3 className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">🃏 Shortcode Replayer</h3>
             <p className="text-xs text-slate-500 mb-3">Chèn vào content để nhúng trình phát ván bài:</p>
-            
-            <button
+
+            <FormButton
               type="button"
               onClick={() => setIsPickerOpen(true)}
-              className="w-full mb-3 flex items-center justify-center gap-2 py-2 px-4 bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-bold rounded-lg transition-all cursor-pointer"
+              variant="contained"
+              color="primary"
+              fullWidth
+              className="mb-3"
             >
               Chọn ván bài từ hệ thống
-            </button>
+            </FormButton>
 
             <code className="block bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-yellow-300 font-mono select-all">
               {`[hand-replayer id="HAND_ID"]`}

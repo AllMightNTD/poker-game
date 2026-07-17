@@ -7,7 +7,7 @@ import { useQueryClient, useInfiniteQuery, useMutation } from "@tanstack/react-q
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { FormInput, FormSelect, FormCheckbox } from "@/components/ui/form";
+import { FormInput, FormSelect, FormCheckbox, FormButton } from "@/components/ui/form";
 
 const adminKeys = {
   all: ["admin"] as const,
@@ -177,15 +177,17 @@ export default function AdminTablesPage() {
           <h1 className="text-2xl font-semibold text-slate-100">Quản lý bàn</h1>
           <p className="text-slate-500 text-sm mt-1">Theo dõi bàn đang hoạt động, cấu hình cược và các thao tác admin.</p>
         </div>
-        <button
+        <FormButton
           onClick={() => {
             reset(INITIAL_VALUES);
             setIsModalOpen(true);
           }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-indigo-600/10 cursor-pointer"
+          variant="contained"
+          color="primary"
+          startIcon={<Plus size={16} />}
         >
-          <Plus size={16} /> Tạo bàn mới
-        </button>
+          Tạo bàn mới
+        </FormButton>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -245,26 +247,35 @@ export default function AdminTablesPage() {
 
               <div className="grid grid-cols-2 gap-2 mt-auto pt-2 border-t border-slate-800/60">
                 {table.status === "paused" ? (
-                  <button
+                  <FormButton
                     onClick={() => handleResume(table.id)}
-                    className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors text-xs border border-emerald-500/20 cursor-pointer"
+                    variant="outlined"
+                    color="success"
+                    size="small"
+                    startIcon={<Play size={13} />}
                   >
-                    <Play size={13} /> Tiếp tục
-                  </button>
+                    Tiếp tục
+                  </FormButton>
                 ) : (
-                  <button
+                  <FormButton
                     onClick={() => handlePause(table.id)}
-                    className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition-colors text-xs border border-amber-500/20 cursor-pointer"
+                    variant="outlined"
+                    color="warning"
+                    size="small"
+                    startIcon={<Pause size={13} />}
                   >
-                    <Pause size={13} /> Tạm dừng
-                  </button>
+                    Tạm dừng
+                  </FormButton>
                 )}
-                <button
+                <FormButton
                   onClick={() => handleClose(table.id)}
-                  className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 transition-colors text-xs border border-rose-500/20 cursor-pointer"
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  startIcon={<PowerOff size={13} />}
                 >
-                  <PowerOff size={13} /> Đóng bàn
-                </button>
+                  Đóng bàn
+                </FormButton>
               </div>
             </div>
           ))
@@ -273,13 +284,15 @@ export default function AdminTablesPage() {
 
       {hasNextPage && (
         <div className="flex justify-center mt-6">
-          <button
+          <FormButton
             onClick={() => fetchNextPage()}
             disabled={isFetchingNextPage}
-            className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+            isLoading={isFetchingNextPage}
+            variant="outlined"
+            color="primary"
           >
-            {isFetchingNextPage ? "Đang tải..." : "Tải thêm"}
-          </button>
+            Tải thêm
+          </FormButton>
         </div>
       )}
 
@@ -398,20 +411,24 @@ export default function AdminTablesPage() {
               </div>
 
               <div className="pt-4 flex gap-3 border-t border-slate-800 mt-6">
-                <button
+                <FormButton
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-sm font-medium rounded-lg transition-colors border border-slate-750 cursor-pointer"
+                  variant="outlined"
+                  className="flex-1"
                 >
                   Hủy bỏ
-                </button>
-                <button
+                </FormButton>
+                <FormButton
                   type="submit"
                   disabled={createMutation.isPending || !isValid}
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-medium rounded-lg transition-colors shadow-lg shadow-indigo-600/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  isLoading={createMutation.isPending}
+                  variant="contained"
+                  color="primary"
+                  className="flex-1"
                 >
-                  {createMutation.isPending ? "Đang tạo..." : "Tạo ngay"}
-                </button>
+                  Tạo ngay
+                </FormButton>
               </div>
             </form>
           </div>

@@ -177,9 +177,8 @@ export class AdminController {
     description: 'Returns all active device sessions for the current admin.',
   })
   @ApiResponse({ status: 200, description: 'List of active sessions' })
-  async getSessions(@Req() req: any) {
-    const adminId = req.admin.sub;
-    return this.adminService.getActiveSessions(adminId);
+  async getSessions() {
+    return this.adminService.getActiveSessions();
   }
 
   @Delete('sessions/:id')
@@ -190,7 +189,6 @@ export class AdminController {
   })
   @ApiResponse({ status: 200, description: 'Session revoked' })
   async revokeSession(@Req() req: any, @Param('id') sessionId: string) {
-    const adminId = req.admin.sub;
-    return this.adminService.revokeSession(adminId, sessionId);
+    return this.adminService.revokeSession(sessionId);
   }
 }

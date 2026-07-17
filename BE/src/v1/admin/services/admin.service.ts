@@ -4,17 +4,22 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { AdminRole } from 'src/constants/enums';
 import { Admin } from '../../entities/admin.entity';
 import { AdminRefreshToken } from '../../entities/admin_refresh_token.entity';
+import { RefreshToken } from '../../entities/refresh_token.entity';
 import { AdminLoginDto } from '../dto/admin-login.dto';
 import { AdminRefreshTokenDto } from '../dto/admin-refresh-token.dto';
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async login(dto: AdminLoginDto, ipAddress?: string, deviceInfo?: string) {
     const admin = await Admin.findOne({ where: { email: dto.email } });
@@ -199,25 +204,33 @@ export class AdminService {
     return { message: 'Đăng xuất thành công' };
   }
 
-  async getActiveSessions(adminId: string) {
-    return AdminRefreshToken.createQueryBuilder('art')
-      .where('art.admin_id = :adminId', { adminId })
-      .andWhere('art.revoked_at IS NULL')
-      .andWhere('art.expires_at > :now', { now: new Date() })
-      .orderBy('art.created_at', 'DESC')
+  async getActiveSessions() {
+    return RefreshToken.createQueryBuilder('rt')
+      .leftJoinAndSelect('rt.user', 'user')
+      .where('rt.revoked_at IS NULL')
+      .andWhere('rt.expires_at > :now', { now: new Date() })
+      .orderBy('rt.created_at', 'DESC')
       .getMany();
   }
 
-  async revokeSession(adminId: string, sessionId: string) {
-    const result = await AdminRefreshToken.update(
-      { id: sessionId, admin_id: adminId, revoked_at: null },
-      { revoked_at: new Date() },
-    );
-    if (result.affected === 0) {
+  async revokeSession(sessionId: string) {
+    const session = await RefreshToken.findOne({
+      where: { id: sessionId, revoked_at: null },
+    });
+    if (!session) {
       throw new NotFoundException(
         'Phiên làm việc không tồn tại hoặc đã bị thu hồi',
       );
     }
+    session.revoked_at = new Date();
+    await session.save();
+
+    // Emit event để logout user qua socket
+    this.eventEmitter.emit('user.session.revoked', {
+      userId: session.user_id,
+      sessionId: session.id,
+    });
+
     return { success: true };
   }
 }

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { FormInput, FormSelect, FormButton } from "@/components/ui/form";
 
 interface BlogPost {
   id: string;
@@ -118,32 +119,33 @@ export default function AdminBlogsPage() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
+        <div className="flex-1 min-w-[200px]">
+          <FormInput
             id="blog-search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Tìm bài viết..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-yellow-500/60"
+            leftIcon={<Search size={15} />}
+            size="small"
           />
         </div>
-        <select
+        <FormSelect
           id="blog-category-filter"
           value={category ?? ""}
           onChange={(e) => { setCursor(undefined); setCategory(e.target.value || undefined); }}
-          className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-300 focus:outline-none focus:border-yellow-500/60"
-        >
-          <option value="">Tất cả danh mục</option>
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <button
+          placeholder="Tất cả danh mục"
+          size="small"
+          options={CATEGORIES.map((c) => ({ value: c, label: c }))}
+          className="!w-48"
+        />
+        <FormButton
           onClick={() => refetch()}
-          className="p-2 text-slate-500 hover:text-slate-300 hover:bg-slate-800 rounded-lg transition-colors"
+          variant="text"
+          className="min-w-0 p-2 text-slate-500 hover:text-slate-300"
           title="Làm mới"
         >
           <RefreshCw size={15} />
-        </button>
+        </FormButton>
       </div>
 
       {/* Table */}
@@ -243,12 +245,13 @@ export default function AdminBlogsPage() {
       {/* Pagination */}
       {data?.meta.has_next_page && (
         <div className="text-center">
-          <button
+          <FormButton
             onClick={() => setCursor(data.meta.next_cursor ?? undefined)}
-            className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm rounded-lg transition-colors"
+            variant="contained"
+            color="primary"
           >
             Tải thêm →
-          </button>
+          </FormButton>
         </div>
       )}
 
@@ -281,19 +284,23 @@ export default function AdminBlogsPage() {
                 ⚠️ Hành động này không thể hoàn tác.
               </p>
               <div className="flex gap-3">
-                <button
+                <FormButton
                   onClick={() => setDeleteTarget(null)}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-700 text-slate-400 hover:text-white text-sm font-medium transition-colors"
+                  variant="outlined"
+                  className="flex-1"
                 >
                   Hủy
-                </button>
-                <button
+                </FormButton>
+                <FormButton
                   onClick={() => deleteBlog.mutate(deleteTarget.id)}
                   disabled={deleteBlog.isPending}
-                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition-colors disabled:opacity-50"
+                  isLoading={deleteBlog.isPending}
+                  variant="contained"
+                  color="error"
+                  className="flex-1"
                 >
-                  {deleteBlog.isPending ? "Đang xóa..." : "Xóa vĩnh viễn"}
-                </button>
+                  Xóa vĩnh viễn
+                </FormButton>
               </div>
             </motion.div>
           </motion.div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormTextArea } from "@/components/ui/form";
+import { FormTextArea, FormButton } from "@/components/ui/form";
 import httpClient from "@/core/api/http-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertCircle, Clock, Globe, Laptop, Send, Trash2 } from "lucide-react";
@@ -138,13 +138,17 @@ export default function AdminSystemPage() {
               </div>
             )}
 
-            <button
+            <FormButton
               type="submit"
               disabled={isSubmitting || !messageValue.trim()}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 shadow-lg shadow-indigo-600/15 cursor-pointer disabled:cursor-not-allowed"
+              isLoading={isSubmitting}
+              variant="contained"
+              color="primary"
+              fullWidth
+              startIcon={<Send size={16} />}
             >
-              <Send size={16} /> {isSubmitting ? "Đang gửi..." : "Phát thông báo"}
-            </button>
+              Phát thông báo
+            </FormButton>
           </form>
         </div>
 
@@ -161,7 +165,7 @@ export default function AdminSystemPage() {
           </div>
 
           <p className="text-slate-400 text-xs leading-relaxed">
-            Danh sách các thiết bị/trình duyệt đang đăng nhập vào tài khoản admin của bạn. Bạn có thể thu hồi (đăng xuất) bất kỳ phiên hoạt động đáng ngờ nào từ xa.
+            Danh sách các thiết bị/trình duyệt đang đăng nhập hoạt động của tất cả người chơi. Bạn có thể thu hồi (đăng xuất) bất kỳ phiên hoạt động nào từ xa để tự động logout người dùng đó.
           </p>
 
           <div className="space-y-4">
@@ -185,6 +189,9 @@ export default function AdminSystemPage() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-semibold text-slate-200">
+                        {session.user ? `${session.user.user_name} (${session.user.email})` : "Người dùng không xác định"}
+                      </p>
+                      <p className="text-xs text-slate-400">
                         {session.device_info || "Thiết bị không xác định"}
                       </p>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 font-mono">

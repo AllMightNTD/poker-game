@@ -18,13 +18,4 @@ export class AdminLoginDto {
   @IsNotEmpty()
   @MinLength(6)
   password: string;
-
-  @ApiProperty({
-    example: '123456',
-    description: '2FA token (Optional for now)',
-    required: false,
-  })
-  @IsString({ message: 'Must be a valid string' })
-  @IsNotEmpty()
-  twoFactorToken?: string;
 }

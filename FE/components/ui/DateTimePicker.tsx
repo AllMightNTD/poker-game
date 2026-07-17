@@ -1,31 +1,53 @@
-import React, { forwardRef } from "react";
-import { twMerge } from "tailwind-merge";
+"use client";
 
-interface DateTimePickerProps extends React.InputHTMLAttributes<HTMLInputElement> {
+import React, { forwardRef } from "react";
+import { DateTimePicker as MuiDateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import dayjs from "dayjs";
+
+export interface DateTimePickerProps {
   label?: string;
   error?: string;
+  value?: string;
+  onChange?: (e: { target: { name?: string; value: string } }) => void;
+  name?: string;
+  disabled?: boolean;
+  className?: string;
 }
 
-export const DateTimePicker = forwardRef<HTMLInputElement, DateTimePickerProps>(
-  ({ label, error, className, ...props }, ref) => {
+export const DateTimePicker = forwardRef<any, DateTimePickerProps>(
+  ({ label, error, value, onChange, name, disabled, className }, ref) => {
+    // Parse value string to dayjs object, handle invalid or empty strings gracefully
+    const parsedValue = value ? dayjs(value) : null;
+
     return (
-      <div className="space-y-1.5 w-full">
-        {label && (
-          <label className="text-xs font-semibold text-slate-400">
-            {label}
-          </label>
-        )}
-        <input
-          type="datetime-local"
-          ref={ref}
-          className={twMerge(
-            "w-full bg-slate-950 border rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors",
-            error ? "border-red-500 focus:border-red-500" : "border-slate-850",
-            className
-          )}
-          {...props}
+      <div className={className}>
+        <MuiDateTimePicker
+          label={label}
+          value={parsedValue}
+          onChange={(newValue) => {
+            if (onChange) {
+              onChange({
+                target: {
+                  name,
+                  value: newValue && dayjs(newValue).isValid() ? dayjs(newValue).toISOString() : "",
+                },
+              });
+            }
+          }}
+          disabled={disabled}
+          slotProps={{
+            textField: {
+              inputRef: ref,
+              fullWidth: true,
+              error: !!error,
+              helperText: error,
+              variant: "outlined",
+              size: "small",
+              // Ensure clicking anywhere in the input opens the picker modal
+              onClick: (e) => e.stopPropagation(),
+            },
+          }}
         />
-        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
       </div>
     );
   }

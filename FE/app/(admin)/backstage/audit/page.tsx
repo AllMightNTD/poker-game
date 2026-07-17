@@ -3,6 +3,7 @@
 import httpClient from "@/core/api/http-client";
 import { ChevronDown, Globe, Monitor, Search } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { FormInput, FormButton } from "@/components/ui/form";
 
 interface AdminAuditLog {
     id: string;
@@ -86,14 +87,14 @@ export default function AdminAuditLogsPage() {
                 <p className="text-slate-500 text-sm mt-1">Lịch sử thao tác của quản trị viên trên hệ thống.</p>
             </div>
 
-            <div className="relative w-80">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
+            <div className="w-80">
+                <FormInput
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Tìm theo admin, hành động, đối tượng..."
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg py-2 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 outline-none focus:border-slate-600 transition-colors"
+                    leftIcon={<Search size={16} />}
+                    size="small"
                 />
             </div>
 
@@ -211,13 +212,16 @@ export default function AdminAuditLogsPage() {
                 </div>
                 {hasMore && (
                     <div className="p-4 border-t border-slate-800 text-center">
-                        <button
+                        <FormButton
                             onClick={() => fetchLogs(nextCursor, query)}
                             disabled={loadingMore}
-                            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                            isLoading={loadingMore}
+                            variant="contained"
+                            color="primary"
+                            size="small"
                         >
-                            {loadingMore ? "Đang tải..." : "Tải thêm"}
-                        </button>
+                            Tải thêm
+                        </FormButton>
                     </div>
                 )}
             </div>
