@@ -476,7 +476,10 @@ export class AuthService {
     await redis.set(`reset:cooldown:${email}`, '1', 'EX', 60);
 
     if (!user) {
-      throw new UnauthorizedException('Địa chỉ email không tồn tại');
+      return {
+        message:
+          'Nếu địa chỉ email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi.',
+      };
     }
 
     // Generate secure token

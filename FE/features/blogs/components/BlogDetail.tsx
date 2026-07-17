@@ -1,33 +1,16 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import httpClient from "@/core/api/http-client";
+import Image from "next/image";
+import { blogsApi } from "../api/blogsApi";
+import type { BlogPost } from "../types";
 import { PokerHandReplayer } from "./PokerHandReplayer";
 
-interface BlogPost {
-  id: string;
-  title: string;
-  slug: string;
-  thumbnail: string | null;
-  content: string;
-  excerpt: string | null;
-  category: string;
-  tags: string[];
-  author_id: string | null;
-  views_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
-async function fetchBlog(slug: string): Promise<BlogPost> {
-  const res = await httpClient.get(`/api/v1/blogs/${slug}`);
-  return res.data;
-}
-
-function BlogDetailSkeleton() {
+// ── Skeleton (used as Suspense fallback at page level) ────────────────────────
+export function BlogDetailSkeleton() {
   return (
     <div className="min-h-screen bg-[#050B14] animate-pulse">
       <div className="w-full h-[50vh] min-h-[400px] bg-slate-800" />
@@ -45,47 +28,62 @@ function BlogDetailSkeleton() {
   );
 }
 
-export function BlogDetail() {
+// ── Content renderer (shortcode-aware) ────────────────────────────────────────
+function renderContent(raw: string): React.ReactNode[] {
+  const SHORTCODE_RE = /\[hand-replayer id="([^"]+)"\]/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  const proseClasses = `prose prose-invert prose-lg max-w-none
+    prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-headings:text-white
+    prose-a:text-yellow-400 hover:prose-a:text-yellow-300
+    prose-p:text-slate-300 prose-p:leading-relaxed
+    prose-strong:text-white
+    prose-li:text-slate-300
+    prose-blockquote:border-yellow-500 prose-blockquote:text-slate-300 prose-blockquote:bg-white/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4
+    prose-code:bg-white/10 prose-code:text-yellow-300 prose-code:rounded prose-code:px-1 prose-code:text-sm`;
+
+  while ((match = SHORTCODE_RE.exec(raw)) !== null) {
+    const before = raw.slice(lastIndex, match.index);
+    if (before) {
+      parts.push(
+        <div
+          key={`html-${lastIndex}`}
+          className={proseClasses}
+          dangerouslySetInnerHTML={{ __html: before }}
+        />
+      );
+    }
+    parts.push(<PokerHandReplayer key={`replayer-${match[1]}`} handId={match[1]} />);
+    lastIndex = match.index + match[0].length;
+  }
+
+  const tail = raw.slice(lastIndex);
+  if (tail) {
+    parts.push(
+      <div
+        key="html-tail"
+        className={proseClasses}
+        dangerouslySetInnerHTML={{ __html: tail }}
+      />
+    );
+  }
+  return parts;
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
+export function BlogDetail(): React.ReactElement {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug as string;
 
-  const { data: blog, isLoading, isError } = useQuery<BlogPost>({
+  // useSuspenseQuery — no isLoading needed; Suspense boundary handles loading state
+  const { data: blog } = useSuspenseQuery<BlogPost>({
     queryKey: ["blog", slug],
-    queryFn: () => fetchBlog(slug),
-    enabled: !!slug,
+    queryFn: () => blogsApi.getBySlug(slug),
     retry: 1,
   });
-
-  if (isLoading) return <BlogDetailSkeleton />;
-
-  if (isError || !blog) {
-    return (
-      <div className="min-h-screen bg-[#050B14] text-white flex flex-col items-center justify-center gap-6">
-        <div className="text-6xl">🃏</div>
-        <h1 className="text-3xl font-black uppercase text-slate-400">
-          Article not found
-        </h1>
-        <p className="text-slate-500 text-sm">
-          The post you&apos;re looking for may have been removed or the link is broken.
-        </p>
-        <div className="flex items-center gap-4 mt-2">
-          <button
-            onClick={() => router.back()}
-            className="text-slate-400 hover:text-white font-bold uppercase tracking-wider text-sm transition-colors"
-          >
-            ← Go Back
-          </button>
-          <Link
-            href="/blogs"
-            className="px-6 py-2 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 font-bold uppercase tracking-wider text-sm rounded-lg transition-all"
-          >
-            All Articles
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   const formattedDate = new Date(blog.created_at).toLocaleDateString("en-US", {
     year: "numeric",
@@ -93,60 +91,9 @@ export function BlogDetail() {
     day: "numeric",
   });
 
-  const readingTime = Math.ceil((blog.content?.replace(/<[^>]+>/g, "").length ?? 0) / 1000);
-
-  // Parse [hand-replayer id="xxx"] shortcodes from content
-  function renderContent(raw: string): React.ReactNode[] {
-    const SHORTCODE_RE = /\[hand-replayer id="([^"]+)"\]/g;
-    const parts: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-
-    while ((match = SHORTCODE_RE.exec(raw)) !== null) {
-      // HTML chunk before this shortcode
-      const before = raw.slice(lastIndex, match.index);
-      if (before) {
-        parts.push(
-          <div
-            key={`html-${lastIndex}`}
-            className="prose prose-invert prose-lg max-w-none
-              prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-headings:text-white
-              prose-a:text-yellow-400 hover:prose-a:text-yellow-300
-              prose-p:text-slate-300 prose-p:leading-relaxed
-              prose-strong:text-white
-              prose-li:text-slate-300
-              prose-blockquote:border-yellow-500 prose-blockquote:text-slate-300 prose-blockquote:bg-white/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4
-              prose-code:bg-white/10 prose-code:text-yellow-300 prose-code:rounded prose-code:px-1 prose-code:text-sm"
-            dangerouslySetInnerHTML={{ __html: before }}
-          />
-        );
-      }
-      // Replayer embed
-      parts.push(<PokerHandReplayer key={`replayer-${match[1]}`} handId={match[1]} />);
-      lastIndex = match.index + match[0].length;
-    }
-
-    // Remaining HTML after last shortcode
-    const tail = raw.slice(lastIndex);
-    if (tail) {
-      parts.push(
-        <div
-          key="html-tail"
-          className="prose prose-invert prose-lg max-w-none
-            prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight prose-headings:text-white
-            prose-a:text-yellow-400 hover:prose-a:text-yellow-300
-            prose-p:text-slate-300 prose-p:leading-relaxed
-            prose-strong:text-white
-            prose-li:text-slate-300
-            prose-blockquote:border-yellow-500 prose-blockquote:text-slate-300 prose-blockquote:bg-white/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4
-            prose-code:bg-white/10 prose-code:text-yellow-300 prose-code:rounded prose-code:px-1 prose-code:text-sm"
-          dangerouslySetInnerHTML={{ __html: tail }}
-        />
-      );
-    }
-
-    return parts;
-  }
+  const readingTime = Math.ceil(
+    (blog.content?.replace(/<[^>]+>/g, "").length ?? 0) / 1000
+  );
 
   return (
     <div className="min-h-screen bg-[#050B14] text-white">
@@ -154,16 +101,17 @@ export function BlogDetail() {
       <div className="relative w-full h-[55vh] min-h-[420px] flex items-end">
         <div className="absolute inset-0 bg-slate-900">
           {blog.thumbnail ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={blog.thumbnail}
               alt={blog.title}
-              className="w-full h-full object-cover opacity-40"
+              fill
+              priority
+              className="object-cover opacity-40"
+              sizes="100vw"
             />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-slate-900 to-black" />
           )}
-          {/* Multi-layer fade for cinematic look */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#050B14] via-[#050B14]/70 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#050B14]/60 via-transparent to-transparent" />
         </div>

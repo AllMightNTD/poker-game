@@ -6,6 +6,14 @@ import { PokerStateService } from '../services/poker-state.service';
 import { PokerLobbyGateway } from './poker-lobby.gateway';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
+jest.mock('../../common/guards/custom-throttler.guard', () => ({
+  CustomThrottlerGuard: class MockCustomThrottlerGuard {
+    canActivate() {
+      return true;
+    }
+  },
+}));
+
 // Mock DB Entities
 jest.mock('../entities/poker_table.entity', () => ({
   PokerTable: {

@@ -1,8 +1,7 @@
 "use client";
 
-import httpClient from "@/core/api/http-client";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
+import { useState, useCallback, useRef, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Play,
@@ -13,48 +12,8 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface HandAction {
-  id: string;
-  user_id: string;
-  user_name: string;
-  seat_number: number;
-  stage: "preflop" | "flop" | "turn" | "river";
-  action_type: "fold" | "check" | "call" | "raise" | "bet" | "allin" | "timeout";
-  amount: string;
-  action_order: number;
-  is_all_in: boolean;
-}
-
-interface HandPlayer {
-  user_id: string;
-  user_name: string;
-  avatar_url: string | null;
-  seat_number: number;
-  hole_cards: string | null;
-  initial_stack: string;
-  chips_won: string;
-  net_gain_loss: string;
-  is_winner: boolean;
-}
-
-interface HandData {
-  hand: {
-    id: string;
-    table_name: string | null;
-    dealer_seat: number | null;
-    small_blind_seat: number;
-    big_blind_seat: number;
-    community_cards: string | null;
-    total_pot: string;
-    hand_stage: string;
-    started_at: string;
-    ended_at: string | null;
-  };
-  players: HandPlayer[];
-  actions: HandAction[];
-}
+import { handsApi } from "../api/blogsApi";
+import type { HandAction, HandData, HandPlayer } from "../types";
 
 // ─── Card rendering helper ─────────────────────────────────────────────────────
 const SUIT_COLORS: Record<string, string> = {
@@ -205,26 +164,35 @@ function MiniTable({
 }
 
 // ─── Main Replayer Component ───────────────────────────────────────────────────
-export function PokerHandReplayer({ handId }: { handId: string }) {
+export function PokerHandReplayer({ handId }: { handId: string }): React.ReactElement {
+  return (
+    <Suspense
+      fallback={
+        <div className="my-8 rounded-2xl bg-slate-900 border border-slate-700 p-8 flex items-center justify-center gap-3 text-slate-500">
+          <Loader2 size={20} className="animate-spin" />
+          <span>Đang tải Hand Replayer...</span>
+        </div>
+      }
+    >
+      <ReplayerInner handId={handId} />
+    </Suspense>
+  );
+}
+
+function ReplayerInner({ handId }: { handId: string }): React.ReactElement {
   const [step, setStep] = useState(-1); // -1 = before first action
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1200); // ms per step
   const [showAiCoach, setShowAiCoach] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { data, isLoading, isError } = useQuery<HandData>({
+  const { data } = useSuspenseQuery<HandData>({
     queryKey: ["hand-replayer", handId],
-    queryFn: async () => {
-      const res = await httpClient.get(`/api/v1/blogs/hands/${handId}`);
-      return res.data;
-    },
+    queryFn: () => handsApi.getById(handId),
   });
 
   const aiCoachMutation = useMutation({
-    mutationFn: async () => {
-      const res = await httpClient.post(`/api/v1/blogs/hands/${handId}/ai-coach`, {});
-      return res.data as { analysis: string; generated_at: string };
-    },
+    mutationFn: () => handsApi.requestAiCoach(handId),
   });
 
   const actions = data?.actions ?? [];
@@ -272,22 +240,6 @@ export function PokerHandReplayer({ handId }: { handId: string }) {
   const STAGES = ["preflop", "flop", "turn", "river"] as const;
   const currentStageIndex = currentAction ? STAGES.indexOf(currentAction.stage) : -1;
 
-  if (isLoading) {
-    return (
-      <div className="my-8 rounded-2xl bg-slate-900 border border-slate-700 p-8 flex items-center justify-center gap-3 text-slate-500">
-        <Loader2 size={20} className="animate-spin" />
-        <span>Đang tải Hand Replayer...</span>
-      </div>
-    );
-  }
-
-  if (isError || !data) {
-    return (
-      <div className="my-8 rounded-2xl bg-slate-900 border border-red-900/40 p-6 text-center text-red-400">
-        ⚠️ Không thể tải dữ liệu ván bài <code className="text-xs">{handId}</code>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -411,7 +363,7 @@ export function PokerHandReplayer({ handId }: { handId: string }) {
                 }
               }}
               disabled={aiCoachMutation.isPending}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white text-xs font-bold transition-all disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white text-xs font-bold transition-all disabled:opacity-60"
               id={`btn-ai-coach-${handId}`}
             >
               {aiCoachMutation.isPending ? (
@@ -429,10 +381,10 @@ export function PokerHandReplayer({ handId }: { handId: string }) {
                   exit={{ opacity: 0, height: 0 }}
                   className="mt-3 overflow-hidden"
                 >
-                  <div className="p-3 bg-violet-950/40 border border-violet-800/30 rounded-xl">
+                  <div className="p-3 bg-teal-950/40 border border-teal-800/30 rounded-xl">
                     <div className="flex items-center gap-1.5 mb-2">
-                      <Bot size={11} className="text-violet-400" />
-                      <span className="text-[10px] text-violet-400 font-bold uppercase tracking-wider">
+                      <Bot size={11} className="text-teal-400" />
+                      <span className="text-[10px] text-teal-400 font-bold uppercase tracking-wider">
                         Gemini AI Coach
                       </span>
                     </div>
@@ -494,6 +446,7 @@ export function PokerHandReplayer({ handId }: { handId: string }) {
             max={totalSteps - 1}
             value={step}
             onChange={(e) => { stopPlay(); setStep(Number(e.target.value)); }}
+            aria-label="Điều hướng hành động"
             className="w-full accent-yellow-400 h-1.5 rounded-full cursor-pointer"
           />
         </div>

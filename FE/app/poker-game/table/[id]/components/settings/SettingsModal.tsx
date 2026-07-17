@@ -142,6 +142,7 @@ export const SettingsModal = () => {
                     value={draftDealerVoiceVol}
                     disabled={draftMuteAllVoice}
                     onChange={(e) => setDraftDealerVoiceVol(Number(e.target.value))}
+                    aria-label="Âm lượng giọng nói Dealer"
                     className="w-full h-1 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                   />
                 </div>
@@ -164,6 +165,7 @@ export const SettingsModal = () => {
                     value={draftSoundEffectsVol}
                     disabled={draftMuteAllVoice}
                     onChange={(e) => setDraftSoundEffectsVol(Number(e.target.value))}
+                    aria-label="Âm lượng hiệu ứng âm thanh"
                     className="w-full h-1 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                   />
                 </div>

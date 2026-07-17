@@ -33,23 +33,26 @@ export const AdminLoginForm = () => {
     },
   });
 
-  const getErrorMessage = (err: any): string => {
-    const data = err.response?.data;
+  const getErrorMessage = (err: unknown): string => {
+    const axiosErr = err as { response?: { data?: { message?: unknown; error?: string } } };
+    const data = axiosErr.response?.data;
     if (!data) return "Sai thông tin đăng nhập.";
 
     const message = data.message;
     if (typeof message === "string") return message;
 
     if (Array.isArray(message)) {
-      const first = message[0];
+      const first = message[0] as unknown;
       if (typeof first === "string") return first;
       if (first && typeof first === "object") {
-        return first.error || first.message || JSON.stringify(first);
+        const f = first as Record<string, string>;
+        return f.error || f.message || JSON.stringify(first);
       }
     }
 
     if (message && typeof message === "object") {
-      return message.error || message.message || JSON.stringify(message);
+      const m = message as Record<string, string>;
+      return m.error || m.message || JSON.stringify(message);
     }
 
     if (typeof data.error === "string") return data.error;
@@ -69,7 +72,7 @@ export const AdminLoginForm = () => {
         });
         router.push("/backstage/dashboard");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(getErrorMessage(err));
     }
   };

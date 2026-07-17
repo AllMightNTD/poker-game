@@ -1,68 +1,16 @@
 "use client";
 
-import httpClient from "@/core/api/http-client";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useCallback, useEffect, useRef } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useRef, Suspense } from "react";
+import { blogsApi } from "../api/blogsApi";
+import type { BlogListItem, BlogListPage, BlogPost } from "../types";
 
-// ── Types ─────────────────────────────────────────────
+// ── Skeletons ────────────────────────────────────────────────────────────────
 
-interface BlogListItem {
-  id: string;
-  title: string;
-  slug: string;
-  thumbnail: string | null;
-  excerpt: string | null;
-  category: string;
-  tags: string[];
-  views_count: number;
-  created_at: string;
-}
-
-interface BlogListPage {
-  data: BlogListItem[];
-  meta: {
-    limit: number;
-    has_next_page: boolean;
-    next_cursor: string | null;
-  };
-}
-
-interface BlogPost {
-  id: string;
-  title: string;
-  slug: string;
-  thumbnail: string | null;
-  content: string;
-  excerpt: string | null;
-  category: string;
-  tags: string[];
-  author_id: string | null;
-  views_count: number;
-  created_at: string;
-  updated_at: string;
-}
-
-// ── API ───────────────────────────────────────────────
-
-async function fetchBlogs(cursor?: string, category?: string): Promise<BlogListPage> {
-  const params = new URLSearchParams({ limit: "5" });
-  if (cursor) params.set("cursor", cursor);
-  if (category) params.set("category", category);
-
-  const res = await httpClient.get(`/api/v1/blogs?${params.toString()}`);
-  return res.data;
-}
-
-async function fetchBlog(slug: string): Promise<BlogPost> {
-  const res = await httpClient.get(`/api/v1/blogs/${slug}`);
-  return res.data;
-}
-
-// ── Skeletons ─────────────────────────────────────────
-
-function FeedPostSkeleton() {
+export function FeedPostSkeleton() {
   return (
     <div className="w-full animate-pulse">
       <div className="w-full h-[40vh] min-h-[300px] rounded-3xl bg-slate-800" />
@@ -80,24 +28,20 @@ function FeedPostSkeleton() {
   );
 }
 
-// ── Single full post rendered inline in the feed ─────
+// ── Single post — uses useSuspenseQuery, no early-return ─────────────────────
 
-function FeedPost({ item, isLast }: { item: BlogListItem; isLast: boolean }) {
-  const { data: post, isLoading, isError } = useQuery<BlogPost>({
+function FeedPostContent({
+  item,
+  isLast,
+}: {
+  item: BlogListItem;
+  isLast: boolean;
+}): React.ReactElement {
+  const { data: post } = useSuspenseQuery<BlogPost>({
     queryKey: ["blog", item.slug],
-    queryFn: () => fetchBlog(item.slug),
+    queryFn: () => blogsApi.getBySlug(item.slug),
     staleTime: 5 * 60 * 1000,
   });
-
-  if (isLoading) return <FeedPostSkeleton />;
-
-  if (isError || !post) {
-    return (
-      <div className="max-w-3xl mx-auto px-6 py-16 text-center text-slate-500">
-        Không thể tải bài viết &ldquo;{item.title}&rdquo;.
-      </div>
-    );
-  }
 
   const formattedDate = new Date(post.created_at).toLocaleDateString("vi-VN", {
     year: "numeric",
@@ -105,7 +49,9 @@ function FeedPost({ item, isLast }: { item: BlogListItem; isLast: boolean }) {
     day: "numeric",
   });
 
-  const readingTime = Math.ceil((post.content?.replace(/<[^>]+>/g, "").length ?? 0) / 1000);
+  const readingTime = Math.ceil(
+    (post.content?.replace(/<[^>]+>/g, "").length ?? 0) / 1000
+  );
 
   return (
     <motion.article
@@ -119,8 +65,13 @@ function FeedPost({ item, isLast }: { item: BlogListItem; isLast: boolean }) {
       <div className="relative w-full h-[45vh] min-h-[340px] rounded-3xl overflow-hidden flex items-end">
         <div className="absolute inset-0 bg-slate-900">
           {post.thumbnail ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={post.thumbnail} alt={post.title} className="w-full h-full object-cover opacity-40" />
+            <Image
+              src={post.thumbnail}
+              alt={post.title}
+              fill
+              className="object-cover opacity-40"
+              sizes="(max-width: 768px) 100vw, 768px"
+            />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-slate-900 to-black" />
           )}
@@ -193,9 +144,18 @@ function FeedPost({ item, isLast }: { item: BlogListItem; isLast: boolean }) {
   );
 }
 
-// ── Feed ──────────────────────────────────────────────
+// Wrap each post in its own Suspense boundary so they load independently
+function FeedPost({ item, isLast }: { item: BlogListItem; isLast: boolean }): React.ReactElement {
+  return (
+    <Suspense fallback={<FeedPostSkeleton />}>
+      <FeedPostContent item={item} isLast={isLast} />
+    </Suspense>
+  );
+}
 
-export function BlogList() {
+// ── Feed ─────────────────────────────────────────────────────────────────────
+
+export function BlogList(): React.ReactElement {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -203,14 +163,14 @@ export function BlogList() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading,
     isError,
   } = useInfiniteQuery<BlogListPage>({
     queryKey: ["blogs-feed"],
-    queryFn: ({ pageParam }) => fetchBlogs(pageParam as string | undefined),
+    queryFn: ({ pageParam }) =>
+      blogsApi.list({ cursor: pageParam as string | undefined }),
     initialPageParam: undefined,
     getNextPageParam: (lastPage) =>
-      lastPage.meta.has_next_page ? lastPage.meta.next_cursor ?? undefined : undefined,
+      lastPage.meta.has_next_page ? (lastPage.meta.next_cursor ?? undefined) : undefined,
   });
 
   const handleIntersect = useCallback(
@@ -282,59 +242,48 @@ export function BlogList() {
           </div>
         )}
 
-        {isLoading && (
-          <div className="space-y-16">
-            <FeedPostSkeleton />
-            <FeedPostSkeleton />
+        {allItems.length === 0 && !isError && (
+          <div className="text-center text-slate-500 py-20">
+            Chưa có bài viết nào. Quay lại sau nhé!
           </div>
         )}
 
-        {!isLoading && (
-          <>
-            {allItems.length === 0 && (
-              <div className="text-center text-slate-500 py-20">Chưa có bài viết nào. Quay lại sau nhé!</div>
-            )}
+        {allItems.map((item, i) => (
+          <FeedPost key={item.id} item={item} isLast={i === allItems.length - 1} />
+        ))}
 
-            {allItems.map((item, i) => (
-              <FeedPost key={item.id} item={item} isLast={i === allItems.length - 1} />
-            ))}
+        {/* Infinite scroll trigger */}
+        <div ref={sentinelRef} className="h-1 w-full" />
 
-            {/* Infinite scroll trigger */}
-            <div ref={sentinelRef} className="h-1 w-full" />
+        {isFetchingNextPage && (
+          <div className="flex justify-center mt-4">
+            <div className="w-8 h-8 border-3 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
 
-            {isFetchingNextPage && (
-              <div className="flex justify-center mt-4">
-                <div className="w-8 h-8 border-3 border-yellow-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-
-            {/* End of feed CTA */}
-            {!hasNextPage && allItems.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{ duration: 0.5 }}
-                className="mt-8 p-10 rounded-3xl relative overflow-hidden bg-gradient-to-br from-blue-900/30 to-black border border-white/10 backdrop-blur-md text-center flex flex-col items-center"
-              >
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-yellow-500/10 rounded-full blur-[80px] pointer-events-none" />
-
-                <h3 className="relative text-2xl md:text-3xl font-black uppercase tracking-wide text-white mb-4">
-                  Bạn đã đọc hết bài viết
-                </h3>
-                <p className="relative text-blue-300 mb-8 max-w-xl">
-                  Đừng chỉ đọc — thử sức ngay với người chơi thật tại phòng cược cao của chúng tôi.
-                </p>
-
-                <Link href="/poker-game" className="relative group">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-xl blur opacity-40 group-hover:opacity-80 transition duration-500" />
-                  <button className="relative px-12 py-5 bg-gradient-to-b from-[#FFF6B3] via-[#FFD84D] to-[#C79500] rounded-xl text-[#091321] font-black uppercase tracking-[0.25em] text-sm hover:-translate-y-1 transition-transform shadow-[0_0_40px_rgba(255,215,0,0.4)]">
-                    🎰 Play Now
-                  </button>
-                </Link>
-              </motion.div>
-            )}
-          </>
+        {/* End of feed CTA */}
+        {!hasNextPage && allItems.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.5 }}
+            className="mt-8 p-10 rounded-3xl relative overflow-hidden bg-gradient-to-br from-blue-900/30 to-black border border-white/10 backdrop-blur-md text-center flex flex-col items-center"
+          >
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-yellow-500/10 rounded-full blur-[80px] pointer-events-none" />
+            <h3 className="relative text-2xl md:text-3xl font-black uppercase tracking-wide text-white mb-4">
+              Bạn đã đọc hết bài viết
+            </h3>
+            <p className="relative text-blue-300 mb-8 max-w-xl">
+              Đừng chỉ đọc — thử sức ngay với người chơi thật tại phòng cược cao của chúng tôi.
+            </p>
+            <Link href="/poker-game" className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-xl blur opacity-40 group-hover:opacity-80 transition duration-500" />
+              <button className="relative px-12 py-5 bg-gradient-to-b from-[#FFF6B3] via-[#FFD84D] to-[#C79500] rounded-xl text-[#091321] font-black uppercase tracking-[0.25em] text-sm hover:-translate-y-1 transition-transform shadow-[0_0_40px_rgba(255,215,0,0.4)]">
+                🎰 Play Now
+              </button>
+            </Link>
+          </motion.div>
         )}
       </div>
     </div>

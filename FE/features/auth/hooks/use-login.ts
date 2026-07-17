@@ -1,3 +1,5 @@
+"use client";
+
 import { useToast } from "@/core/providers/toast-provider";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Cookies from "js-cookie";

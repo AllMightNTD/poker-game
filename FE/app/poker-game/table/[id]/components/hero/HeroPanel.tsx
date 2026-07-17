@@ -178,7 +178,7 @@ export const HeroPanel: React.FC = () => {
               {currentUser?.name || currentUser?.username || "Hero (Bạn)"}
             </p>
             {hero.isBigBlind && (
-              <span className="px-1.5 py-0.5 rounded bg-violet-500/20 border border-violet-500/30 text-violet-300 text-[7px] font-black uppercase shrink-0">BB</span>
+              <span className="px-1.5 py-0.5 rounded bg-teal-500/20 border border-teal-500/30 text-teal-300 text-[7px] font-black uppercase shrink-0">BB</span>
             )}
           </div>
 

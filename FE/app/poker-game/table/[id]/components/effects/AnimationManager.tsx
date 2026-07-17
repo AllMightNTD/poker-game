@@ -72,7 +72,7 @@ const Confetti: React.FC = () => {
       const left = getPseudoRand(i + 1) * 100;
       const delay = getPseudoRand(i + 2) * 2;
       const duration = 2 + getPseudoRand(i + 3) * 2;
-      const color = ["#F4B942", "#E23744", "#38BDF8", "#34D399", "#A78BFA"][i % 5];
+      const color = ["#F4B942", "#E23744", "#38BDF8", "#34D399", "#22D3EE"][i % 5];
       return { left, delay, duration, color };
     });
   }, []);

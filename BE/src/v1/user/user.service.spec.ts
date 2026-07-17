@@ -3,6 +3,8 @@ import { UserService } from './user.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '../entities/user.entity';
 
+import { RefreshToken } from '../entities/refresh_token.entity';
+
 describe('UserService', () => {
   let service: UserService;
 
@@ -14,6 +16,13 @@ describe('UserService', () => {
           provide: getRepositoryToken(User),
           useValue: {
             findOne: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(RefreshToken),
+          useValue: {
+            update: jest.fn(),
+            createQueryBuilder: jest.fn(),
           },
         },
       ],

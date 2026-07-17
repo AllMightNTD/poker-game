@@ -38,6 +38,7 @@ export const RaiseInput: React.FC<RaiseInputProps> = ({
                     inputMode="numeric"
                     value={inputRaw}
                     onChange={(e) => onInputChange(e.target.value)}
+                    aria-label="Số tiền raise"
                     className="w-full text-center bg-[#0F4438] border border-[#F4B942]/20 focus:border-[#F4B942] rounded-md py-1 text-[#F4B942] font-black text-xs focus:outline-none"
                 />
                 {potPercent !== null && (
