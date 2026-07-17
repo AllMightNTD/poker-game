@@ -1,5 +1,5 @@
+import { AnimatePresence, motion } from 'framer-motion';
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface ActionBubbleProps {
   action: string;
@@ -17,7 +17,7 @@ const getActionColors = (action: string) => {
 const ActionBubble: React.FC<ActionBubbleProps> = React.memo(({ action }) => {
   if (!action) return null;
   const colors = getActionColors(action);
-  
+
   return (
     <AnimatePresence>
       <motion.div
