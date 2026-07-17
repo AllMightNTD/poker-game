@@ -1,19 +1,15 @@
 import { UserStatus } from '../../constants/user-status';
-import { GameHand, HandStage } from '../entities/game_hand.entity';
-import { HandAction } from '../entities/hand_action.entity';
-import { HandPlayer } from '../entities/hand_player.entity';
 import { PokerTable } from '../entities/poker_table.entity';
-import { SystemRevenue } from '../entities/system_revenue.entity';
-import { TableSession } from '../entities/table_session.entity';
 import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
+import { TableSession } from '../entities/table_session.entity';
 import { User } from '../entities/user.entity';
-import { PokerGameEngine } from './poker-game.engine';
 import { PokerGameService } from '../services/poker-game.service';
 import {
   PokerSeatState,
   PokerTableState,
   WinnerLog,
 } from '../types/poker.types';
+import { PokerGameEngine } from './poker-game.engine';
 
 export class PokerShowdownManager {
   constructor(private readonly gameService: PokerGameService) {}
@@ -384,7 +380,14 @@ export class PokerShowdownManager {
   ) {
     let totalPotAmount = parseInt(tableState.total_pot || '0');
 
-    // 0. Xử lý Uncalled Refunds (trả lại tiền cược không ai theo)
+    // 0. Chuẩn bị dữ liệu cập nhật Refund
+    const refundRedisUpdates: {
+      seat_number: number;
+      user_id: string;
+      stack: string;
+      total_contributed: string;
+    }[] = [];
+
     for (const [userId, refundAmount] of uncalledRefunds.entries()) {
       const seat = seats.find((s) => s.user_id === userId);
       if (seat) {
@@ -398,18 +401,12 @@ export class PokerShowdownManager {
 
         totalPotAmount -= refundAmount;
 
-        await this.gameService.stateService.setSeat(roomId, seat.seat_number, {
+        refundRedisUpdates.push({
+          seat_number: seat.seat_number,
+          user_id: userId,
           stack: newStack.toString(),
           total_contributed: newContributed.toString(),
         });
-        await this.gameService.syncSeatStackToDb(
-          roomId,
-          userId,
-          newStack.toString(),
-        );
-        this.gameService.logger.log(
-          `[REFUND] User ${userId} refunded ${refundAmount} uncalled bet.`,
-        );
       }
     }
 
@@ -470,8 +467,14 @@ export class PokerShowdownManager {
       }
     }
 
-    // 3. Cập nhật Stack người thắng
-    const winnerPromises = winnersLog.map(async (winner) => {
+    // 3. Chuẩn bị dữ liệu cập nhật Winner stack
+    const winnersRedisUpdates: {
+      seat_number: number;
+      user_id: string;
+      stack: string;
+    }[] = [];
+
+    for (const winner of winnersLog) {
       const winnerSeat = seats.find(
         (s) => s.seat_number === winner.seat_number,
       );
@@ -479,21 +482,14 @@ export class PokerShowdownManager {
         const currentStack = parseInt(winnerSeat.stack || '0');
         const newStack = currentStack + winner.win_amount;
         winnerSeat.stack = newStack.toString();
-        await this.gameService.stateService.setSeat(
-          roomId,
-          winner.seat_number,
-          {
-            stack: newStack.toString(),
-          },
-        );
-        await this.gameService.syncSeatStackToDb(
-          roomId,
-          winnerSeat.user_id,
-          newStack.toString(),
-        );
+
+        winnersRedisUpdates.push({
+          seat_number: winner.seat_number,
+          user_id: winnerSeat.user_id,
+          stack: newStack.toString(),
+        });
       }
-    });
-    await Promise.all(winnerPromises);
+    }
 
     // 1.B. Reconciliation đối soát số phỉnh (Audit Trail & Anti-Money Exploit)
     let reconciliationSuccess = true;
@@ -527,30 +523,8 @@ export class PokerShowdownManager {
           actual_stack: actualNewStack,
           success: seatSuccess,
         });
-
-        if (!seatSuccess) {
-          this.gameService.logger.error(
-            `[RECONCILIATION ERROR] Money Exploit Detected! User ${seat.user_id} on seat ${seat.seat_number} of table ${roomId}. ` +
-              `Start stack: ${startStack}, Bet: ${totalChipsBetEarly}, Won: ${wonAmount}, Expected: ${expectedNewStack}, Actual: ${actualNewStack}`,
-          );
-          // Block user account
-          const user = await User.findOne({ where: { id: seat.user_id } });
-          if (user) {
-            user.status = UserStatus.BANNED;
-            await user.save();
-            this.gameService.logger.warn(
-              `[RECONCILIATION] User ${seat.user_id} has been BANNED due to chip discrepancy.`,
-            );
-          }
-        } else {
-          this.gameService.logger.log(
-            `[RECONCILIATION] Success for User ${seat.user_id} on seat ${seat.seat_number}. Stack verified: ${actualNewStack}`,
-          );
-        }
       }
     }
-
-    // totalPotAmount already has refund subtracted
 
     // Decrypt the server seed for audit log and hand history
     let serverSeedPlain = '';
@@ -568,182 +542,195 @@ export class PokerShowdownManager {
       }
     }
 
-    // 3. Lưu lịch sử GameHand vào DB
-    const hand = new GameHand();
-    hand.table_id = roomId;
-    hand.dealer_seat = parseInt(tableState.dealer_seat || '1');
-    hand.small_blind_seat = parseInt(tableState.small_blind_seat || '0');
-    hand.big_blind_seat = parseInt(tableState.big_blind_seat || '0');
-    hand.community_cards = tableState.community_cards;
-    hand.total_pot = totalPotAmount.toString();
-    hand.rake_amount = rakeCalculated.toString();
-    hand.hand_stage = (tableState.game_stage || 'preflop') as HandStage;
-    hand.server_seed = serverSeedPlain || null;
-    hand.client_seed = tableState.client_seed || null;
-    hand.shuffled_deck = tableState.shuffled_deck || null;
-    hand.ended_at = new Date();
-    await hand.save();
-
+    // Get nonce and serverSeedHash from database synchronously (Read-only) to pass to clients
     let nonce: number | null = null;
     let serverSeedHash: string | null = null;
-
-    // Update the ProvablyFairAudit record to link the real hand ID and reveal the server seed
     if (tableState.provably_fair_audit_id) {
       try {
         const audit = await ProvablyFairAudit.findOne({
           where: { id: tableState.provably_fair_audit_id },
         });
         if (audit) {
-          audit.hand_id = hand.id;
-          audit.revealed_at = new Date();
-          await audit.save();
           nonce = audit.nonce;
           serverSeedHash = audit.server_seed_hash;
         }
       } catch (err) {
         this.gameService.logger.error(
-          `Failed to update ProvablyFairAudit record: ${err.message}`,
+          `Failed to fetch provably fair audit for table ${roomId}: ${err.message}`,
         );
       }
     }
 
-    // Emit event
-    this.gameService.eventEmitter.emit('poker.hand.completed', {
-      roomId,
-      handId: hand.id,
-      totalPot: totalPotAmount,
-      rakeAmount: rakeCalculated.toString(),
-      winners: winnersLog.map((w) => ({
-        user_id: w.user_id,
-        seat_number: w.seat_number,
-        username: w.username,
-        win_amount: w.win_amount,
-        hand_name: w.hand_name || '',
-      })),
-      userRakeShares,
-      reconciliationSuccess,
-      reconciliationDetails,
-    });
+    const zeroStackPlayers = seats.filter((s) => parseInt(s.stack) === 0);
 
-    // 4. Lưu System Revenue
-    if (rakeCalculated > BigInt(0)) {
-      const revenue = new SystemRevenue();
-      revenue.room_id = roomId;
-      revenue.hand_id = hand.id;
-      revenue.revenue_amount = rakeCalculated.toString();
-      revenue.rake_rate_applied = rakeRate;
-      revenue.pot_total = totalPotAmount.toString();
-      await revenue.save();
+    // ==========================================
+    // DB TRANSACTION (保证 ACID)
+    // ==========================================
+    try {
+      await this.gameService.dataSource.transaction(async (manager) => {
+        // A. Cập nhật stack Refund vào DB
+        for (const update of refundRedisUpdates) {
+          await this.gameService.syncSeatStackToDb(
+            roomId,
+            update.user_id,
+            update.stack,
+            manager,
+          );
+        }
+
+        // B. Cập nhật stack Winner vào DB
+        for (const update of winnersRedisUpdates) {
+          await this.gameService.syncSeatStackToDb(
+            roomId,
+            update.user_id,
+            update.stack,
+            manager,
+          );
+        }
+
+        // C. Phạt user nếu Reconciliation thất bại
+        for (const detail of reconciliationDetails) {
+          if (!detail.success) {
+            this.gameService.logger.error(
+              `[RECONCILIATION ERROR] Money Exploit Detected! User ${detail.user_id} on seat ${detail.seat_number} of table ${roomId}. ` +
+                `Start stack: ${detail.start_stack}, Bet: ${detail.total_bet}, Won: ${detail.won_amount}, Expected: ${detail.expected_stack}, Actual: ${detail.actual_stack}`,
+            );
+            const user = await manager.findOne(User, {
+              where: { id: detail.user_id },
+            });
+            if (user) {
+              user.status = UserStatus.BANNED;
+              await manager.save(user);
+              this.gameService.logger.warn(
+                `[RECONCILIATION] User ${detail.user_id} has been BANNED due to chip discrepancy.`,
+              );
+            }
+          } else {
+            this.gameService.logger.log(
+              `[RECONCILIATION] Success for User ${detail.user_id} on seat ${detail.seat_number}. Stack verified: ${detail.actual_stack}`,
+            );
+          }
+        }
+
+        // D. Cập nhật DB TableSession cho Busted Players
+        for (const player of zeroStackPlayers) {
+          const session = await manager.findOne(TableSession, {
+            where: {
+              table_id: roomId,
+              user_id: player.user_id,
+              member_status: 'active',
+            },
+          });
+          if (session) {
+            session.member_status = 'left';
+            session.left_at = new Date();
+            await manager.save(session);
+          }
+        }
+      });
+    } catch (txError) {
+      this.gameService.logger.error(
+        `[SHOWDOWN TRANSACTION ERROR] Rollbacked database changes for room ${roomId}: ${txError.message}`,
+        txError.stack,
+      );
+      throw txError;
     }
 
-    // 5. Lưu HandPlayer bằng Batch Insert và chuẩn bị dữ liệu Replay
-    const replayPlayers = [];
-    const handPlayersToInsert = [];
-    for (const seat of seats) {
-      const seatWinner = winnersLog.find(
-        (w) => w.seat_number === seat.seat_number,
+    // ==========================================
+    // REDIS STATE UPDATE (Chạy sau khi Tx thành công)
+    // ==========================================
+
+    // 0. Update Redis Refund
+    for (const update of refundRedisUpdates) {
+      await this.gameService.stateService.setSeat(roomId, update.seat_number, {
+        stack: update.stack,
+        total_contributed: update.total_contributed,
+      });
+      this.gameService.logger.log(
+        `[REFUND] User ${update.user_id} refunded stack ${update.stack} uncalled bet.`,
       );
-      const wonAmount = seatWinner ? seatWinner.win_amount : 0;
-      const pocketCards = await this.gameService.stateService.getPlayerCards(
-        roomId,
-        seat.user_id,
-      );
+    }
 
-      const totalChipsBetEarly = parseInt(seat.total_contributed || '0');
-      const chipsBefore = (
-        parseInt(seat.stack) +
-        totalChipsBetEarly -
-        wonAmount
-      ).toString();
-
-      const hpData = {
-        hand_id: hand.id,
-        user_id: seat.user_id,
-        hole_cards: pocketCards.join(','),
-        chips_before: chipsBefore,
-        chips_bet: totalChipsBetEarly.toString(),
-        chips_won: wonAmount.toString(),
-        net_gain_loss: (wonAmount - totalChipsBetEarly).toString(),
-        is_winner: wonAmount > 0,
-        seat_number: seat.seat_number,
-        initial_stack: chipsBefore,
-      };
-      handPlayersToInsert.push(hpData);
-
-      replayPlayers.push({
-        user_id: seat.user_id,
-        user_name: seat.username || 'Player',
-        avatar_url: seat.avatar || null,
-        seat_number: seat.seat_number,
-        hole_cards: hpData.hole_cards,
-        initial_stack: hpData.chips_before,
-        chips_won: hpData.chips_won,
-        net_gain_loss: hpData.net_gain_loss,
-        is_winner: hpData.is_winner,
+    // 3. Update Redis Winner Stack
+    for (const update of winnersRedisUpdates) {
+      await this.gameService.stateService.setSeat(roomId, update.seat_number, {
+        stack: update.stack,
       });
     }
 
-    if (handPlayersToInsert.length > 0) {
-      await HandPlayer.insert(handPlayersToInsert);
+    // ==========================================
+    // ASYNCHRONOUS HAND HISTORY QUEUEING (BullMQ)
+    // ==========================================
+    try {
+      // Đọc bài tẩy của các seats còn lại từ Redis
+      const seatsWithCards = await Promise.all(
+        seats.map(async (seat) => {
+          const pocketCards =
+            await this.gameService.stateService.getPlayerCards(
+              roomId,
+              seat.user_id,
+            );
+          return {
+            user_id: seat.user_id,
+            username: seat.username,
+            avatar: seat.avatar,
+            seat_number: seat.seat_number,
+            stack: seat.stack,
+            total_contributed: seat.total_contributed,
+            muck_cards: seat.muck_cards,
+            pocketCards,
+          };
+        }),
+      );
+
+      // Đọc buffered actions từ Redis
+      const bufferedActions = await this.gameService.stateService.getActionLogs(
+        tableState.current_hand_id || '0',
+      );
+
+      await this.gameService.historyQueue.add(
+        'log-history',
+        {
+          roomId,
+          totalPotAmount,
+          rakeCalculated: rakeCalculated.toString(),
+          rakeRate,
+          tableState: {
+            dealer_seat: tableState.dealer_seat,
+            small_blind_seat: tableState.small_blind_seat,
+            big_blind_seat: tableState.big_blind_seat,
+            community_cards: tableState.community_cards,
+            game_stage: tableState.game_stage,
+            client_seed: tableState.client_seed,
+            shuffled_deck: tableState.shuffled_deck,
+            provably_fair_audit_id: tableState.provably_fair_audit_id,
+            current_hand_id: tableState.current_hand_id,
+            room_name: tableState.room_name,
+          },
+          serverSeedPlain,
+          seats: seatsWithCards,
+          winnersLog,
+          userRakeShares,
+          reconciliationSuccess,
+          reconciliationDetails,
+          bufferedActions,
+        },
+        {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 5000,
+          },
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
+      );
+    } catch (queueErr) {
+      this.gameService.logger.error(
+        `Failed to enqueue hand history logging job for room ${roomId}: ${queueErr.message}`,
+        queueErr.stack,
+      );
     }
-
-    // 6. Lưu HandAction bằng Batch Insert và chuẩn bị dữ liệu Replay
-    const bufferedActions = await this.gameService.stateService.getActionLogs(
-      tableState.current_hand_id || '0',
-    );
-    const handActionsToInsert = [];
-    const replayActions = [];
-    for (let idx = 0; idx < bufferedActions.length; idx++) {
-      const actObj = JSON.parse(bufferedActions[idx]);
-      const playerSeat = seats.find((s) => s.user_id === actObj.user_id);
-
-      const actData = {
-        hand_id: hand.id,
-        user_id: actObj.user_id,
-        seat_number: actObj.seat_number,
-        stage: actObj.stage,
-        action_type: actObj.action_type,
-        amount: actObj.amount.toString(),
-        action_order: idx + 1,
-        is_all_in: actObj.action_type === 'allin',
-      };
-      handActionsToInsert.push(actData);
-
-      replayActions.push({
-        id: undefined,
-        user_id: actObj.user_id,
-        user_name: playerSeat?.username || 'Player',
-        seat_number: actObj.seat_number,
-        stage: actObj.stage,
-        action_type: actObj.action_type,
-        amount: actData.amount,
-        action_order: actData.action_order,
-        is_all_in: actData.is_all_in,
-      });
-    }
-
-    if (handActionsToInsert.length > 0) {
-      await HandAction.insert(handActionsToInsert);
-    }
-
-    // Đóng gói và cập nhật cột replay_json của GameHand
-    hand.replay_json = {
-      hand: {
-        id: hand.id,
-        table_name: dbTable?.name || tableState.room_name || null,
-        dealer_seat: hand.dealer_seat,
-        small_blind_seat: hand.small_blind_seat,
-        big_blind_seat: hand.big_blind_seat,
-        community_cards: hand.community_cards,
-        total_pot: hand.total_pot,
-        hand_stage: hand.hand_stage,
-        started_at: hand.started_at,
-        ended_at: hand.ended_at,
-      },
-      players: replayPlayers,
-      actions: replayActions,
-    };
-    await hand.save();
 
     // 7. Dọn dẹp Action Timer và action logs
     this.gameService.clearActionTimer(roomId);
@@ -833,7 +820,6 @@ export class PokerShowdownManager {
     await this.gameService.broadcastTableState(roomId);
 
     // 10. Xử lý người chơi hết chip (Bust)
-    const zeroStackPlayers = seats.filter((s) => parseInt(s.stack) === 0);
     if (zeroStackPlayers.length > 0) {
       const bustPromises = zeroStackPlayers.map(async (player) => {
         this.gameService.server
@@ -858,19 +844,6 @@ export class PokerShowdownManager {
           roomId,
           player.user_id,
         );
-
-        const session = await TableSession.findOne({
-          where: {
-            table_id: roomId,
-            user_id: player.user_id,
-            member_status: 'active',
-          },
-        });
-        if (session) {
-          session.member_status = 'left';
-          session.left_at = new Date();
-          await session.save();
-        }
       });
       await Promise.all(bustPromises);
 

@@ -1,7 +1,10 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Queue } from 'bullmq';
+import { InjectQueue } from '@nestjs/bullmq';
 import { randomBytes, randomUUID } from 'crypto';
 import { Server } from 'socket.io';
+import { DataSource } from 'typeorm';
 import { GameHand } from '../entities/game_hand.entity';
 import { PokerTable } from '../entities/poker_table.entity';
 import { TableSession } from '../entities/table_session.entity';
@@ -48,6 +51,8 @@ export class PokerGameService implements OnModuleDestroy {
     readonly stateService: PokerStateService,
     readonly eventEmitter: EventEmitter2,
     readonly provablyFairService: ProvablyFairService,
+    readonly dataSource: DataSource,
+    @InjectQueue('poker-game-history') readonly historyQueue: Queue,
   ) {
     this.startIdleCleanupInterval();
   }
@@ -385,14 +390,24 @@ export class PokerGameService implements OnModuleDestroy {
   /**
    * State and DB helpers
    */
-  async syncSeatStackToDb(tableId: string, userId: string, newStack: string) {
+  async syncSeatStackToDb(
+    tableId: string,
+    userId: string,
+    newStack: string,
+    manager?: any,
+  ) {
     try {
-      const sess = await TableSession.findOne({
+      const repo = manager ? manager.getRepository(TableSession) : TableSession;
+      const sess = await repo.findOne({
         where: { table_id: tableId, user_id: userId, member_status: 'active' },
       });
       if (sess) {
         sess.chips_at_table = newStack;
-        await sess.save();
+        if (manager) {
+          await manager.save(sess);
+        } else {
+          await sess.save();
+        }
       }
     } catch (e) {
       this.logger.error(

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bullmq';
 import { PokerTable } from '../entities/poker_table.entity';
 import { TableSession } from '../entities/table_session.entity';
 import { Wallet } from '../entities/wallet.entity';
@@ -20,6 +21,7 @@ import { TournamentService } from '../services/tournament.service';
 import { ProvablyFairService } from '../services/provably-fair.service';
 import { AntiCollusionService } from '../services/anti-collusion.service';
 import { ConfigModule } from '@nestjs/config';
+import { PokerGameHistoryProcessor } from '../engines/poker-game-history.processor';
 
 @Module({
   imports: [
@@ -31,6 +33,9 @@ import { ConfigModule } from '@nestjs/config';
       SystemRevenue,
       ProvablyFairAudit,
     ]),
+    BullModule.registerQueue({
+      name: 'poker-game-history',
+    }),
   ],
   controllers: [
     LobbyController,
@@ -49,6 +54,7 @@ import { ConfigModule } from '@nestjs/config';
     TournamentService,
     ProvablyFairService,
     AntiCollusionService,
+    PokerGameHistoryProcessor,
   ],
   exports: [
     PokerLobbyService,
@@ -60,6 +66,7 @@ import { ConfigModule } from '@nestjs/config';
     TournamentService,
     ProvablyFairService,
     AntiCollusionService,
+    BullModule,
   ],
 })
 export class PokerLobbyModule {}

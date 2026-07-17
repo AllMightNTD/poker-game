@@ -14,6 +14,7 @@ import { flattenValidationErrors } from './global-enum';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { config } from './v1/swagger/config';
 import { corsOriginFn } from './config/cors.config';
+import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -52,6 +53,10 @@ async function bootstrap() {
 
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, documentFactory);
+
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis();
+  app.useWebSocketAdapter(redisIoAdapter);
 
   const configTest = app.get(ConfigService);
 

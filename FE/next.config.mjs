@@ -1,8 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
+  compress: true,
   allowedDevOrigins: ['10.10.0.224', 'localhost', '127.0.0.1'],
   images: {
     dangerouslyAllowSVG: true,
+    minimumCacheTTL: 60,
     remotePatterns: [
       {
         protocol: "https",

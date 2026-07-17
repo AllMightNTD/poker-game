@@ -1,7 +1,7 @@
 # 🃏 KBL Poker - Knowledge Block Platform
 
 
-| **318** Bộ Kỹ năng (Skills) | **29** Quy trình (Workflows) | **12** Quy tắc (Rules) |
+| **318** Bộ Kỹ năng (Skills) | **29** Quy trình (Workflows) | **12** Quy tắc (Rules) | (Workflows) | **12** Quy tắc (Rules) | (Workflows) | **12** Quy tắc (Rules) |
 
 Nền tảng ứng dụng chơi Poker trực tuyến thời gian thực với hệ thống quản trị, xác thực, ví người chơi, tích hợp AI Coach và trình phát lại ván bài (Hand Replayer).
 

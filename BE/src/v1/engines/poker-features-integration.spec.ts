@@ -1,15 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { DataSource } from 'typeorm';
+import { AuditLog } from '../entities/audit_log.entity';
+import { GameHand } from '../entities/game_hand.entity';
+import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
+import { AntiCollusionService } from '../services/anti-collusion.service';
 import { PokerGameService } from '../services/poker-game.service';
 import { PokerLobbyService } from '../services/poker-lobby.service';
 import { PokerStateService } from '../services/poker-state.service';
+import { ProvablyFairService } from '../services/provably-fair.service';
+import { PokerGameHistoryProcessor } from './poker-game-history.processor';
 import { PokerGameEngine } from './poker-game.engine';
 import { PokerShowdownManager } from './poker-showdown.manager';
-import { ProvablyFairService } from '../services/provably-fair.service';
-import { ThrottlerGuard } from '@nestjs/throttler';
-import { AntiCollusionService } from '../services/anti-collusion.service';
-import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
-import { AuditLog } from '../entities/audit_log.entity';
-import { GameHand } from '../entities/game_hand.entity';
 jest.mock('../../common/guards/custom-throttler.guard', () => ({
   CustomThrottlerGuard: class MockCustomThrottlerGuard {
     canActivate() {
@@ -227,9 +229,9 @@ class MockPokerStateService {
   }
 }
 
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { JwtService } from '@nestjs/jwt';
 import { PokerLobbyGateway } from '../gateways/poker-lobby.gateway';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('Poker Integrated Advanced Features', () => {
   let gameService: PokerGameService;
@@ -238,9 +240,37 @@ describe('Poker Integrated Advanced Features', () => {
   let gateway: PokerLobbyGateway;
   let antiCollusionService: AntiCollusionService;
   let provablyFairService: ProvablyFairService;
+  let mockManager: any;
 
   beforeEach(async () => {
     jest.clearAllMocks();
+
+    mockManager = {
+      findOne: jest.fn().mockImplementation((entity) => {
+        if (entity === ProvablyFairAudit) {
+          return Promise.resolve({
+            id: 'mock_audit_id',
+            table_id: 'mock_table_id',
+            server_seed_hash: 'mock_server_seed_hash',
+            encrypted_server_seed: 'iv_hex:seed_hex',
+            auth_tag: 'mock_auth_tag',
+            client_seed: 'mock_client_seed',
+            nonce: 1,
+            save: jest.fn().mockResolvedValue(true),
+          });
+        }
+        return Promise.resolve({});
+      }),
+      save: jest.fn().mockResolvedValue({}),
+      insert: jest.fn().mockResolvedValue({}),
+      getRepository: jest.fn().mockImplementation(() => ({
+        findOne: jest.fn().mockResolvedValue({
+          balance: '1000',
+          save: jest.fn().mockResolvedValue({}),
+        }),
+        save: jest.fn().mockResolvedValue({}),
+      })),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -251,6 +281,20 @@ describe('Poker Integrated Advanced Features', () => {
         { provide: PokerLobbyService, useValue: { leaveRoom: jest.fn() } },
         { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: DataSource,
+          useValue: {
+            transaction: jest.fn().mockImplementation(async (cb) => {
+              return cb(mockManager);
+            }),
+          },
+        },
+        {
+          provide: 'BullQueue_poker-game-history',
+          useValue: {
+            add: jest.fn().mockResolvedValue({ id: 'job_id' }),
+          },
+        },
         {
           provide: ProvablyFairService,
           useValue: {
@@ -584,7 +628,6 @@ describe('Poker Integrated Advanced Features', () => {
     const roomId = 'room_provably_fair';
 
     // Mock findOne for ProvablyFairAudit to return a valid record
-    const auditSaveSpy = jest.fn().mockResolvedValue(true);
     const mockAuditRecord = {
       id: 'mock_audit_id',
       table_id: roomId,
@@ -593,14 +636,10 @@ describe('Poker Integrated Advanced Features', () => {
       auth_tag: 'mock_auth_tag',
       client_seed: 'mock_client_seed',
       nonce: 1,
-      save: auditSaveSpy,
       server_seed_plain: undefined,
     };
 
-    // Use imported ProvablyFairAudit
-    jest
-      .spyOn(ProvablyFairAudit, 'findOne')
-      .mockResolvedValue(mockAuditRecord as any);
+    jest.spyOn(mockManager, 'findOne').mockResolvedValue(mockAuditRecord);
 
     // Mock decryptServerSeed to return plaintext
     jest
@@ -654,6 +693,26 @@ describe('Poker Integrated Advanced Features', () => {
     const testShowdownManager = new PokerShowdownManager(gameService);
     await testShowdownManager.processShowdown(roomId);
 
+    // Verify queue job addition
+    const addMock = (gameService as any).historyQueue.add;
+    expect(addMock).toHaveBeenCalled();
+    const jobData = addMock.mock.calls[0][1];
+
+    // Trigger PokerGameHistoryProcessor synchronously to simulate async worker execution
+    const mockProcessorEventEmitter = { emit: jest.fn() };
+    const mockProcessorDataSource = {
+      transaction: jest.fn().mockImplementation(async (cb) => {
+        return cb(mockManager);
+      }),
+    };
+    const processor = new PokerGameHistoryProcessor(
+      mockProcessorDataSource as any,
+      mockProcessorEventEmitter as any,
+    );
+
+    // Call processor
+    await processor.process({ data: jobData } as any);
+
     // Check if the decrypted seed was published in table:hand-ended event
     expect(gameService.server.to).toHaveBeenCalledWith(`table_${roomId}`);
     const handEndedCall = (
@@ -678,7 +737,7 @@ describe('Poker Integrated Advanced Features', () => {
     expect((GameHand as any).latestInstance.server_seed).toBe(
       'decrypted_plain_server_seed',
     );
-    expect(auditSaveSpy).toHaveBeenCalled();
+    expect(mockManager.save).toHaveBeenCalledWith(mockAuditRecord);
   });
 
   // ── 6. TEST ANTI-COLLUSION ──

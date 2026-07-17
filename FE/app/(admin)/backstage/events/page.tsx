@@ -16,8 +16,13 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { DateTimePicker } from "@/components/ui/DateTimePicker";
 import { FormInput, FormTextArea, FormSelect, FormCheckbox, FormButton } from "@/components/ui/form";
+import dynamic from "next/dynamic";
+
+const DateTimePicker = dynamic(
+  () => import("@/components/ui/DateTimePicker").then((mod) => mod.DateTimePicker),
+  { ssr: false, loading: () => <div className="h-10 w-full bg-slate-800/50 animate-pulse rounded-md border border-white/5" /> }
+);
 
 interface PromoEvent {
   id: string;
