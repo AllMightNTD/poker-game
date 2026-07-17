@@ -20,6 +20,7 @@
     "@mui/material-nextjs": "^9.1.1",
     "@mui/x-date-pickers": "^9.9.0",
     "@tanstack/react-query": "^5.101.0",
+    "@vercel/speed-insights": "^2.0.0",
     "axios": "^1.16.0",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.21",
