@@ -1,10 +1,10 @@
 "use client";
 
+import { FormButton } from "@/components/ui/form";
+import { RHFCheckbox, RHFInput } from "@/components/ui/form/RhfFields";
 import { useRegister } from "@/features/auth/hooks/use-register";
 import { AtSign, Lock, Mail } from "lucide-react";
 import Link from "next/link";
-import { FormButton } from "@/components/ui/form";
-import { RHFCheckbox, RHFInput } from "@/components/ui/form/RhfFields";
 
 const uiText: Record<string, string> = {
   createYourAccount: "CREATE ACCOUNT",
@@ -12,7 +12,7 @@ const uiText: Record<string, string> = {
   yourUsername: "Username",
   yourEmailAddress: "Email Address",
   password: "Password",
-  confirmPassword: "Confirm password",
+  confirmPassword: "Confirm Password",
   acceptTerm: "I agree to the Terms and Conditions",
   registerButton: "REGISTER",
   alreadyHaveAccount: "Already have an account?",
@@ -33,74 +33,86 @@ export default function RegisterClient() {
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit} noValidate>
-          {/* Username */}
-          <RHFInput
-            control={control}
-            name="user_name"
-            placeholder={uiText.yourUsername}
-            leftIcon={<AtSign size={16} />}
-            error={errors.user_name?.message}
-            disabled={isSubmitting}
-          />
+          <div className="grid grid-cols-1 gap-4">
+            {/* Username Field */}
+            <RHFInput
+              control={control}
+              name="user_name"
+              id="user_name"
+              label={uiText.yourUsername}
+              placeholder={uiText.yourUsername}
+              leftIcon={<AtSign className="w-4 h-4 text-slate-500" />}
+              error={errors.user_name?.message}
+              disabled={isSubmitting}
+            />
 
-          {/* Email */}
-          <RHFInput
-            control={control}
-            name="email"
-            type="email"
-            placeholder={uiText.yourEmailAddress}
-            leftIcon={<Mail size={16} />}
-            error={errors.email?.message}
-            disabled={isSubmitting}
-          />
+            {/* Email Field */}
+            <RHFInput
+              control={control}
+              name="email"
+              id="email"
+              type="email"
+              label={uiText.yourEmailAddress}
+              placeholder={uiText.yourEmailAddress}
+              leftIcon={<Mail className="w-4 h-4 text-slate-500" />}
+              error={errors.email?.message}
+              disabled={isSubmitting}
+            />
 
-          {/* Password */}
-          <RHFInput
-            control={control}
-            name="password"
-            type="password"
-            placeholder={uiText.password}
-            leftIcon={<Lock size={16} />}
-            error={errors.password?.message}
-            disabled={isSubmitting}
-          />
+            {/* Password Field */}
+            <RHFInput
+              control={control}
+              name="password"
+              id="password"
+              type="password"
+              label={uiText.password}
+              placeholder={uiText.password}
+              leftIcon={<Lock className="w-4 h-4 text-slate-500" />}
+              error={errors.password?.message}
+              disabled={isSubmitting}
+            />
 
-          {/* Confirm Password */}
-          <RHFInput
-            control={control}
-            name="confirmPassword"
-            type="password"
-            placeholder={uiText.confirmPassword}
-            leftIcon={<Lock size={16} />}
-            error={errors.confirmPassword?.message}
-            disabled={isSubmitting}
-          />
+            {/* Confirm Password Field */}
+            <RHFInput
+              control={control}
+              name="confirmPassword"
+              id="confirmPassword"
+              type="password"
+              label={uiText.confirmPassword}
+              placeholder={uiText.confirmPassword}
+              leftIcon={<Lock className="w-4 h-4 text-slate-500" />}
+              error={errors.confirmPassword?.message}
+              disabled={isSubmitting}
+            />
 
-          {/* Terms */}
-          <RHFCheckbox
-            control={control}
-            name="terms"
-            label={uiText.acceptTerm}
-            error={errors.terms?.message}
-            disabled={isSubmitting}
-          />
+            {/* Terms and Conditions Checkbox */}
+            <RHFCheckbox
+              control={control}
+              name="terms"
+              id="terms"
+              label={uiText.acceptTerm}
+              error={errors.terms?.message}
+              disabled={isSubmitting}
+            />
 
-          <FormButton
-            type="submit"
-            disabled={isSubmitting}
-            isLoading={isSubmitting}
-            variant="contained"
-            color="primary"
-            fullWidth
-            size="large"
-            className="mt-2"
-          >
-            {uiText.registerButton}
-          </FormButton>
+            {/* Submit Button */}
+            <FormButton
+              type="submit"
+              disabled={isSubmitting}
+              isLoading={isSubmitting}
+              variant="contained"
+              color="primary"
+              fullWidth
+              size="large"
+              className="h-12 sm:h-13 font-bold tracking-wide text-[#081326] text-sm uppercase mt-2"
+            >
+              {uiText.registerButton}
+            </FormButton>
+          </div>
 
-          <p className="text-center text-xs text-slate-400 pt-1">
+          <p className="text-center text-xs text-slate-400 pt-2">
             {uiText.alreadyHaveAccount}{" "}
-            <Link href="/login" className="text-[#F4B942] font-semibold hover:underline">
+            <Link href="/login" className="text-yellow-400 font-semibold hover:underline">
               {uiText.login}
             </Link>
           </p>
