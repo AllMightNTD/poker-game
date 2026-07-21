@@ -1,7 +1,7 @@
 "use client";
 
 import { useSocket } from "@/core/providers/SocketProvider";
-import { UserProvider, useCurrentUser } from "@/core/providers/user-provider";
+import { useCurrentUser } from "@/core/providers/user-provider";
 import { useLogout } from "@/features/auth/hooks/use-logout";
 import api from "@/lib/axios";
 import {
@@ -26,10 +26,10 @@ import {
   Settings,
   ShieldAlert,
   Signal,
+  Sparkles,
   Trophy,
   User,
   Wallet,
-  Sparkles,
   Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -88,7 +88,7 @@ const JackpotOdometer = ({ initialValue }: { initialValue: number }) => {
     <div className="flex flex-col items-center justify-center p-5 bg-gradient-to-br from-[#0e2118] via-[#08130f] to-[#040806] border border-[#F4B942]/30 rounded-3xl relative overflow-hidden shadow-[0_15px_30px_rgba(0,0,0,0.4)] group">
       {/* Glow border effect */}
       <div className="absolute inset-0 bg-[#F4B942]/5 opacity-0 group-hover:opacity-100 transition-all duration-500 pointer-events-none" />
-      
+
       {/* Decorative LED pulse dot */}
       <div className="absolute top-3 right-3 flex items-center gap-1">
         <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
@@ -100,7 +100,7 @@ const JackpotOdometer = ({ initialValue }: { initialValue: number }) => {
         <Trophy size={16} className="text-[#F4B942] animate-bounce" />
         <span className="text-[10px] text-[#F4B942] font-black uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(244,185,66,0.2)]">
           PROGRESSIVE JACKPOT
-                          </span>
+        </span>
       </div>
 
       <div className="flex items-center gap-1 font-mono">
@@ -110,11 +110,10 @@ const JackpotOdometer = ({ initialValue }: { initialValue: number }) => {
           return (
             <span
               key={idx}
-              className={`inline-block ${
-                isComma
-                  ? "text-[#F4B942]/60 text-lg md:text-xl font-bold px-0.5"
-                  : "bg-black/60 text-[#F4B942] text-xl md:text-2xl font-black px-1.5 py-1 rounded border border-white/[0.04] shadow-inner text-shadow-neon"
-              }`}
+              className={`inline-block ${isComma
+                ? "text-[#F4B942]/60 text-lg md:text-xl font-bold px-0.5"
+                : "bg-black/60 text-[#F4B942] text-xl md:text-2xl font-black px-1.5 py-1 rounded border border-white/[0.04] shadow-inner text-shadow-neon"
+                }`}
               style={{
                 boxShadow: isComma ? "none" : "inset 0 2px 4px rgba(0,0,0,0.8)",
                 textShadow: isComma ? "none" : "0 0 8px rgba(244,185,66,0.6)"
@@ -418,10 +417,10 @@ function PokerGameLobby() {
       queryClient.setQueriesData<any[]>({ queryKey: ["rooms"] }, (old) =>
         old
           ? old.map((t) =>
-              t.id === data.room_id.toString()
-                ? { ...t, current_players: data.current_players_count }
-                : t
-            )
+            t.id === data.room_id.toString()
+              ? { ...t, current_players: data.current_players_count }
+              : t
+          )
           : old
       );
     });
@@ -473,7 +472,7 @@ function PokerGameLobby() {
           </div>
           <p className="text-[#F7EFDD]/80 font-black tracking-widest text-xs uppercase">
             Loading lobby data...
-                              </p>
+          </p>
         </div>
       </div>
     );
@@ -510,7 +509,7 @@ function PokerGameLobby() {
       <header className="relative z-30 max-w-6xl mx-auto py-5 border-b border-white/[0.06] flex items-center justify-between gap-4">
         {/* Brand Logo & Name */}
         <div className="flex items-center gap-3">
-          <motion.div 
+          <motion.div
             whileHover={{ scale: 1.05, rotate: 5 }}
             className="w-10 h-10 rounded-2xl bg-gradient-to-r from-[#F4B942] to-[#E0942A] flex items-center justify-center text-[#142019] text-xs font-black shadow-lg shadow-[#F4B942]/20 border border-[#F4B942]/40"
           >
@@ -571,19 +570,19 @@ function PokerGameLobby() {
                     <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[#F7EFDD]/85 hover:bg-[#F4B942]/10 hover:text-white transition-all cursor-pointer">
                       <User size={14} className="text-[#F4B942]" />
                       Profile
-                                                              </button>
+                    </button>
                     <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[#F7EFDD]/85 hover:bg-[#F4B942]/10 hover:text-white transition-all cursor-pointer">
                       <Settings size={14} className="text-[#F4B942]" />
                       Game Settings
-                                                              </button>
+                    </button>
                     <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[#F7EFDD]/85 hover:bg-[#F4B942]/10 hover:text-white transition-all cursor-pointer">
                       <Mail size={14} className="text-[#F4B942]" />
                       Inbox
-                                                              </button>
+                    </button>
                     <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[#F7EFDD]/85 hover:bg-[#F4B942]/10 hover:text-white transition-all cursor-pointer">
                       <HelpCircle size={14} className="text-[#F4B942]" />
                       Technical Support
-                                                              </button>
+                    </button>
 
                     <div className="border-t border-white/[0.06] my-2" />
 
@@ -593,7 +592,7 @@ function PokerGameLobby() {
                     >
                       <LogOut size={14} />
                       Log Out
-                                                              </button>
+                    </button>
                   </motion.div>
                 </>
               )}
@@ -611,9 +610,8 @@ function PokerGameLobby() {
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.9 }}
-              className={`fixed bottom-6 right-6 z-50 flex items-center gap-3.5 px-6 py-4.5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border text-sm font-semibold backdrop-blur-xl text-white ${
-                toast.type === "success" ? "bg-[#0b1612]/95 border-[#F4B942]/40 text-[#F4B942]" : "bg-[#E23744]/95 border-[#E23744]"
-              }`}
+              className={`fixed bottom-6 right-6 z-50 flex items-center gap-3.5 px-6 py-4.5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border text-sm font-semibold backdrop-blur-xl text-white ${toast.type === "success" ? "bg-[#0b1612]/95 border-[#F4B942]/40 text-[#F4B942]" : "bg-[#E23744]/95 border-[#E23744]"
+                }`}
             >
               {toast.type === "success" ? (
                 <CheckCircle2 size={20} className="shrink-0 text-[#F4B942]" />
@@ -659,11 +657,10 @@ function PokerGameLobby() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setQpGameType("NLH")}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
-                      qpGameType === "NLH"
-                        ? "bg-gradient-to-r from-[#F4B942] to-[#E0942A] border-[#F4B942] text-[#142019] shadow-md shadow-[#F4B942]/20"
-                        : "bg-black/40 border-white/[0.06] text-[#F7EFDD]/60 hover:text-white"
-                    }`}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${qpGameType === "NLH"
+                      ? "bg-gradient-to-r from-[#F4B942] to-[#E0942A] border-[#F4B942] text-[#142019] shadow-md shadow-[#F4B942]/20"
+                      : "bg-black/40 border-white/[0.06] text-[#F7EFDD]/60 hover:text-white"
+                      }`}
                   >
                     Hold&apos;em
                   </motion.button>
@@ -671,11 +668,10 @@ function PokerGameLobby() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setQpGameType("PLO")}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${
-                      qpGameType === "PLO"
-                        ? "bg-gradient-to-r from-[#F4B942] to-[#E0942A] border-[#F4B942] text-[#142019] shadow-md shadow-[#F4B942]/20"
-                        : "bg-black/40 border-white/[0.06] text-[#F7EFDD]/60 hover:text-white"
-                    }`}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all border ${qpGameType === "PLO"
+                      ? "bg-gradient-to-r from-[#F4B942] to-[#E0942A] border-[#F4B942] text-[#142019] shadow-md shadow-[#F4B942]/20"
+                      : "bg-black/40 border-white/[0.06] text-[#F7EFDD]/60 hover:text-white"
+                      }`}
                   >
                     Omaha PLO
                   </motion.button>
@@ -692,11 +688,10 @@ function PokerGameLobby() {
                     <button
                       key={st.id}
                       onClick={() => setQpStake(st.id)}
-                      className={`py-2 px-1 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
-                        qpStake === st.id
-                          ? "bg-[#F4B942]/10 border-[#F4B942] text-[#F4B942] shadow-inner"
-                          : "bg-black/20 border-white/[0.04] text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
-                      }`}
+                      className={`py-2 px-1 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${qpStake === st.id
+                        ? "bg-[#F4B942]/10 border-[#F4B942] text-[#F4B942] shadow-inner"
+                        : "bg-black/20 border-white/[0.04] text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
+                        }`}
                     >
                       <span className={qpStake === st.id ? "" : st.color}>{st.label}</span>
                     </button>
@@ -724,9 +719,8 @@ function PokerGameLobby() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveTab("cash")}
-              className={`pb-3.5 px-4 text-sm font-black uppercase tracking-widest relative transition-all cursor-pointer ${
-                activeTab === "cash" ? "text-[#F4B942]" : "text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
-              }`}
+              className={`pb-3.5 px-4 text-sm font-black uppercase tracking-widest relative transition-all cursor-pointer ${activeTab === "cash" ? "text-[#F4B942]" : "text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
+                }`}
             >
               Cash Game
               {activeTab === "cash" && (
@@ -740,13 +734,12 @@ function PokerGameLobby() {
 
             <button
               onClick={() => setActiveTab("private")}
-              className={`pb-3.5 px-4 text-sm font-black uppercase tracking-widest relative transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === "private" ? "text-[#F4B942]" : "text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
-              }`}
+              className={`pb-3.5 px-4 text-sm font-black uppercase tracking-widest relative transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === "private" ? "text-[#F4B942]" : "text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
+                }`}
             >
               <Lock size={14} className="text-[#F4B942]" />
               Private Room
-                                        {activeTab === "private" && (
+              {activeTab === "private" && (
                 <motion.span
                   layoutId="tab-underline"
                   className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#F4B942] to-[#E0942A]"
@@ -765,7 +758,7 @@ function PokerGameLobby() {
           >
             <Plus size={15} />
             Create New Table
-                                </motion.button>
+          </motion.button>
         </div>
 
         {/* Filters Bar */}
@@ -853,11 +846,11 @@ function PokerGameLobby() {
                             {table.status === "RUNNING" ? (
                               <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-black text-[9px] border border-emerald-500/20 uppercase tracking-wider">
                                 Playing
-                                                                        </span>
+                              </span>
                             ) : (
                               <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 font-black text-[9px] border border-amber-500/20 uppercase tracking-wider">
                                 Waiting
-                                                                            </span>
+                              </span>
                             )}
                           </td>
                           <td className="py-4.5 px-6 text-right">
@@ -869,17 +862,16 @@ function PokerGameLobby() {
                                 className="px-3.5 py-2 rounded-xl bg-black/40 hover:bg-black/60 border border-[#F4B942]/30 text-[#F7EFDD]/70 hover:text-[#F4B942] transition-all text-[10px] font-black uppercase tracking-wider cursor-pointer"
                               >
                                 Spectate
-                                                                        </motion.button>
+                              </motion.button>
                               <motion.button
                                 whileHover={!isFull ? { scale: 1.02 } : {}}
                                 whileTap={!isFull ? { scale: 0.98 } : {}}
                                 onClick={() => joinTableMutation.mutate(table)}
                                 disabled={isFull}
-                                className={`px-4.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                                  isFull
-                                    ? "bg-[#08121a]/60 text-[#F7EFDD]/30 border border-white/5 cursor-not-allowed"
-                                    : "bg-gradient-to-r from-[#F4B942] to-[#E0942A] hover:brightness-110 text-[#142019]"
-                                }`}
+                                className={`px-4.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${isFull
+                                  ? "bg-[#08121a]/60 text-[#F7EFDD]/30 border border-white/5 cursor-not-allowed"
+                                  : "bg-gradient-to-r from-[#F4B942] to-[#E0942A] hover:brightness-110 text-[#142019]"
+                                  }`}
                               >
                                 {isFull ? "Table full" : "Join"}
                               </motion.button>
@@ -910,10 +902,10 @@ function PokerGameLobby() {
               style={{ fontFamily: "'Fraunces', Georgia, serif" }}
             >
               No matching tables found
-                                              </h3>
+            </h3>
             <p className="text-[#F7EFDD]/60 text-xs max-w-sm mt-3 leading-relaxed relative z-10">
               Please adjust your search keyword, stakes filter, or create a new table to start playing now!
-                                              </p>
+            </p>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -922,7 +914,7 @@ function PokerGameLobby() {
             >
               <Plus size={15} />
               Create New Table
-                                              </motion.button>
+            </motion.button>
           </div>
         )}
 
@@ -1005,8 +997,6 @@ function PokerGameLobby() {
 
 export default function PokerGamePage() {
   return (
-    <UserProvider>
-      <PokerGameLobby />
-    </UserProvider>
+    <PokerGameLobby />
   );
 }

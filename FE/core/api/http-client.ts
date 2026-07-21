@@ -78,7 +78,10 @@ httpClient.interceptors.response.use(
         } catch (refreshError) {
           Cookies.remove("admin_access_token", { path: "/" });
           if (typeof window !== "undefined") {
-            window.location.href = "/backstage/login";
+            const currentPath = window.location.pathname;
+            if (!currentPath.startsWith("/backstage/login")) {
+              window.location.href = "/backstage/login";
+            }
           }
           return Promise.reject(refreshError);
         }
@@ -102,7 +105,13 @@ httpClient.interceptors.response.use(
         } catch (refreshError) {
           Cookies.remove("accessToken", { path: "/" });
           if (typeof window !== "undefined") {
-            window.location.href = "/login";
+            const currentPath = window.location.pathname;
+            if (!currentPath.startsWith("/login") && 
+                !currentPath.startsWith("/register") && 
+                !currentPath.startsWith("/forgot-password") && 
+                !currentPath.startsWith("/backstage")) {
+              window.location.href = "/login";
+            }
           }
           return Promise.reject(refreshError);
         }

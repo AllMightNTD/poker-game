@@ -175,8 +175,8 @@ export default function AdminTablesPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-100">Quản lý bàn</h1>
-          <p className="text-slate-500 text-sm mt-1">Theo dõi bàn đang hoạt động, cấu hình cược và các thao tác admin.</p>
+          <h1 className="text-2xl font-semibold text-slate-100">Table management</h1>
+          <p className="text-slate-500 text-sm mt-1">Track active tables, betting configurations, and admin actions.</p>
         </div>
         <FormButton
           onClick={() => {
@@ -187,15 +187,15 @@ export default function AdminTablesPage() {
           color="primary"
           startIcon={<Plus size={16} />}
         >
-          Tạo bàn mới
+          Create new table
         </FormButton>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {isLoading ? (
-          <div className="col-span-full p-8 text-center text-slate-500">Đang tải danh sách bàn...</div>
+          <div className="col-span-full p-8 text-center text-slate-500">Loading...</div>
         ) : tables.length === 0 ? (
-          <div className="col-span-full p-8 text-center text-slate-500">Không có bàn nào đang hoạt động.</div>
+          <div className="col-span-full p-8 text-center text-slate-500">No tables found.</div>
         ) : (
           tables.map((table: any) => (
             <div key={table.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 relative flex flex-col hover:border-slate-700 transition-colors">
@@ -216,7 +216,7 @@ export default function AdminTablesPage() {
               <div className="space-y-2.5 mb-5 flex-1 text-sm">
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 flex items-center gap-2">
-                    <CircleDollarSign size={14} /> Mức cược
+                    <CircleDollarSign size={14} /> Blinds
                   </span>
                   <span className="font-medium text-slate-200">
                     ${table.small_blind} / ${table.big_blind}
@@ -230,7 +230,7 @@ export default function AdminTablesPage() {
                 )}
                 <div className="flex justify-between items-center">
                   <span className="text-slate-500 flex items-center gap-2">
-                    <Users size={14} /> Số ghế tối đa
+                    <Users size={14} /> Max players
                   </span>
                   <span className="font-medium text-slate-200">{table.max_players}</span>
                 </div>
@@ -255,7 +255,7 @@ export default function AdminTablesPage() {
                     size="small"
                     startIcon={<Play size={13} />}
                   >
-                    Tiếp tục
+                    Resume
                   </FormButton>
                 ) : (
                   <FormButton
@@ -275,7 +275,7 @@ export default function AdminTablesPage() {
                   size="small"
                   startIcon={<PowerOff size={13} />}
                 >
-                  Đóng bàn
+                  Close table
                 </FormButton>
               </div>
             </div>
@@ -439,7 +439,7 @@ export default function AdminTablesPage() {
                   color="primary"
                   className="flex-1"
                 >
-                  Tạo ngay
+                  Create
                 </FormButton>
               </div>
             </form>

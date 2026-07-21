@@ -19,11 +19,11 @@ const CATEGORIES = ["Strategy", "Tournament", "News", "Lifestyle"];
 
 const blogFormSchema = z.object({
   title: z.string().min(1, "Title cannot be empty"),
-  excerpt: z.string().max(100, "Trích dẫn không được vượt quá 100 ký tự").optional().or(z.literal("")),
+  excerpt: z.string().max(100, "Excerpt cannot exceed 100 characters").optional().or(z.literal("")),
   thumbnail: z.string().optional().or(z.literal("")),
   category: z.string(),
   tags: z.string().optional().or(z.literal("")),
-  content: z.string().min(1, "Nội dung không được để trống"),
+  content: z.string().min(1, "Content cannot be empty"),
   is_published: z.boolean(),
 });
 
@@ -62,7 +62,7 @@ export default function AdminBlogEditorPage() {
     control,
     setValue,
     reset,
-    formState: { errors, isValid, isSubmitting },
+    formState: { errors, isSubmitting },
   } = useForm<BlogFormValues>({
     resolver: zodResolver(blogFormSchema),
     defaultValues: INITIAL,
@@ -235,23 +235,23 @@ export default function AdminBlogEditorPage() {
             )}
           >
             {preview ? <FileText size={16} /> : <Eye size={16} />}
-            {preview ? "Quay lại Editor" : "Xem trước (Preview)"}
+            {preview ? "Back" : "Preview"}
           </button>
 
           <FormButton
             type="submit"
-            disabled={!isValid || saveMutation.isPending || saved || isSubmitting}
+            disabled={saveMutation.isPending || saved || isSubmitting}
             isLoading={saveMutation.isPending}
             variant="contained"
             color="primary"
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl !bg-yellow-500 hover:!bg-yellow-400 !text-black h-auto"
           >
             {saved ? (
-              "✅ Đã lưu thành công!"
+              "Saved!"
             ) : (
               <>
                 <Save size={16} className="mr-0.5" />
-                {isEditing ? "Save changes" : "Xuất bản ngay"}
+                {isEditing ? "Save changes" : "Publish now"}
               </>
             )}
           </FormButton>
@@ -266,8 +266,8 @@ export default function AdminBlogEditorPage() {
         >
           <span className="text-lg">⚠️</span>
           <div>
-            <p className="font-semibold">Lưu thất bại</p>
-            <p className="text-xs opacity-80">Đã có lỗi xảy ra khi gửi dữ liệu. Vui lòng kiểm tra lại đường truyền hoặc thử lại sau.</p>
+            <p className="font-semibold">Failed to save</p>
+            <p className="text-xs opacity-80">Error saving blog. Please try again later.</p>
           </div>
         </motion.div>
       )}
@@ -335,12 +335,12 @@ export default function AdminBlogEditorPage() {
         <div className="space-y-6 xl:sticky xl:top-6 xl:self-start">
           {/* Publish & Category Card combined for better space */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
-            <SidebarCardTitle icon={Settings}>Trạng thái & Danh mục</SidebarCardTitle>
+            <SidebarCardTitle icon={Settings}>Status & Category</SidebarCardTitle>
 
             <div className="space-y-5">
               {/* Publish toggle stylized as segment control */}
               <div>
-                <label className="text-xs text-slate-500 font-medium mb-2 block">Trạng thái xuất bản</label>
+                <label className="text-xs text-slate-500 font-medium mb-2 block">Status</label>
                 <div className="grid grid-cols-2 gap-2 bg-slate-800 p-1 rounded-xl border border-slate-700">
                   <button
                     type="button"
@@ -348,7 +348,7 @@ export default function AdminBlogEditorPage() {
                     className={clsx("flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm transition-all",
                       !isPublishedValue ? "bg-slate-700 text-white shadow" : "text-slate-400 hover:text-slate-100")}
                   >
-                    <EyeOff size={14} /> Bản nháp
+                    <EyeOff size={14} /> Draft
                   </button>
                   <button
                     type="button"
@@ -356,14 +356,14 @@ export default function AdminBlogEditorPage() {
                     className={clsx("flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm transition-all",
                       isPublishedValue ? "bg-emerald-600 text-white shadow" : "text-slate-400 hover:text-emerald-400")}
                   >
-                    <Eye size={14} /> Công khai
+                    <Eye size={14} /> Public
                   </button>
                 </div>
               </div>
 
               {/* Category selector stylized as tags */}
               <div>
-                <label className="text-xs text-slate-500 font-medium mb-2 block">Danh mục bài viết</label>
+                <label className="text-xs text-slate-500 font-medium mb-2 block">Category</label>
                 <div className="flex flex-wrap gap-2">
                   {CATEGORIES.map((cat) => (
                     <button
@@ -460,7 +460,7 @@ export default function AdminBlogEditorPage() {
             </div>
 
             <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-              Sử dụng công cụ này để chèn trình phát lại ván bài Poker trực quan vào nội dung bài viết.
+              Use this tool to insert a visual poker hand player into the article.
             </p>
 
             <button
@@ -468,7 +468,7 @@ export default function AdminBlogEditorPage() {
               onClick={() => setIsPickerOpen(true)}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold transition-colors shadow-md mb-4"
             >
-              🃏 Chọn ván bài từ thư viện
+              🃏 Poker Hand Replayer
             </button>
 
             <div className="relative group">

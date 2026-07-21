@@ -14,7 +14,7 @@ export class AdminUsersService {
   constructor(
     private readonly lobbyService: PokerLobbyService,
     private readonly gameService: PokerGameService,
-  ) {}
+  ) { }
 
   async getUsers(cursor: string | undefined, limit: number, search: string) {
     const query = User.createQueryBuilder('user').select([
@@ -50,6 +50,7 @@ export class AdminUsersService {
   }
 
   async banUser(id: string) {
+    console.log('id ', id);
     const user = await User.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
 

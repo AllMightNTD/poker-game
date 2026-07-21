@@ -1,10 +1,10 @@
 "use client";
 
+import { FormButton } from "@/components/ui/form";
+import { RHFInput } from "@/components/ui/form/RhfFields";
 import httpClient from "@/core/api/http-client";
 import { Ban, Eye, Search, ShieldAlert, UserMinus, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { FormButton } from "@/components/ui/form";
-import { RHFInput } from "@/components/ui/form/RhfFields";
 import { useForm, useWatch } from "react-hook-form";
 
 export default function AdminCollusionPage() {
@@ -13,13 +13,13 @@ export default function AdminCollusionPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
-  
-  const { control } = useForm({
+
+  const { control, getValues } = useForm({
     defaultValues: {
       searchQuery: "",
     },
   });
-  
+
   const searchQuery = useWatch({ control, name: "searchQuery" });
 
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
@@ -64,7 +64,8 @@ export default function AdminCollusionPage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchLogs(null, true);
+    if (getValues("searchQuery") !== "" && getValues("searchQuery").trim().length > 0)
+      fetchLogs(null, true);
   };
 
   const handleViewDetail = (log: any) => {
@@ -125,10 +126,10 @@ export default function AdminCollusionPage() {
           <h1 className="text-2xl font-semibold text-slate-100 flex items-center gap-2">
             <ShieldAlert className="text-rose-500" />
             Anti-Collusion Logs
-                                </h1>
+          </h1>
           <p className="text-slate-500 text-sm mt-1">
             Look up risk alert history for players sharing networks/devices or engaging in money laundering.
-                                </p>
+          </p>
         </div>
 
         <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full md:w-auto items-center">
@@ -150,7 +151,7 @@ export default function AdminCollusionPage() {
             className="shrink-0"
           >
             Search
-                                </FormButton>
+          </FormButton>
         </form>
       </div>
 
@@ -240,7 +241,7 @@ export default function AdminCollusionPage() {
               size="small"
             >
               Load more
-                                      </FormButton>
+            </FormButton>
           </div>
         )}
       </div>
@@ -254,7 +255,7 @@ export default function AdminCollusionPage() {
                 <h2 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
                   <ShieldAlert size={18} className="text-rose-500" />
                   Detailed collusion alert
-                                                  </h2>
+                </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Alert ID: {detail.id}
                 </p>
@@ -337,7 +338,7 @@ export default function AdminCollusionPage() {
                 className="text-slate-400 hover:text-slate-200"
               >
                 Close
-                                            </FormButton>
+              </FormButton>
 
               {detail.room_id && (
                 <FormButton
@@ -349,7 +350,7 @@ export default function AdminCollusionPage() {
                   startIcon={<UserMinus size={14} />}
                 >
                   Kick from table
-                                                  </FormButton>
+                </FormButton>
               )}
 
               <FormButton
@@ -361,7 +362,7 @@ export default function AdminCollusionPage() {
                 startIcon={<Ban size={14} />}
               >
                 Lock account
-                                            </FormButton>
+              </FormButton>
             </div>
           </div>
         </div>

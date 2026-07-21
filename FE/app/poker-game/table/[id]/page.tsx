@@ -1,13 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { UserProvider } from "@/core/providers/user-provider";
 import { HeroPanel } from "./components/hero/HeroPanel";
 import { PokerGameProvider } from "./components/hooks/usePokerGame";
 import { TableBackground } from "./components/layout/TableBackground";
 import { PokerTable } from "./components/table/PokerTable";
-import { Toast } from "./components/ui/Toast";
 import { RitVoteModal } from "./components/ui/RitVoteModal";
+import { Toast } from "./components/ui/Toast";
 
 // Lazily load large components/modals only when client-side environment is ready to reduce initial bundle size and speed up FCP
 const ChatDrawer = dynamic(() => import("./components/chat/ChatDrawer").then(mod => mod.ChatDrawer), {
@@ -75,10 +74,8 @@ function PokerTableRoom() {
 
 export default function GamingTablePage() {
   return (
-    <UserProvider>
-      <PokerGameProvider>
-        <PokerTableRoom />
-      </PokerGameProvider>
-    </UserProvider>
+    <PokerGameProvider>
+      <PokerTableRoom />
+    </PokerGameProvider>
   );
 }

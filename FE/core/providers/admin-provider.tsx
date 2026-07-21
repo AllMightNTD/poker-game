@@ -1,9 +1,9 @@
 "use client";
 
 import api from "@/lib/axios";
-import { usePathname, useRouter } from "next/navigation";
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 interface AdminContextType {
   currentAdmin: any;
@@ -17,13 +17,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [currentAdmin, setCurrentAdmin] = useState<any>(null);
   const [isLoadingAdmin, setIsLoadingAdmin] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
 
   const fetchMe = useCallback(async () => {
     const token = Cookies.get("admin_access_token");
     if (!token) {
       setIsLoadingAdmin(false);
-      if (!pathname.includes("/backstage/login")) {
+      if (!window.location.pathname.includes("/backstage/login")) {
         router.push("/backstage/login");
       }
       return;
@@ -36,13 +35,13 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       setCurrentAdmin(admin);
     } catch {
       setCurrentAdmin(null);
-      if (!pathname.includes("/backstage/login")) {
+      if (!window.location.pathname.includes("/backstage/login")) {
         router.push("/backstage/login");
       }
     } finally {
       setIsLoadingAdmin(false);
     }
-  }, [pathname, router]);
+  }, [router]);
 
   useEffect(() => {
     Promise.resolve().then(() => {

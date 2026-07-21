@@ -23,7 +23,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const user = res.data?.metadata || res.data;
       setCurrentUser(user);
     } catch {
-      router.push("/login");
+      setCurrentUser(null);
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+      if (!currentPath.startsWith('/login') && 
+          !currentPath.startsWith('/register') && 
+          !currentPath.startsWith('/forgot-password') && 
+          !currentPath.startsWith('/backstage')) {
+        router.push("/login");
+      }
     } finally {
       setIsLoadingUser(false);
     }

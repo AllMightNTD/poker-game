@@ -52,7 +52,7 @@ export const SocketProvider = ({
         withCredentials: true,
         reconnection: true,
         reconnectionAttempts: 10,
-        reconnectionDelay: 5000,
+        reconnectionDelay: 1000,
         reconnectionDelayMax: 30000,
         randomizationFactor: 0.5,
       }
@@ -140,7 +140,7 @@ export const SocketProvider = ({
 
     const resetIdleTimeout = () => {
       clearTimeout(timeout);
-      
+
       if (isIdle) {
         isIdle = false;
         socket.emit("user_idle", { is_idle: false });

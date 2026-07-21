@@ -2,10 +2,10 @@
 import { ReactQueryProvider } from "@/components/providers/ReactQueryProvider";
 import { SocketProvider } from "@/components/providers/SocketProvider";
 import { ToastProvider } from '@/core/providers/toast-provider';
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import "./globals.css";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const roboto = Roboto({
   weight: ["100", "300", "400", "500", "700", "900"],
@@ -40,6 +40,7 @@ export const metadata: Metadata = {
 };
 
 import MuiThemeProvider from "@/core/providers/mui-theme-provider";
+import { UserProvider } from "@/core/providers/user-provider";
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter';
 
 const jsonLd = {
@@ -85,12 +86,14 @@ export default function RootLayout({
         <AppRouterCacheProvider>
           <ReactQueryProvider>
             <ToastProvider>
-              <SocketProvider>
-                <MuiThemeProvider>
-                  {children}
-                  <SpeedInsights />
-                </MuiThemeProvider>
-              </SocketProvider>
+              <UserProvider>
+                <SocketProvider>
+                  <MuiThemeProvider>
+                    {children}
+                    <SpeedInsights />
+                  </MuiThemeProvider>
+                </SocketProvider>
+              </UserProvider>
             </ToastProvider>
           </ReactQueryProvider>
         </AppRouterCacheProvider>

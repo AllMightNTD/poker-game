@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { gamificationApi, PlayerStats, Achievement } from "@/features/gamification/api/gamification-api";
-import { UserProvider, useCurrentUser } from "@/core/providers/user-provider";
-import { LevelBadge } from "../poker-game/table/[id]/components/ui/LevelBadge";
-import { Coins, Trophy, Swords, Zap, Star, Laptop, Globe, Trash2, Clock } from "lucide-react";
-import { motion } from "framer-motion";
+import { useCurrentUser } from "@/core/providers/user-provider";
 import { AuthService } from "@/features/auth/services/auth.service";
+import { Achievement, gamificationApi, PlayerStats } from "@/features/gamification/api/gamification-api";
+import { motion } from "framer-motion";
+import { Clock, Coins, Globe, Laptop, Star, Swords, Trash2, Trophy, Zap } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { LevelBadge } from "../poker-game/table/[id]/components/ui/LevelBadge";
 
 function ProfileContent() {
   const { currentUser } = useCurrentUser();
@@ -96,15 +96,15 @@ function ProfileContent() {
     return new Intl.NumberFormat().format(Number(val));
   };
 
-  const winRate = stats?.hands_played 
-    ? Math.round((stats.hands_won / stats.hands_played) * 100) 
+  const winRate = stats?.hands_played
+    ? Math.round((stats.hands_won / stats.hands_played) * 100)
     : 0;
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-slate-200 py-12 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header Profile */}
-        <motion.div 
+        <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           className="bg-slate-900/80 backdrop-blur-md rounded-3xl p-8 border border-slate-800 shadow-2xl flex flex-col md:flex-row items-center gap-8"
@@ -130,7 +130,7 @@ function ProfileContent() {
           <div className="flex-1 text-center md:text-left space-y-4 w-full">
             <div>
               <h1 className="text-3xl font-black text-white">{currentUser.name || currentUser.username}</h1>
-              <p className="text-slate-400 font-mono text-sm mt-1">Player ID: {currentUser.id.substring(0,8)}</p>
+              <p className="text-slate-400 font-mono text-sm mt-1">Player ID: {currentUser.id.substring(0, 8)}</p>
             </div>
 
             <div className="bg-slate-950/50 rounded-xl p-4 border border-slate-800/50 w-full max-w-md">
@@ -144,7 +144,7 @@ function ProfileContent() {
         </motion.div>
 
         {/* Stats Grid */}
-        <motion.div 
+        <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
@@ -157,7 +157,7 @@ function ProfileContent() {
         </motion.div>
 
         {/* Achievements Showcase */}
-        <motion.div 
+        <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -173,12 +173,12 @@ function ProfileContent() {
           {achievements.length === 0 ? (
             <div className="text-center py-12 text-slate-500 border-2 border-dashed border-slate-800 rounded-xl">
               <Star className="w-12 h-12 mx-auto mb-3 text-slate-700" />
-              <p>No achievements unlocked yet.<br/>Play more hands to earn badges!</p>
+              <p>No achievements unlocked yet.<br />Play more hands to earn badges!</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {achievements.map((ach, idx) => (
-                <motion.div 
+                <motion.div
                   key={ach.id}
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -203,7 +203,7 @@ function ProfileContent() {
         </motion.div>
 
         {/* Active Sessions */}
-        <motion.div 
+        <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3 }}
@@ -221,12 +221,12 @@ function ProfileContent() {
               className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition cursor-pointer"
             >
               Refresh
-                                      </button>
+            </button>
           </div>
 
           <p className="text-slate-400 text-sm leading-relaxed mb-6">
             List of devices/browsers currently logged into your account. You can remotely log out of any suspicious active sessions.
-                                </p>
+          </p>
 
           <div className="space-y-4">
             {loadingSessions ? (
@@ -236,7 +236,7 @@ function ProfileContent() {
             ) : sessions.length === 0 ? (
               <div className="text-center py-8 text-slate-500 text-sm border-2 border-dashed border-slate-800 rounded-xl">
                 No active sessions found.
-                                                </div>
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {sessions.map((session) => (
@@ -296,8 +296,6 @@ const StatCard = ({ icon, label, value }: { icon: React.ReactNode, label: string
 
 export default function ProfilePage() {
   return (
-    <UserProvider>
-      <ProfileContent />
-    </UserProvider>
+    <ProfileContent />
   );
 }

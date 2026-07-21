@@ -116,8 +116,8 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-100">Quản lý người dùng</h1>
-        <p className="text-slate-500 text-sm mt-1">Quản lý tài khoản người chơi, khóa bảo mật và hồ sơ.</p>
+        <h1 className="text-2xl font-semibold text-slate-100">User management</h1>
+        <p className="text-slate-500 text-sm mt-1">Manage player accounts, security keys, and profiles.</p>
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
@@ -125,10 +125,10 @@ export default function AdminUsersPage() {
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-slate-800/40 border-b border-slate-800 text-xs text-slate-500">
-                <th className="p-3 font-medium">UID / Tên đăng nhập</th>
+                <th className="p-3 font-medium">UID / Username</th>
                 <th className="p-3 font-medium">Email</th>
                 <th className="p-3 font-medium">Status</th>
-                <th className="p-3 font-medium">Ngày tham gia</th>
+                <th className="p-3 font-medium">Joined Date</th>
                 <th className="p-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -137,12 +137,12 @@ export default function AdminUsersPage() {
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-slate-500">
                     Loading data...
-                                                        </td>
+                  </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-slate-500">
-                    Không có người dùng nào.
+                    There are no users.
                   </td>
                 </tr>
               ) : (
@@ -156,12 +156,12 @@ export default function AdminUsersPage() {
                     <td className="p-3">
                       {user.status === "BANNED" ? (
                         <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-red-500/10 text-red-400 text-xs border border-red-500/20">
-                          <ShieldAlert size={12} /> Đã khóa
+                          <ShieldAlert size={12} /> Locked
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-xs border border-emerald-500/20">
                           <ShieldCheck size={12} /> Active
-                                                                </span>
+                        </span>
                       )}
                     </td>
                     <td className="p-3 text-slate-500">
@@ -216,7 +216,7 @@ export default function AdminUsersPage() {
               size="small"
             >
               Load more
-                                      </FormButton>
+            </FormButton>
           </div>
         )}
       </div>
@@ -247,7 +247,7 @@ export default function AdminUsersPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                   <User size={14} className="text-slate-500" />
-                  <span>Thông tin tài khoản</span>
+                  <span>Account information</span>
                 </div>
 
                 <div className="bg-slate-950/60 border border-slate-850 rounded-xl p-4 space-y-3 text-sm shadow-inner">
@@ -276,18 +276,18 @@ export default function AdminUsersPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                   <BarChart3 size={14} className="text-slate-500" />
-                  <span>Hiệu suất chơi game</span>
+                  <span>Performance statistics</span>
                 </div>
 
                 {statsLoading ? (
                   <div className="flex flex-col items-center justify-center bg-slate-950/40 border border-slate-850 rounded-xl py-8 gap-2">
                     <div className="size-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-xs text-slate-500">Đang tải thống kê dữ liệu...</span>
+                    <span className="text-xs text-slate-500">Loading statistics...</span>
                   </div>
                 ) : userStats ? (
                   <div className="grid grid-cols-3 gap-3">
                     <div className="bg-slate-950/60 border border-slate-850 p-3.5 rounded-xl text-center shadow-sm">
-                      <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Số Hand</div>
+                      <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Number of Hands</div>
                       <div className="text-xl font-bold text-slate-100 font-mono mt-1">{userStats.hands_played}</div>
                     </div>
 
@@ -305,7 +305,7 @@ export default function AdminUsersPage() {
                   </div>
                 ) : (
                   <div className="text-center text-slate-500 bg-slate-950/40 border border-slate-850 rounded-xl py-6 text-xs italic">
-                    Không tìm thấy dữ liệu thống kê của người chơi này.
+                    No statistics found for this player.
                   </div>
                 )}
               </div>
@@ -314,7 +314,7 @@ export default function AdminUsersPage() {
               <div className="border border-rose-950/40 bg-rose-950/10 rounded-xl p-4 space-y-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-rose-400 uppercase tracking-wider">
                   <ShieldAlert size={14} />
-                  <span>Quản trị viên thao tác nhanh</span>
+                  <span>Admin quick actions</span>
                 </div>
 
                 <div className="flex gap-2 items-start">
@@ -333,7 +333,7 @@ export default function AdminUsersPage() {
                     className="!bg-rose-600 hover:!bg-rose-500 !text-white h-10 px-4 rounded-xl flex items-center gap-1.5 text-sm font-semibold shadow-md shrink-0"
                   >
                     <LogOut size={14} />
-                    <span>Trục xuất</span>
+                    <span>Kick</span>
                   </FormButton>
                 </div>
               </div>

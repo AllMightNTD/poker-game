@@ -1,6 +1,5 @@
-import { UserProvider } from "@/core/providers/user-provider";
-import LeaderboardContent from "./LeaderboardClient";
 import { Metadata } from "next";
+import LeaderboardContent from "./LeaderboardClient";
 
 export const metadata: Metadata = {
   title: "Poker Masters Leaderboard - Hall of Fame | PKCG",
@@ -18,8 +17,6 @@ export const metadata: Metadata = {
 
 export default function LeaderboardPage() {
   return (
-    <UserProvider>
-      <LeaderboardContent />
-    </UserProvider>
+    <LeaderboardContent />
   );
 }

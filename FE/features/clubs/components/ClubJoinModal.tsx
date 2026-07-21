@@ -1,28 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { clubsApi } from "@/features/clubs/api/clubs-api";
+import { useJoinClub } from "@/features/clubs/hooks/useClubs";
 import { X, Loader2 } from "lucide-react";
 
 export default function ClubJoinModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
   const [code, setCode] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const { mutateAsync: joinClub, isPending: isLoading } = useJoinClub();
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim()) return;
     
-    setIsLoading(true);
     setError("");
     
     try {
-      await clubsApi.joinClub(code.trim().toUpperCase());
+      await joinClub(code.trim().toUpperCase());
       onSuccess();
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to join club. Check your code.");
-    } finally {
-      setIsLoading(false);
     }
   };
 

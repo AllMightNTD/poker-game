@@ -3,6 +3,9 @@ const nextConfig = {
   reactStrictMode: true,
   compress: true,
   allowedDevOrigins: ['10.10.0.224', 'localhost', '127.0.0.1'],
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'date-fns', 'lodash'],
+  },
   images: {
     dangerouslyAllowSVG: true,
     minimumCacheTTL: 60,

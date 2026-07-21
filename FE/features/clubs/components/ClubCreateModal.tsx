@@ -1,25 +1,24 @@
 "use client";
 
+import { useCreateClub } from "@/features/clubs/hooks/useClubs";
+import { Loader2, X } from "lucide-react";
 import { useState } from "react";
-import { clubsApi } from "@/features/clubs/api/clubs-api";
-import { X, Loader2 } from "lucide-react";
 
 export default function ClubCreateModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [rakeRate, setRakeRate] = useState("5.0");
-  const [isLoading, setIsLoading] = useState(false);
+  const { mutateAsync: createClub, isPending: isLoading } = useCreateClub();
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    
-    setIsLoading(true);
+
     setError("");
-    
+
     try {
-      await clubsApi.createClub({
+      await createClub({
         name,
         description,
         club_rake_rate: parseFloat(rakeRate)
@@ -27,8 +26,6 @@ export default function ClubCreateModal({ onClose, onSuccess }: { onClose: () =>
       onSuccess();
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to create club");
-    } finally {
-      setIsLoading(false);
     }
   };
 

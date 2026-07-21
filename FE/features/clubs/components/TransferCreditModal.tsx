@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { clubsApi } from "@/features/clubs/api/clubs-api";
+import { useTransferCredit } from "@/features/clubs/hooks/useClubs";
 import { X, Loader2, ArrowRight } from "lucide-react";
 
 export default function TransferCreditModal({ 
@@ -17,24 +17,21 @@ export default function TransferCreditModal({
 }) {
   const [amount, setAmount] = useState("");
   const [direction, setDirection] = useState<'send' | 'receive'>('send');
-  const [isLoading, setIsLoading] = useState(false);
+  const { mutateAsync: transferCredit, isPending: isLoading } = useTransferCredit();
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) return;
     
-    setIsLoading(true);
     setError("");
     
     try {
       const finalAmount = direction === 'send' ? amount : `-${amount}`;
-      await clubsApi.transferCredit(clubId, member.user_id, finalAmount);
+      await transferCredit({ clubId, memberUserId: member.user_id, amount: finalAmount });
       onSuccess();
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to transfer credit");
-    } finally {
-      setIsLoading(false);
     }
   };
 

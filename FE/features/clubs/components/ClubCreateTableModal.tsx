@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { clubsApi } from "@/features/clubs/api/clubs-api";
+import { useCreateClubTable } from "@/features/clubs/hooks/useClubs";
 import { X, Loader2 } from "lucide-react";
 
 export default function ClubCreateTableModal({ 
@@ -16,32 +16,29 @@ export default function ClubCreateTableModal({
   const [name, setName] = useState("");
   const [sb, setSb] = useState("500");
   const [maxPlayers, setMaxPlayers] = useState("9");
-  const [isLoading, setIsLoading] = useState(false);
+  const { mutateAsync: createClubTable, isPending: isLoading } = useCreateClubTable();
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
     
-    setIsLoading(true);
     setError("");
     
     try {
       const smallBlind = parseInt(sb);
-      await clubsApi.createClubTable({
+      await createClubTable({
         room_name: name,
         small_blind: smallBlind,
         max_players: parseInt(maxPlayers),
         club_id: clubId,
         custom_settings: {
-          table_visibility: 'PRIVATE' // Club tables are implicitly private to the club
+          table_visibility: 'PRIVATE'
         }
       });
       onSuccess();
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to create table");
-    } finally {
-      setIsLoading(false);
     }
   };
 

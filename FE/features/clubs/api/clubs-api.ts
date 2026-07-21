@@ -17,9 +17,6 @@ export const clubsApi = {
   getClubDetail: (id: string) =>
     httpClient.get(`/api/v1/clubs/${id}`).then(res => res.data),
 
-  // Get Club Members
-  getClubMembers: (id: string) =>
-    httpClient.get(`/api/v1/clubs/${id}/members`).then(res => res.data),
 
   // A-BE-08: Update role
   updateRole: (clubId: string, userId: string, role: 'AGENT' | 'MEMBER') =>
@@ -39,4 +36,16 @@ export const clubsApi = {
     
   createClubTable: (data: any) =>
     httpClient.post("/api/v1/rooms", data).then(res => res.data),
+
+  // Update club
+  updateClub: (id: string, data: { name?: string; description?: string; avatar_url?: string; }) =>
+    httpClient.put(`/api/v1/clubs/${id}`, data).then(res => res.data),
+
+  // Kick/ban member
+  removeMember: (clubId: string, userId: string, ban?: boolean) =>
+    httpClient.delete(`/api/v1/clubs/${clubId}/members/${userId}${ban ? '?ban=true' : ''}`).then(res => res.data),
+
+  // Leave club
+  leaveClub: (id: string) =>
+    httpClient.delete(`/api/v1/clubs/${id}/leave`).then(res => res.data),
 };
