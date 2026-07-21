@@ -3,14 +3,14 @@ import LeaderboardContent from "./LeaderboardClient";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Bảng Xếp Hạng Cao Thủ Poker - Hall of Fame | PKCG",
-  description: "Bảng xếp hạng cập nhật liên tục các game thủ Poker xuất sắc nhất tuần, tháng tại cổng game PKCG. Xem số ván thắng và tổng số chips thắng cược.",
+  title: "Poker Masters Leaderboard - Hall of Fame | PKCG",
+  description: "Leaderboard continuously updating the best Poker players of the week and month on PKCG. View wins and total chips won.",
   alternates: {
     canonical: "https://pkcg.com/leaderboard",
   },
   openGraph: {
-    title: "Bảng Xếp Hạng Cao Thủ Poker - Hall of Fame | PKCG",
-    description: "Bảng xếp hạng cập nhật liên tục các game thủ Poker xuất sắc nhất tuần, tháng tại cổng game PKCG.",
+    title: "Poker Masters Leaderboard - Hall of Fame | PKCG",
+    description: "Leaderboard continuously updating the best Poker players of the week and month on PKCG.",
     url: "https://pkcg.com/leaderboard",
     type: "website",
   },

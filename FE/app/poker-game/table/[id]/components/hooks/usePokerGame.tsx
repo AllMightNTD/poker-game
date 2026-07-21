@@ -168,7 +168,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [draftMuteAllVoice, setDraftMuteAllVoice] = useState(false);
 
   // Table State
-  const [tableName, setTableName] = useState("Bàn Poker");
+  const [tableName, setTableName] = useState("Poker Tables");
   const [maxPlayers, setMaxPlayers] = useState(6);
   const [smallBlind, setSmallBlind] = useState("50");
   const [bigBlind, setBigBlind] = useState("100");
@@ -290,7 +290,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [gameStage]);
 
   const showToast = (text: any, type: "success" | "error" | "info" | "warning" = "success") => {
-    let formattedText = "Đã xảy ra lỗi không xác định.";
+    let formattedText = "An unknown error occurred.";
     if (typeof text === "string") {
       formattedText = text;
     } else if (Array.isArray(text)) {
@@ -419,11 +419,11 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     socket.emit("table:get-chat-history", { room_id: tableId, offset: 0, limit: 20 });
 
     socket.on("error", (data: Record<string, unknown>) => {
-      showToast((data.message as string) || "Đã xảy ra lỗi không xác định.", "error");
+      showToast((data.message as string) || "An unknown error occurred.", "error");
     });
 
     socket.on("table:state", (data: SocketTypes.TableStatePayload) => {
-      setTableName(data.room_name || "Bàn Poker");
+      setTableName(data.room_name || "Poker Tables");
       setMaxPlayers(data.max_players || 6);
       setGameStage(data.game_stage);
       if (data.game_stage !== 'waiting') {
@@ -500,7 +500,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               isSmallBlind: s.seatIndex === data.small_blind_seat,
               isBigBlind: s.seatIndex === data.big_blind_seat,
               isActive: s.seatIndex === data.current_turn_seat,
-              lastAction: s.status === "folded" ? "Fold" : s.status === "sitting_out" ? "Sit Out" : s.status === "disconnected" ? "Mất mạng" : "",
+              lastAction: s.status === "folded" ? "Fold" : s.status === "sitting_out" ? "Sit Out" : s.status === "disconnected" ? "Disconnected" : "",
               isFolded: s.status === "folded",
               hasAllIn: s.chips === "0" && s.status === "active",
               isHero,
@@ -613,7 +613,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setPlayers((prev) =>
         prev.map((p) =>
           p.seatIndex === data.seat_number
-            ? { ...p, lastAction: "Mất mạng" }
+            ? { ...p, lastAction: "Disconnected" }
             : p
         )
       );
@@ -675,7 +675,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
 
     socket.on("table:hand-aborted", (data: Record<string, unknown>) => {
-      showToast((data.reason as string) || "Ván bài bị huỷ đột ngột do lỗi hệ thống.", "error");
+      showToast((data.reason as string) || "The hand was aborted due to a system error.", "error");
       setCommunityCards([]);
       setGameStage("waiting");
     });
@@ -767,7 +767,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     socket.on("table:player-busted", (data: Record<string, unknown>) => {
       if (data.user_id === currentUserRef.current?.id) {
-        showToast(`Bạn đã hết chip và rời khỏi ghế (Trở thành khán giả). Bạn có thể Buy-in lại để tiếp tục chơi!`, "error");
+        showToast(`You ran out of chips and left your seat (became a spectator). You can buy-in again to continue playing!`, "error");
       } else {
         const actor = playersRef.current.find(p => p.seatIndex === data.seat_number);
         showToast(`Người chơi ${actor ? actor.name : `ở ghế ${data.seat_number}`} đã hết chip và rời bàn!`, "info");
@@ -782,7 +782,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setRitVotesYesCount(0);
       setRitVotesNoCount(0);
       setIsRitVotingActive(true);
-      showToast("Có biểu quyết Run It Twice (All-In Showdown)!", "info");
+      showToast("Run It Twice vote in progress (All-In Showdown)!", "info");
     });
 
     socket.on("table:rit-vote-updated", (data: { yes_count: number; no_count: number; total_voters: number }) => {
@@ -792,14 +792,14 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     socket.on("table:rit-vote-finalized", (data: { is_rit_active: boolean; yes_votes: string[] }) => {
       setIsRitVotingActive(false);
-      showToast(data.is_rit_active ? "Run It Twice ĐƯỢC CHẤP NHẬN!" : "Run It Twice BỊ TỪ CHỐI!", data.is_rit_active ? "success" : "warning");
+      showToast(data.is_rit_active ? "Run It Twice ACCEPTED!" : "Run It Twice DECLINED!", data.is_rit_active ? "success" : "warning");
     });
 
     socket.on("table:rabbit-cards", (data: { user_id: string; rabbit_cards: string[] }) => {
       const cards = data.rabbit_cards.map(parseCard);
       setRabbitCards(cards);
       const user = playersRef.current.find(p => p.id === data.user_id);
-      showToast(`${user ? user.name : "Người chơi"} đã săn thỏ: ${data.rabbit_cards.join(', ')}`, "info");
+      showToast(`${user ? user.name : "Players"} đã săn thỏ: ${data.rabbit_cards.join(', ')}`, "info");
     });
 
     socket.on("table:player-left-seat", (data: Record<string, unknown>) => {
@@ -809,7 +809,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     socket.on("table:player-sat-out", (data: Record<string, unknown>) => {
       if (data.user_id === currentUserRef.current?.id) {
-        showToast(`Bạn đã bị tự động chuyển sang trạng thái đi vắng do timeout!`, "warning");
+        showToast(`You have been automatically set to Away due to timeout!`, "warning");
       } else {
         const actor = playersRef.current.find(p => p.seatIndex === data.seat_number);
         showToast(`Người chơi ${actor ? actor.name : `ở ghế ${data.seat_number}`} đã chuyển sang trạng thái đi vắng.`, "info");
@@ -830,7 +830,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
 
     socket.on("table:sit-request-submitted", () => {
-      showToast("Yêu cầu xin ngồi của bạn đã được gửi và đang chờ chủ phòng duyệt.", "success");
+      showToast("Your request to sit has been sent and is awaiting host approval.", "success");
     });
 
     socket.on("table:sit-approved", (data: Record<string, unknown>) => {
@@ -838,7 +838,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
 
     socket.on("table:sit-declined", (data: Record<string, unknown>) => {
-      showToast((data.reason as string) || "Yêu cầu xin ngồi của bạn đã bị từ chối.", "error");
+      showToast((data.reason as string) || "Your request to sit was declined.", "error");
     });
 
     socket.on("user_joined_seat", (data: { display_name: string, seat_number: number, chips: number }) => {
@@ -855,12 +855,12 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     socket.on("table:waiting-for-players", (data: { required: number, current: number, starting: boolean, can_start?: boolean, paused?: boolean }) => {
       if (data.paused) {
         setWaitingMessage({
-          text: `Chủ phòng đã tạm dừng ván mới.`,
+          text: `The host has paused the next hand.`,
           starting: false
         });
       } else if (data.can_start) {
         setWaitingMessage({
-          text: `Đã đủ người. Tự động chia bài trong giây lát...`,
+          text: `Table is full. Automatically dealing in a moment...`,
           starting: true
         });
       } else {
@@ -874,15 +874,15 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     socket.on("table:status-changed", (data: { status: string }) => {
       setRoomStatus(data.status);
       if (data.status === 'paused') {
-        showToast("Chủ phòng đã tạm dừng trò chơi (sẽ không chia ván tiếp theo).", "warning");
+        showToast("The host has paused the game (the next hand will not be dealt).", "warning");
         if (gameStageRef.current === "waiting" || gameStageRef.current === "ended") {
           setWaitingMessage({
-            text: `Chủ phòng đã tạm dừng ván mới.`,
+            text: `The host has paused the next hand.`,
             starting: false
           });
         }
       } else if (data.status === 'waiting') {
-        showToast("Phòng chơi đã được mở lại.", "success");
+        showToast("The room has been reopened.", "success");
       }
     });
 
@@ -907,11 +907,11 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         );
       };
       resetUI();
-      showToast((data.message as string) || "Bàn đã được reset do không đủ người chơi.", "info");
+      showToast((data.message as string) || "The table has been reset due to insufficient players.", "info");
     });
 
     socket.on("table:destroyed", () => {
-      showToast("Bàn chơi đã bị giải tán do không có người tham gia trong thời gian dài.", "warning");
+      showToast("The table has been dissolved due to prolonged inactivity.", "warning");
       setTimeout(() => {
         router.push("/poker-game");
       }, 2000);
@@ -1073,21 +1073,21 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     await httpClient.post(`/api/v1/rooms/${tableId}/config`, {
       small_blind: sb,
     });
-    showToast("Đã cập nhật mức blinds của phòng.", "success");
+    showToast("Room blinds updated.", "success");
   };
 
   const kickPlayer = async (seatIndex: number) => {
     await httpClient.post(`/api/v1/rooms/${tableId}/kick`, {
       seat_number: seatIndex,
     });
-    showToast("Đã mời người chơi ra khỏi phòng.", "info");
+    showToast("Player has been removed from the room.", "info");
   };
 
   const forceSitOut = async (seatIndex: number) => {
     await httpClient.post(`/api/v1/rooms/${tableId}/force-sit-out`, {
       seat_number: seatIndex,
     });
-    showToast("Đã chuyển người chơi sang chế độ đi vắng.", "info");
+    showToast("Player has been set to Away.", "info");
   };
 
   const modifyPlayerStack = async (seatIndex: number, amount: number, action: "add" | "subtract") => {
@@ -1096,7 +1096,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       amount,
       action,
     });
-    showToast("Đã điều chỉnh lượng chip của người chơi.", "success");
+    showToast("Player's chips adjusted.", "success");
   };
 
   const fetchStats = async () => {
@@ -1108,10 +1108,10 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       await httpClient.post(`/api/v1/rooms/${tableId}/pause`, { paused });
       setRoomStatus(paused ? 'paused' : 'waiting');
-      showToast(paused ? "Đã tạm dừng phòng chơi." : "Đã mở lại phòng chơi.", "success");
+      showToast(paused ? "Room paused." : "Room reopened.", "success");
     } catch (error) {
       console.error("Toggle pause error:", error);
-      showToast("Không thể thay đổi trạng thái bàn lúc này", "error");
+      showToast("Cannot change table status at this time.", "error");
     }
   };
 

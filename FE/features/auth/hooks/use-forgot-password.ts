@@ -21,6 +21,7 @@ export function useForgotPassword(t: any) {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(getForgotPasswordSchema(t)),
@@ -45,6 +46,7 @@ export function useForgotPassword(t: any) {
 
   return {
     register,
+    control,
     handleSubmit: handleSubmit(onSubmit),
     errors,
     isSubmitting,

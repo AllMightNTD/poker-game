@@ -20,10 +20,10 @@ interface PokerStats {
 }
 
 const THROWABLES = [
-  { id: "tomato", name: "Cà chua", icon: "🍅", color: "from-red-500/20 to-rose-600/30 hover:border-red-500/50" },
+  { id: "tomato", name: "Tomato", icon: "🍅", color: "from-red-500/20 to-rose-600/30 hover:border-red-500/50" },
   { id: "beer", name: "Bia", icon: "🍺", color: "from-amber-400/20 to-yellow-500/30 hover:border-amber-500/50" },
-  { id: "rose", name: "Hoa hồng", icon: "🌹", color: "from-pink-500/20 to-red-500/30 hover:border-pink-500/50" },
-  { id: "bomb", name: "Bom nước", icon: "💣", color: "from-slate-700/35 to-slate-900/50 hover:border-slate-500/50" },
+  { id: "rose", name: "Rose", icon: "🌹", color: "from-pink-500/20 to-red-500/30 hover:border-pink-500/50" },
+  { id: "bomb", name: "Water Balloon", icon: "💣", color: "from-slate-700/35 to-slate-900/50 hover:border-slate-500/50" },
 ];
 
 export const PlayerHudPopup: React.FC<PlayerHudPopupProps> = ({ player, onClose }) => {
@@ -171,7 +171,7 @@ export const PlayerHudPopup: React.FC<PlayerHudPopupProps> = ({ player, onClose 
               className="w-16 h-16 rounded-full border-2 border-amber-500/50 bg-slate-950 object-cover shadow-[0_0_15px_rgba(245,158,11,0.2)]"
             />
             <div className="absolute -bottom-1 -right-1 bg-slate-950 border border-slate-800 rounded-full px-2 py-0.5 text-[8px] font-black text-amber-400 uppercase tracking-widest leading-none">
-              Ghế {player.seatIndex}
+              Seat {player.seatIndex}
             </div>
           </div>
 
@@ -187,7 +187,7 @@ export const PlayerHudPopup: React.FC<PlayerHudPopupProps> = ({ player, onClose 
               )}
             </div>
             <p className="text-xs text-emerald-400 font-bold mt-1">
-              Phỉnh: {parseInt(player.chips || "0").toLocaleString("vi-VN")}
+              Chips: {parseInt(player.chips || "0").toLocaleString("vi-VN")}
             </p>
           </div>
         </div>
@@ -199,8 +199,8 @@ export const PlayerHudPopup: React.FC<PlayerHudPopupProps> = ({ player, onClose 
           <div className="space-y-2">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <Award className="w-3.5 h-3.5 text-amber-500" />
-              Chỉ số Poker (Real-Time HUD)
-            </h4>
+              Poker Stats (Real-Time HUD)
+                                      </h4>
             
             {loading ? (
               <div className="flex justify-center items-center py-6">
@@ -209,11 +209,11 @@ export const PlayerHudPopup: React.FC<PlayerHudPopupProps> = ({ player, onClose 
             ) : stats ? (
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-slate-950/60 border border-slate-800/50 rounded-2xl p-3 flex flex-col justify-center">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ván chơi</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Hands</span>
                   <span className="text-lg font-extrabold text-slate-200 mt-1">{stats.total_hands}</span>
                 </div>
                 <div className="bg-slate-950/60 border border-slate-800/50 rounded-2xl p-3 flex flex-col justify-center">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Thắng Lớn Nhất</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Biggest Win</span>
                   <span className="text-sm font-extrabold text-emerald-400 truncate mt-1">
                     +{parseInt(stats.biggest_win || "0").toLocaleString("vi-VN")}
                   </span>
@@ -221,22 +221,22 @@ export const PlayerHudPopup: React.FC<PlayerHudPopupProps> = ({ player, onClose 
                 <div className="bg-slate-950/60 border border-slate-800/50 rounded-2xl p-3 flex flex-col justify-center">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
                     VPIP
-                    <span className="text-[8px] text-amber-400/80 font-normal normal-case">(Tự nguyện vào Pot)</span>
+                    <span className="text-[8px] text-amber-400/80 font-normal normal-case">(VPIP)</span>
                   </span>
                   <span className="text-lg font-extrabold text-amber-400 mt-1">{stats.vpip}%</span>
                 </div>
                 <div className="bg-slate-950/60 border border-slate-800/50 rounded-2xl p-3 flex flex-col justify-center">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
                     PFR
-                    <span className="text-[8px] text-orange-400/80 font-normal normal-case">(Raise trước Flop)</span>
+                    <span className="text-[8px] text-orange-400/80 font-normal normal-case">(PFR)</span>
                   </span>
                   <span className="text-lg font-extrabold text-orange-400 mt-1">{stats.pfr}%</span>
                 </div>
               </div>
             ) : (
               <div className="text-center py-4 text-xs text-slate-500">
-                Không thể tải thông số người chơi.
-              </div>
+                Failed to load player stats.
+                                                    </div>
             )}
           </div>
 
@@ -245,8 +245,8 @@ export const PlayerHudPopup: React.FC<PlayerHudPopupProps> = ({ player, onClose 
             <div className="space-y-2">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Target className="w-3.5 h-3.5 text-rose-500" />
-                Ném vật phẩm tương tác
-              </h4>
+                Throw interactive items
+                                            </h4>
               <div className="grid grid-cols-4 gap-2">
                 {THROWABLES.map((item) => (
                   <button
@@ -267,11 +267,11 @@ export const PlayerHudPopup: React.FC<PlayerHudPopupProps> = ({ player, onClose 
             <div className="flex items-center justify-between">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <BookOpen className="w-3.5 h-3.5 text-emerald-500" />
-                Ghi chú đối thủ (Local Notes)
-              </h4>
+                Opponent Notes (Local)
+                                            </h4>
               {saveStatus !== "idle" && (
                 <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider animate-pulse">
-                  {saveStatus === "saving" ? "Đang lưu..." : "Đã lưu!"}
+                  {saveStatus === "saving" ? "Saving..." : "Saved!"}
                 </span>
               )}
             </div>
@@ -279,7 +279,7 @@ export const PlayerHudPopup: React.FC<PlayerHudPopupProps> = ({ player, onClose 
             <textarea
               value={note}
               onChange={handleNoteChange}
-              placeholder="Nhập lối chơi của đối thủ tại đây (Ví dụ: Thích bluff sông, chơi chặt chẽ, call nhiều...)"
+              placeholder="Enter opponent's playstyle here (e.g. likes to bluff river, plays tight, calls a lot...)"
               className="w-full h-20 bg-slate-950 border border-slate-800 rounded-2xl px-3 py-2 text-xs font-medium text-slate-200 placeholder-slate-600 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 outline-none transition-all resize-none"
             />
 
@@ -288,8 +288,8 @@ export const PlayerHudPopup: React.FC<PlayerHudPopupProps> = ({ player, onClose 
                 <div className="flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-slate-500" />
                   <div className="flex flex-col">
-                    <span className="text-xs font-extrabold text-slate-300">Chặn tin nhắn Chat</span>
-                    <span className="text-[9px] text-slate-600 font-bold uppercase tracking-wider">Ẩn tất cả chat từ người này</span>
+                    <span className="text-xs font-extrabold text-slate-300">Mute Chat</span>
+                    <span className="text-[9px] text-slate-600 font-bold uppercase tracking-wider">Hide all chat from this player</span>
                   </div>
                 </div>
                 <button
@@ -313,8 +313,8 @@ export const PlayerHudPopup: React.FC<PlayerHudPopupProps> = ({ player, onClose 
             onClick={onClose}
             className="px-6 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-black uppercase tracking-wider transition-colors duration-200"
           >
-            Đóng
-          </button>
+            Close
+                                </button>
         </div>
 
       </div>

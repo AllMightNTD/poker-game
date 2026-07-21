@@ -63,13 +63,13 @@ export const TableCard: React.FC<TableCardProps> = ({
             </span>
             {table.status === "RUNNING" && (
               <span className="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase border border-emerald-500/20">
-                ● Đang chơi
-              </span>
+                ● Playing
+                                            </span>
             )}
             {table.status === "WAITING" && (
               <span className="inline-flex px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold uppercase border border-amber-500/20">
-                ○ Đang chờ
-              </span>
+                ○ Waiting
+                                            </span>
             )}
           </div>
           <h3 className="font-black text-[#F7EFDD] group-hover:text-[#F4B942] transition-colors text-base md:text-lg tracking-tight">
@@ -77,8 +77,8 @@ export const TableCard: React.FC<TableCardProps> = ({
           </h3>
           {isHot && (
             <span className="inline-flex items-center gap-1.5 text-[10px] font-black text-[#E23744] uppercase tracking-wider animate-pulse">
-              <Flame size={12} /> Bàn đang Hot
-            </span>
+              <Flame size={12} /> Hot Tables
+                                      </span>
           )}
         </div>
 
@@ -102,7 +102,7 @@ export const TableCard: React.FC<TableCardProps> = ({
             }`}
           />
         ))}
-        <span className="text-[9px] font-bold uppercase text-[#F7EFDD]/30 tracking-widest ml-auto">Ghế trống</span>
+        <span className="text-[9px] font-bold uppercase text-[#F7EFDD]/30 tracking-widest ml-auto">Open Seats</span>
       </div>
 
       {/* Blinds & Buyin Area */}
@@ -137,7 +137,7 @@ export const TableCard: React.FC<TableCardProps> = ({
           {!isFull && (
             <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/joinbtn:animate-[shimmer_1.5s_infinite]" />
           )}
-          <span>{isFull ? "Bàn đã đầy" : "Vào Bàn Chơi"}</span>
+          <span>{isFull ? "Table Full" : "Join Table"}</span>
           {!isFull && <ChevronRight size={14} />}
         </motion.button>
 
@@ -146,7 +146,7 @@ export const TableCard: React.FC<TableCardProps> = ({
           whileTap={{ scale: 0.95 }}
           onClick={() => onSpectateTable(table)}
           className="p-3.5 rounded-xl bg-[#08121a]/90 hover:bg-[#0d2118] border border-[#F4B942]/30 text-[#F7EFDD]/70 hover:text-[#F4B942] transition-all flex items-center justify-center cursor-pointer shadow-md"
-          title="Theo dõi bàn đấu"
+          title="Spectate Table"
         >
           <Eye size={16} />
         </motion.button>

@@ -99,8 +99,8 @@ const JackpotOdometer = ({ initialValue }: { initialValue: number }) => {
       <div className="flex items-center gap-2 mb-2">
         <Trophy size={16} className="text-[#F4B942] animate-bounce" />
         <span className="text-[10px] text-[#F4B942] font-black uppercase tracking-widest drop-shadow-[0_2px_4px_rgba(244,185,66,0.2)]">
-          HŨ JACKPOT TÍCH LŨY
-        </span>
+          PROGRESSIVE JACKPOT
+                          </span>
       </div>
 
       <div className="flex items-center gap-1 font-mono">
@@ -204,7 +204,7 @@ function PokerGameLobby() {
   }, []);
 
   const showToast = (type: "success" | "error", text: any) => {
-    let formattedText = "Đã xảy ra lỗi không xác định.";
+    let formattedText = "An unknown error occurred.";
     if (typeof text === "string") {
       formattedText = text;
     } else if (Array.isArray(text)) {
@@ -288,11 +288,11 @@ function PokerGameLobby() {
     onSuccess: (data) => {
       if (data?.chips_balance) {
         queryClient.setQueryData(["wallet", "chips", currentUser?.id], data.chips_balance);
-        showToast("success", "Chúc mừng! Bạn vừa nhận 5,000,000 chips miễn phí 🎉");
+        showToast("success", "Congratulations! You just received 5,000,000 free chips 🎉");
       }
     },
     onError: (e: any) => {
-      showToast("error", e.response?.data?.message || "Lỗi nhận chips miễn phí.");
+      showToast("error", e.response?.data?.message || "Failed to claim free chips.");
     },
   });
 
@@ -331,7 +331,7 @@ function PokerGameLobby() {
       }, 800);
     },
     onError: (err: any) => {
-      showToast("error", err.response?.data?.message || "Không thể tạo bàn chơi lúc này.");
+      showToast("error", err.response?.data?.message || "Cannot create a table at this time.");
     },
   });
 
@@ -341,7 +341,7 @@ function PokerGameLobby() {
       // If table is private, prompt for password
       let password;
       if (table.table_visibility === "PRIVATE") {
-        password = prompt("Nhập mật khẩu để vào bàn chơi này:");
+        password = prompt("Enter password to join this table:");
         if (password === null) return null; // user cancelled
       }
       const res = await api.post("/api/v1/rooms/join-request", { room_id: table.id, password });
@@ -357,7 +357,7 @@ function PokerGameLobby() {
       }, 800);
     },
     onError: (e: any) => {
-      showToast("error", e.response?.data?.message || "Không thể vào bàn chơi lúc này.");
+      showToast("error", e.response?.data?.message || "Cannot join the table at this time.");
     },
   });
 
@@ -375,7 +375,7 @@ function PokerGameLobby() {
       }, 800);
     },
     onError: (e: any) => {
-      showToast("error", e.response?.data?.message || "Không thể xem bàn chơi lúc này.");
+      showToast("error", e.response?.data?.message || "Cannot view the table at this time.");
     },
   });
 
@@ -403,7 +403,7 @@ function PokerGameLobby() {
       const sorted = [...candidateTables].sort((a, b) => b.current_players - a.current_players);
       joinTableMutation.mutate(sorted[0]);
     } else {
-      showToast("error", "Không tìm thấy bàn trống phù hợp mức cược đã chọn. Bạn có thể tự tạo bàn mới!");
+      showToast("error", "No empty tables matching the selected stakes found. You can create your own table!");
       setTimeout(() => setIsCreateModalOpen(true), 1200);
     }
   };
@@ -472,8 +472,8 @@ function PokerGameLobby() {
             <Coins size={22} className="absolute inset-0 m-auto text-[#F4B942] animate-pulse" />
           </div>
           <p className="text-[#F7EFDD]/80 font-black tracking-widest text-xs uppercase">
-            Đang tải dữ liệu sảnh đấu...
-          </p>
+            Loading lobby data...
+                              </p>
         </div>
       </div>
     );
@@ -536,7 +536,7 @@ function PokerGameLobby() {
               className="flex items-center gap-2.5 bg-[#0b1612]/80 border border-white/10 hover:border-[#F4B942]/40 rounded-2xl p-1.5 pl-3 transition-all cursor-pointer shadow-lg select-none"
             >
               <div className="flex flex-col text-left hidden sm:flex">
-                <span className="text-xs font-black text-[#F7EFDD]">{currentUser?.user_name || "Tài khoản"}</span>
+                <span className="text-xs font-black text-[#F7EFDD]">{currentUser?.user_name || "Account"}</span>
                 <span className="text-[8px] text-[#F4B942] font-black uppercase tracking-widest flex items-center gap-1.5 mt-0.5">
                   <Sparkles size={8} className="text-[#F4B942] animate-pulse" />
                   VIP 3
@@ -561,7 +561,7 @@ function PokerGameLobby() {
                   >
                     <div className="px-3.5 py-3 border-b border-white/[0.06] mb-2">
                       <span className="text-xs font-black text-[#F7EFDD] block truncate">
-                        {currentUser?.email || "Chưa đăng nhập"}
+                        {currentUser?.email || "Not logged in"}
                       </span>
                       <span className="text-[9px] text-[#F7EFDD]/40 block uppercase font-black tracking-widest mt-1">
                         User ID: {currentUser?.id?.slice(0, 8)}...
@@ -570,20 +570,20 @@ function PokerGameLobby() {
 
                     <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[#F7EFDD]/85 hover:bg-[#F4B942]/10 hover:text-white transition-all cursor-pointer">
                       <User size={14} className="text-[#F4B942]" />
-                      Thông tin cá nhân
-                    </button>
+                      Profile
+                                                              </button>
                     <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[#F7EFDD]/85 hover:bg-[#F4B942]/10 hover:text-white transition-all cursor-pointer">
                       <Settings size={14} className="text-[#F4B942]" />
-                      Cài đặt game
-                    </button>
+                      Game Settings
+                                                              </button>
                     <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[#F7EFDD]/85 hover:bg-[#F4B942]/10 hover:text-white transition-all cursor-pointer">
                       <Mail size={14} className="text-[#F4B942]" />
-                      Hộp thư thông báo
-                    </button>
+                      Inbox
+                                                              </button>
                     <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-[#F7EFDD]/85 hover:bg-[#F4B942]/10 hover:text-white transition-all cursor-pointer">
                       <HelpCircle size={14} className="text-[#F4B942]" />
-                      Hỗ trợ kỹ thuật
-                    </button>
+                      Technical Support
+                                                              </button>
 
                     <div className="border-t border-white/[0.06] my-2" />
 
@@ -592,8 +592,8 @@ function PokerGameLobby() {
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
                     >
                       <LogOut size={14} />
-                      Đăng xuất
-                    </button>
+                      Log Out
+                                                              </button>
                   </motion.div>
                 </>
               )}
@@ -650,7 +650,7 @@ function PokerGameLobby() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2 border-b border-white/[0.06] pb-2.5">
                   <Zap size={16} className="text-[#F4B942] animate-pulse" />
-                  <h3 className="font-black text-sm text-[#F7EFDD] uppercase tracking-widest">Chơi Nhanh</h3>
+                  <h3 className="font-black text-sm text-[#F7EFDD] uppercase tracking-widest">Quick Play</h3>
                 </div>
 
                 {/* Game type quick select */}
@@ -712,7 +712,7 @@ function PokerGameLobby() {
                 className="mt-5 w-full py-3.5 rounded-xl bg-gradient-to-r from-[#F4B942] via-[#E0942A] to-[#B07316] text-[#060e0a] font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-[#F4B942]/20 cursor-pointer flex items-center justify-center gap-2 relative overflow-hidden group/quickbtn"
               >
                 <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/quickbtn:animate-[shimmer_1.5s_infinite]" />
-                <span>Bắt Đầu Ngay</span>
+                <span>Start Now</span>
                 <ChevronRight size={14} />
               </motion.button>
             </div>
@@ -745,8 +745,8 @@ function PokerGameLobby() {
               }`}
             >
               <Lock size={14} className="text-[#F4B942]" />
-              Phòng Riêng Tư
-              {activeTab === "private" && (
+              Private Room
+                                        {activeTab === "private" && (
                 <motion.span
                   layoutId="tab-underline"
                   className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#F4B942] to-[#E0942A]"
@@ -764,8 +764,8 @@ function PokerGameLobby() {
             className="pb-3.5 text-xs font-black text-[#F4B942] hover:text-[#E0942A] transition-colors flex items-center gap-1.5 uppercase tracking-widest cursor-pointer"
           >
             <Plus size={15} />
-            Tạo bàn chơi mới
-          </motion.button>
+            Create New Table
+                                </motion.button>
         </div>
 
         {/* Filters Bar */}
@@ -795,7 +795,7 @@ function PokerGameLobby() {
               <div className="absolute inset-0 rounded-full border-4 border-[#F4B942]/10" />
               <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-[#F4B942] animate-spin" />
             </div>
-            <span className="text-[#F7EFDD]/50 font-black uppercase tracking-widest text-xs">Đang tải bàn chơi...</span>
+            <span className="text-[#F7EFDD]/50 font-black uppercase tracking-widest text-xs">Loading table...</span>
           </div>
         ) : filteredTables.length > 0 ? (
           viewMode === "grid" ? (
@@ -818,13 +818,13 @@ function PokerGameLobby() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-white/[0.06] text-[10px] font-black uppercase text-[#F7EFDD]/40 tracking-widest bg-black/30">
-                      <th className="py-4.5 px-6">Tên bàn chơi</th>
+                      <th className="py-4.5 px-6">Table Name</th>
                       <th className="py-4.5 px-4">Game</th>
                       <th className="py-4.5 px-4">Blinds</th>
                       <th className="py-4.5 px-4">Buy-In</th>
-                      <th className="py-4.5 px-4">Người chơi</th>
-                      <th className="py-4.5 px-4 text-center">Trạng thái</th>
-                      <th className="py-4.5 px-6 text-right">Hành động</th>
+                      <th className="py-4.5 px-4">Players</th>
+                      <th className="py-4.5 px-4 text-center">Status</th>
+                      <th className="py-4.5 px-6 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.04] text-xs">
@@ -852,12 +852,12 @@ function PokerGameLobby() {
                           <td className="py-4.5 px-4 text-center">
                             {table.status === "RUNNING" ? (
                               <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-black text-[9px] border border-emerald-500/20 uppercase tracking-wider">
-                                Đang chơi
-                              </span>
+                                Playing
+                                                                        </span>
                             ) : (
                               <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 font-black text-[9px] border border-amber-500/20 uppercase tracking-wider">
-                                Đang chờ
-                              </span>
+                                Waiting
+                                                                            </span>
                             )}
                           </td>
                           <td className="py-4.5 px-6 text-right">
@@ -868,8 +868,8 @@ function PokerGameLobby() {
                                 onClick={() => spectateTableMutation.mutate(table)}
                                 className="px-3.5 py-2 rounded-xl bg-black/40 hover:bg-black/60 border border-[#F4B942]/30 text-[#F7EFDD]/70 hover:text-[#F4B942] transition-all text-[10px] font-black uppercase tracking-wider cursor-pointer"
                               >
-                                Theo dõi
-                              </motion.button>
+                                Spectate
+                                                                        </motion.button>
                               <motion.button
                                 whileHover={!isFull ? { scale: 1.02 } : {}}
                                 whileTap={!isFull ? { scale: 0.98 } : {}}
@@ -881,7 +881,7 @@ function PokerGameLobby() {
                                     : "bg-gradient-to-r from-[#F4B942] to-[#E0942A] hover:brightness-110 text-[#142019]"
                                 }`}
                               >
-                                {isFull ? "Bàn đầy" : "Vào chơi"}
+                                {isFull ? "Table full" : "Join"}
                               </motion.button>
                             </div>
                           </td>
@@ -909,11 +909,11 @@ function PokerGameLobby() {
               className="text-xl md:text-2xl font-black text-[#F7EFDD] relative z-10"
               style={{ fontFamily: "'Fraunces', Georgia, serif" }}
             >
-              Không tìm thấy bàn chơi phù hợp
-            </h3>
+              No matching tables found
+                                              </h3>
             <p className="text-[#F7EFDD]/60 text-xs max-w-sm mt-3 leading-relaxed relative z-10">
-              Hãy điều chỉnh lại từ khóa tìm kiếm, bộ lọc mức cược hoặc tự tạo một bàn chơi mới để bắt đầu cuộc chiến ngay!
-            </p>
+              Please adjust your search keyword, stakes filter, or create a new table to start playing now!
+                                              </p>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -921,8 +921,8 @@ function PokerGameLobby() {
               className="mt-8 inline-flex items-center gap-2 px-7 py-3.5 text-xs font-black text-[#060e0a] rounded-full bg-gradient-to-r from-[#F4B942] to-[#E0942A] hover:brightness-110 transition-all shadow-lg shadow-[#F4B942]/20 cursor-pointer uppercase tracking-widest relative z-10"
             >
               <Plus size={15} />
-              Tạo bàn chơi mới
-            </motion.button>
+              Create New Table
+                                              </motion.button>
           </div>
         )}
 
@@ -932,7 +932,7 @@ function PokerGameLobby() {
         {/* Footer info */}
         <footer className="w-full flex flex-wrap justify-between items-center gap-4 text-[10px] text-[#F7EFDD]/30 border-t border-white/[0.06] pt-6 mt-12 font-black uppercase tracking-widest">
           <div className="flex items-center gap-3">
-            <span>Phiên bản: v1.2.0-beta</span>
+            <span>Version: v1.2.0-beta</span>
             <span>•</span>
             <span className="flex items-center gap-1">
               <Cpu size={12} /> {fps} FPS
@@ -946,7 +946,7 @@ function PokerGameLobby() {
 
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse" />
-            <span>Mạng chủ: Đang kết nối</span>
+            <span>Server: Connecting</span>
           </div>
         </footer>
       </main>
@@ -965,23 +965,23 @@ function PokerGameLobby() {
           className="flex flex-col items-center gap-1 text-[#F4B942] transition-colors"
         >
           <Compass size={20} />
-          <span className="text-[9px] font-black uppercase tracking-widest">Sảnh</span>
+          <span className="text-[9px] font-black uppercase tracking-widest">Lobby</span>
         </button>
 
         <button
-          onClick={() => showToast("success", "Vui lòng xem mục nhiệm vụ ở các widget bên dưới!")}
+          onClick={() => showToast("success", "Please check the missions section in the widgets below!")}
           className="flex flex-col items-center gap-1 text-[#F7EFDD]/50 hover:text-white transition-colors"
         >
           <Award size={20} />
-          <span className="text-[9px] font-black uppercase tracking-widest">Nhiệm vụ</span>
+          <span className="text-[9px] font-black uppercase tracking-widest">Missions</span>
         </button>
 
         <button
-          onClick={() => showToast("success", "Vui lòng xem bảng xếp hạng ở các widget bên dưới!")}
+          onClick={() => showToast("success", "Please check the leaderboard in the widgets below!")}
           className="flex flex-col items-center gap-1 text-[#F7EFDD]/50 hover:text-white transition-colors"
         >
           <Trophy size={20} />
-          <span className="text-[9px] font-black uppercase tracking-widest">Xếp hạng</span>
+          <span className="text-[9px] font-black uppercase tracking-widest">Leaderboard</span>
         </button>
 
         <button
@@ -989,7 +989,7 @@ function PokerGameLobby() {
           className="flex flex-col items-center gap-1 text-[#F7EFDD]/50 hover:text-white transition-colors"
         >
           <Wallet size={20} />
-          <span className="text-[9px] font-black uppercase tracking-widest">Nhận phỉnh</span>
+          <span className="text-[9px] font-black uppercase tracking-widest">Claim Chips</span>
         </button>
       </nav>
 

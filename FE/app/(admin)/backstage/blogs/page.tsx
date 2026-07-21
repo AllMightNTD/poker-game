@@ -1,21 +1,22 @@
 "use client";
 
+import { FormButton, RHFInput, RHFSelect } from "@/components/ui/form";
 import httpClient from "@/core/api/http-client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  PenSquare,
-  Trash2,
+  BookOpen,
   Eye,
   EyeOff,
+  PenSquare,
   Plus,
   RefreshCw,
-  BookOpen,
   Search,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
-import { FormInput, FormSelect, FormButton } from "@/components/ui/form";
+import { useEffect, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 
 interface BlogPost {
   id: string;
@@ -29,6 +30,11 @@ interface BlogPost {
   updated_at: string;
 }
 
+interface BlogFilterValues {
+  search: string;
+  category: string;
+}
+
 async function fetchAdminBlogs(cursor?: string, category?: string) {
   const params = new URLSearchParams();
   if (cursor) params.set("cursor", cursor);
@@ -38,17 +44,30 @@ async function fetchAdminBlogs(cursor?: string, category?: string) {
   return res.data as { data: BlogPost[]; meta: { has_next_page: boolean; next_cursor: string | null } };
 }
 
+const CATEGORIES = ["Strategy", "Tournament", "News", "Lifestyle"];
+
 export default function AdminBlogsPage() {
   const queryClient = useQueryClient();
   const [cursor, setCursor] = useState<string | undefined>();
-  const [category, setCategory] = useState<string | undefined>();
-  const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<BlogPost | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
+  // Form chỉ dùng để giữ state filter (không submit) — cho phép tái dùng RHFInput/RHFSelect
+  const { control } = useForm<BlogFilterValues>({
+    defaultValues: { search: "", category: "" },
+  });
+  const search = useWatch({ control, name: "search" });
+  const category = useWatch({ control, name: "category" });
+
+  // Đổi danh mục thì quay lại trang đầu (giống hành vi cũ)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCursor(undefined);
+  }, [category]);
+
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["admin-blogs", cursor, category],
-    queryFn: () => fetchAdminBlogs(cursor, category),
+    queryFn: () => fetchAdminBlogs(cursor, category || undefined),
   });
 
   const showToast = (msg: string, type: "success" | "error") => {
@@ -65,9 +84,9 @@ export default function AdminBlogsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-blogs"] });
-      showToast("Đã cập nhật trạng thái xuất bản", "success");
+      showToast("Publish status updated", "success");
     },
-    onError: () => showToast("Cập nhật thất bại", "error"),
+    onError: () => showToast("Update failed", "error"),
   });
 
   // Delete blog
@@ -78,21 +97,19 @@ export default function AdminBlogsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-blogs"] });
       setDeleteTarget(null);
-      showToast("Đã xóa bài viết", "success");
+      showToast("Article deleted", "success");
     },
-    onError: () => showToast("Xóa thất bại", "error"),
+    onError: () => showToast("Delete failed", "error"),
   });
 
   const blogs = data?.data ?? [];
   const filtered = search
     ? blogs.filter(
-        (b) =>
-          b.title.toLowerCase().includes(search.toLowerCase()) ||
-          b.category.toLowerCase().includes(search.toLowerCase())
-      )
+      (b) =>
+        b.title.toLowerCase().includes(search.toLowerCase()) ||
+        b.category.toLowerCase().includes(search.toLowerCase())
+    )
     : blogs;
-
-  const CATEGORIES = ["Strategy", "Tournament", "News", "Lifestyle"];
 
   return (
     <div className="space-y-6">
@@ -101,11 +118,11 @@ export default function AdminBlogsPage() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-100 flex items-center gap-2">
             <BookOpen size={22} className="text-yellow-400" />
-            Quản lý bài viết Blog
-          </h1>
+            Blog Post Management
+                                </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Tạo, biên tập và quản lý nội dung chiến thuật Poker.
-          </p>
+            Create, edit, and manage Poker strategy content.
+                                </p>
         </div>
         <Link
           href="/backstage/blogs/editor"
@@ -113,27 +130,27 @@ export default function AdminBlogsPage() {
           id="btn-new-blog"
         >
           <Plus size={16} />
-          Bài viết mới
-        </Link>
+          New article
+                          </Link>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="flex-1 min-w-[200px]">
-          <FormInput
+          <RHFInput
+            control={control}
+            name="search"
             id="blog-search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Tìm bài viết..."
+            placeholder="Search articles..."
             leftIcon={<Search size={15} />}
             size="small"
           />
         </div>
-        <FormSelect
+        <RHFSelect
+          control={control}
+          name="category"
           id="blog-category-filter"
-          value={category ?? ""}
-          onChange={(e) => { setCursor(undefined); setCategory(e.target.value || undefined); }}
-          placeholder="Tất cả danh mục"
+          placeholder="All categories"
           size="small"
           options={CATEGORIES.map((c) => ({ value: c, label: c }))}
           className="!w-48"
@@ -142,7 +159,7 @@ export default function AdminBlogsPage() {
           onClick={() => refetch()}
           variant="text"
           className="min-w-0 p-2 text-slate-500 hover:text-slate-300"
-          title="Làm mới"
+          title="Refresh"
         >
           <RefreshCw size={15} />
         </FormButton>
@@ -151,22 +168,22 @@ export default function AdminBlogsPage() {
       {/* Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-slate-600 animate-pulse">Đang tải...</div>
+          <div className="p-8 text-center text-slate-600 animate-pulse">Loading...</div>
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center text-slate-600">
             <BookOpen size={40} className="mx-auto mb-3 opacity-30" />
-            <p>Chưa có bài viết nào</p>
+            <p>No articles found</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-800 text-slate-500 text-xs uppercase tracking-wider">
-                <th className="text-left py-3 px-4">Tiêu đề</th>
-                <th className="text-left py-3 px-4">Danh mục</th>
-                <th className="text-center py-3 px-4">Lượt xem</th>
-                <th className="text-center py-3 px-4">Trạng thái</th>
-                <th className="text-left py-3 px-4">Ngày tạo</th>
-                <th className="text-right py-3 px-4">Hành động</th>
+                <th className="text-left py-3 px-4">Title</th>
+                <th className="text-left py-3 px-4">Category</th>
+                <th className="text-center py-3 px-4">Views</th>
+                <th className="text-center py-3 px-4">Status</th>
+                <th className="text-left py-3 px-4">Created date</th>
+                <th className="text-right py-3 px-4">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -200,11 +217,10 @@ export default function AdminBlogsPage() {
                       <button
                         onClick={() => togglePublish.mutate(blog)}
                         disabled={togglePublish.isPending}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
-                          blog.is_published
-                            ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
-                            : "bg-slate-700 text-slate-500 hover:bg-slate-600"
-                        }`}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${blog.is_published
+                          ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                          : "bg-slate-700 text-slate-500 hover:bg-slate-600"
+                          }`}
                       >
                         {blog.is_published ? (
                           <><Eye size={11} /> Published</>
@@ -221,14 +237,14 @@ export default function AdminBlogsPage() {
                         <Link
                           href={`/backstage/blogs/editor?id=${blog.id}`}
                           className="p-1.5 text-slate-500 hover:text-yellow-400 hover:bg-yellow-400/10 rounded-lg transition-all"
-                          title="Chỉnh sửa"
+                          title="Edit"
                         >
                           <PenSquare size={14} />
                         </Link>
                         <button
                           onClick={() => setDeleteTarget(blog)}
                           className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
-                          title="Xóa"
+                          title="Delete"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -250,8 +266,8 @@ export default function AdminBlogsPage() {
             variant="contained"
             color="primary"
           >
-            Tải thêm →
-          </FormButton>
+            Load more →
+                                </FormButton>
         </div>
       )}
 
@@ -272,25 +288,25 @@ export default function AdminBlogsPage() {
             >
               <div className="text-xl font-bold text-white mb-2 flex items-center gap-2">
                 <Trash2 size={20} className="text-red-400" />
-                Xác nhận xóa
-              </div>
+                Confirm deletion
+                                            </div>
               <p className="text-slate-400 text-sm mb-1">
-                Bạn sắp xóa bài viết:
-              </p>
+                You are about to delete the article:
+                                            </p>
               <p className="text-slate-200 font-medium mb-6 line-clamp-2">
                 &ldquo;{deleteTarget.title}&rdquo;
               </p>
               <p className="text-red-400/80 text-xs mb-6">
-                ⚠️ Hành động này không thể hoàn tác.
-              </p>
+                ⚠️ This action cannot be undone.
+                                            </p>
               <div className="flex gap-3">
                 <FormButton
                   onClick={() => setDeleteTarget(null)}
                   variant="outlined"
                   className="flex-1"
                 >
-                  Hủy
-                </FormButton>
+                  Cancel
+                                                  </FormButton>
                 <FormButton
                   onClick={() => deleteBlog.mutate(deleteTarget.id)}
                   disabled={deleteBlog.isPending}
@@ -299,8 +315,8 @@ export default function AdminBlogsPage() {
                   color="error"
                   className="flex-1"
                 >
-                  Xóa vĩnh viễn
-                </FormButton>
+                  Delete permanently
+                                                  </FormButton>
               </div>
             </motion.div>
           </motion.div>
@@ -314,11 +330,10 @@ export default function AdminBlogsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-xl ${
-              toast.type === "success"
-                ? "bg-emerald-600 text-white"
-                : "bg-red-600 text-white"
-            }`}
+            className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-xl ${toast.type === "success"
+              ? "bg-emerald-600 text-white"
+              : "bg-red-600 text-white"
+              }`}
           >
             {toast.msg}
           </motion.div>

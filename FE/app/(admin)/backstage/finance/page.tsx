@@ -40,7 +40,7 @@ export default function AdminFinancePage() {
   }, []);
 
   const handleProcess = async (id: string, status: "APPROVED" | "REJECTED") => {
-    const label = status === "APPROVED" ? "duyệt" : "từ chối";
+    const label = status === "APPROVED" ? "approve" : "reject";
     if (!confirm(`Xác nhận ${label} giao dịch này?`)) return;
     try {
       await httpClient.post(
@@ -49,15 +49,15 @@ export default function AdminFinancePage() {
       );
       setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, status } : tx));
     } catch {
-      alert("Xử lý giao dịch thất bại");
+      alert("Failed to process transaction");
     }
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-100">Giao dịch tài chính</h1>
-        <p className="text-slate-500 text-sm mt-1">Duyệt hoặc từ chối yêu cầu nạp / rút của người chơi.</p>
+        <h1 className="text-2xl font-semibold text-slate-100">Financial Transactions</h1>
+        <p className="text-slate-500 text-sm mt-1">Approve or reject player deposit/withdrawal requests.</p>
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
@@ -65,37 +65,37 @@ export default function AdminFinancePage() {
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-slate-800/40 border-b border-slate-800 text-xs text-slate-500">
-                <th className="p-3 font-medium">Người dùng / Mã GD</th>
-                <th className="p-3 font-medium">Loại</th>
-                <th className="p-3 font-medium">Số tiền</th>
-                <th className="p-3 font-medium">Trạng thái</th>
-                <th className="p-3 font-medium">Thời gian</th>
-                <th className="p-3 font-medium text-right">Thao tác</th>
+                <th className="p-3 font-medium">User / Transaction ID</th>
+                <th className="p-3 font-medium">Type</th>
+                <th className="p-3 font-medium">Amount</th>
+                <th className="p-3 font-medium">Status</th>
+                <th className="p-3 font-medium">Time</th>
+                <th className="p-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-slate-500">
-                    Đang tải giao dịch...
-                  </td>
+                    Loading transactions...
+                                                        </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-slate-500">
-                    Không có giao dịch nào.
-                  </td>
+                    No transactions found.
+                                                            </td>
                 </tr>
               ) : (
                 transactions.map((tx) => (
                   <tr key={tx.id} className="hover:bg-slate-800/30 transition-colors">
                     <td className="p-3">
-                      <div className="font-medium text-slate-100">{tx.user?.user_name || "Không xác định"}</div>
+                      <div className="font-medium text-slate-100">{tx.user?.user_name || "Unknown"}</div>
                       <div className="text-xs text-slate-500 font-mono mt-0.5">{tx.id.substring(0, 8)}...</div>
                     </td>
                     <td className="p-3">
                       <span className="text-xs px-2 py-1 rounded-md bg-slate-800 text-slate-300">
-                        {tx.type === "DEPOSIT" ? "Nạp tiền" : "Rút tiền"}
+                        {tx.type === "DEPOSIT" ? "Deposit" : "Withdraw"}
                       </span>
                     </td>
                     <td className="p-3 font-medium text-slate-100">
@@ -104,18 +104,18 @@ export default function AdminFinancePage() {
                     <td className="p-3">
                       {tx.status === "PENDING" && (
                         <span className="flex items-center gap-1.5 text-xs text-amber-400">
-                          <Clock size={12} /> Đang chờ
-                        </span>
+                          <Clock size={12} /> Waiting
+                                                            </span>
                       )}
                       {tx.status === "APPROVED" && (
                         <span className="flex items-center gap-1.5 text-xs text-emerald-400">
-                          <Check size={12} /> Đã duyệt
-                        </span>
+                          <Check size={12} /> Approved
+                                                            </span>
                       )}
                       {tx.status === "REJECTED" && (
                         <span className="flex items-center gap-1.5 text-xs text-red-400">
-                          <X size={12} /> Từ chối
-                        </span>
+                          <X size={12} /> Rejected
+                                                            </span>
                       )}
                     </td>
                     <td className="p-3 text-slate-500">
@@ -162,8 +162,8 @@ export default function AdminFinancePage() {
               color="primary"
               size="small"
             >
-              Tải thêm
-            </FormButton>
+              Load more
+                                      </FormButton>
           </div>
         )}
       </div>

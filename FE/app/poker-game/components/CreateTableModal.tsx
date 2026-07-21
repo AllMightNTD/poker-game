@@ -1,7 +1,9 @@
+import { FormButton } from "@/components/ui/form";
+import { RHFCheckbox, RHFInput, RHFSelect } from "@/components/ui/form/RhfFields";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Shield, X } from "lucide-react";
 import React, { useState } from "react";
-import { FormInput, FormSelect, FormCheckbox, FormButton } from "@/components/ui/form";
+import { useForm, useWatch } from "react-hook-form";
 
 interface CreateTableModalProps {
   isOpen: boolean;
@@ -30,51 +32,55 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
   onClose,
   onSubmit,
 }) => {
-  const [newTableName, setNewTableName] = useState("");
-  const [newGameType, setNewGameType] = useState("NLH");
-  const [newSmallBlind, setNewSmallBlind] = useState("1000");
-  const [newBigBlind, setNewBigBlind] = useState("2000");
-  const [newMaxPlayers, setNewMaxPlayers] = useState(9);
-  const [newMinBuyin, setNewMinBuyin] = useState("40000");
-  const [newMaxBuyin, setNewMaxBuyin] = useState("200000");
+  const { control, handleSubmit, setValue, reset } = useForm({
+    defaultValues: {
+      newTableName: "",
+      newGameType: "NLH",
+      newSmallBlind: "1000",
+      newMaxPlayers: "9",
+      visibility: "PUBLIC",
+      password: "",
+      turnTime: "15",
+      timeBank: "30",
+      maxSpectators: "10",
+      allowChat: true,
+      allowEmotes: true,
+    }
+  });
+
   const [isCustomSmallBlind, setIsCustomSmallBlind] = useState(false);
 
-  // Advanced settings
-  const [visibility, setVisibility] = useState("PUBLIC");
-  const [password, setPassword] = useState("");
-  const [turnTime, setTurnTime] = useState(15);
-  const [timeBank, setTimeBank] = useState(30);
-  const [maxSpectators, setMaxSpectators] = useState(10);
-  const [allowChat, setAllowChat] = useState(true);
-  const [allowEmotes, setAllowEmotes] = useState(true);
+  const newSmallBlind = useWatch({ control, name: "newSmallBlind" });
+  const visibility = useWatch({ control, name: "visibility" });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const sbVal = parseInt(newSmallBlind);
-    if (isNaN(sbVal) || sbVal <= 0) return;
+  const sbVal = parseInt(newSmallBlind) || 0;
+  const newBigBlind = (sbVal * 2).toString();
+  const newMinBuyin = (sbVal * 40).toString();
+  const newMaxBuyin = (sbVal * 200).toString();
+
+  const onSubmitForm = (data: any) => {
+    const sb = parseInt(data.newSmallBlind);
+    if (isNaN(sb) || sb <= 0) return;
 
     onSubmit({
-      room_name: newTableName,
-      game_type: newGameType,
-      small_blind: sbVal,
-      max_players: newMaxPlayers,
-      min_buy_in: sbVal * 40,
-      max_buy_in: sbVal * 200,
-      turn_time_limit: turnTime,
-      time_bank: timeBank,
+      room_name: data.newTableName,
+      game_type: data.newGameType,
+      small_blind: sb,
+      max_players: parseInt(data.newMaxPlayers),
+      min_buy_in: sb * 40,
+      max_buy_in: sb * 200,
+      turn_time_limit: parseInt(data.turnTime),
+      time_bank: parseInt(data.timeBank),
       custom_settings: {
-        table_visibility: visibility,
-        password: visibility === "PRIVATE" ? password : undefined,
-        max_spectators: maxSpectators,
-        allow_chat: allowChat,
-        allow_emotes: allowEmotes,
+        table_visibility: data.visibility,
+        password: data.visibility === "PRIVATE" ? data.password : undefined,
+        max_spectators: parseInt(data.maxSpectators),
+        allow_chat: data.allowChat,
+        allow_emotes: data.allowEmotes,
       },
     });
 
-    // Reset fields
-    setNewTableName("");
-    setPassword("");
-    setVisibility("PUBLIC");
+    reset();
     setIsCustomSmallBlind(false);
   };
 
@@ -91,7 +97,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
             <div className="flex items-center justify-between p-5 border-b border-white/5">
               <h3 className="font-black text-[#F7EFDD] text-lg flex items-center gap-2">
                 <Plus size={20} className="text-[#F4B942]" />
-                Tạo Bàn Chơi Mới
+                Create New Table
               </h3>
               <button
                 type="button"
@@ -102,23 +108,23 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[75vh] overflow-y-auto no-scrollbar">
+            <form onSubmit={handleSubmit(onSubmitForm)} className="p-5 space-y-4 max-h-[75vh] overflow-y-auto no-scrollbar">
               {/* Tên bàn */}
-              <FormInput
-                label="Tên bàn chơi"
+              <RHFInput
+                control={control}
+                name="newTableName"
+                label="Table Name"
                 required
-                value={newTableName}
-                onChange={(e) => setNewTableName(e.target.value)}
-                placeholder="Ví dụ: Vegas Room, Beginner Stakes..."
+                placeholder="Example: Vegas Room, Beginner Stakes..."
                 size="small"
               />
 
               {/* Game Type & Max Players */}
               <div className="grid grid-cols-2 gap-4">
-                <FormSelect
-                  label="Loại game"
-                  value={newGameType}
-                  onChange={(e) => setNewGameType(e.target.value)}
+                <RHFSelect
+                  control={control}
+                  name="newGameType"
+                  label="Game Type"
                   options={[
                     { value: "NLH", label: "Texas Hold'em" },
                     { value: "PLO", label: "Omaha" },
@@ -126,10 +132,10 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
                   size="small"
                 />
 
-                <FormSelect
-                  label="Số người tối đa"
-                  value={newMaxPlayers.toString()}
-                  onChange={(e) => setNewMaxPlayers(parseInt(e.target.value))}
+                <RHFSelect
+                  control={control}
+                  name="newMaxPlayers"
+                  label="Max Players"
                   options={[
                     { value: "9", label: "9 Players (Full Table)" },
                     { value: "6", label: "6 Players (Short Handed)" },
@@ -144,92 +150,81 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
                 <div className="space-y-1.5">
                   {isCustomSmallBlind ? (
                     <div className="flex gap-1.5 items-start">
-                      <FormInput
+                      <RHFInput
+                        control={control}
+                        name="newSmallBlind"
                         label="Small Blind"
                         type="number"
                         required
                         min={1}
-                        placeholder="Nhập..."
-                        value={newSmallBlind}
-                        onChange={(e) => {
-                          const sb = e.target.value;
-                          setNewSmallBlind(sb);
-                          const val = parseInt(sb) || 0;
-                          setNewBigBlind((val * 2).toString());
-                          setNewMinBuyin((val * 40).toString());
-                          setNewMaxBuyin((val * 200).toString());
-                        }}
+                        placeholder="Enter..."
                         size="small"
                       />
                       <FormButton
+                        type="button"
                         onClick={() => {
                           setIsCustomSmallBlind(false);
-                          setNewSmallBlind("1000");
-                          setNewBigBlind("2000");
-                          setNewMinBuyin("40000");
-                          setNewMaxBuyin("200000");
+                          setValue("newSmallBlind", "1000");
                         }}
                         variant="outlined"
                         color="primary"
                         size="medium"
                         sx={{ minWidth: 0, px: 2, height: 40, mt: 0.5 }}
                       >
-                        Mẫu
+                        Templates
                       </FormButton>
                     </div>
                   ) : (
-                    <FormSelect
-                      label="Small Blind"
-                      value={newSmallBlind}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "custom") {
+                    <div className="flex flex-col gap-1.5">
+                      <RHFSelect
+                        control={control}
+                        name="newSmallBlind"
+                        label="Small Blind"
+                        options={[
+                          { value: "50", label: "50" },
+                          { value: "100", label: "100" },
+                          { value: "200", label: "200" },
+                          { value: "400", label: "400" },
+                          { value: "600", label: "600" },
+                          { value: "800", label: "800" },
+                          { value: "1000", label: "1,000" },
+                          { value: "2000", label: "2,000" },
+                          { value: "5000", label: "5,000" },
+                        ]}
+                        size="small"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
                           setIsCustomSmallBlind(true);
-                          setNewSmallBlind("");
-                          setNewBigBlind("0");
-                          setNewMinBuyin("0");
-                          setNewMaxBuyin("0");
-                        } else {
-                          setNewSmallBlind(val);
-                          const sbVal = parseInt(val) || 0;
-                          setNewBigBlind((sbVal * 2).toString());
-                          setNewMinBuyin((sbVal * 40).toString());
-                          setNewMaxBuyin((sbVal * 200).toString());
-                        }
-                      }}
-                      options={[
-                        { value: "50", label: "50" },
-                        { value: "100", label: "100" },
-                        { value: "200", label: "200" },
-                        { value: "400", label: "400" },
-                        { value: "600", label: "600" },
-                        { value: "800", label: "800" },
-                        { value: "1000", label: "1,000" },
-                        { value: "2000", label: "2,000" },
-                        { value: "5000", label: "5,000" },
-                        { value: "custom", label: "Tự nhập (Custom)..." },
-                      ]}
-                      size="small"
-                    />
+                          setValue("newSmallBlind", "");
+                        }}
+                        className="text-xs text-[#F4B942] hover:underline text-left mt-1"
+                      >
+                        Custom...
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                <FormInput
-                  label="Big Blind"
-                  disabled
-                  value={parseInt(newBigBlind || "0").toLocaleString()}
-                  size="small"
-                />
+                <div className="flex flex-col">
+                  <label className="mb-1 text-xs font-semibold text-[#F7EFDD]/70">Big Blind</label>
+                  <input
+                    disabled
+                    value={parseInt(newBigBlind || "0").toLocaleString()}
+                    className="h-9 px-3 rounded-xl bg-black/40 border border-white/10 text-sm text-white/50"
+                  />
+                </div>
               </div>
 
               {/* Buyins display */}
               <div className="grid grid-cols-2 gap-4 bg-[#08121a]/60 rounded-xl p-3 border border-white/5">
                 <div>
-                  <span className="text-[10px] text-[#F7EFDD]/40 block uppercase font-bold tracking-wider">Buy-In Tối Thiểu</span>
+                  <span className="text-[10px] text-[#F7EFDD]/40 block uppercase font-bold tracking-wider">Min Buy-In</span>
                   <span className="text-xs font-bold text-[#F4B942]">{parseInt(newMinBuyin || "0").toLocaleString()} Chips</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-[#F7EFDD]/40 block uppercase font-bold tracking-wider">Buy-In Tối Đa</span>
+                  <span className="text-[10px] text-[#F7EFDD]/40 block uppercase font-bold tracking-wider">Max Buy-In</span>
                   <span className="text-xs font-bold text-[#F4B942]">{parseInt(newMaxBuyin || "0").toLocaleString()} Chips</span>
                 </div>
               </div>
@@ -237,29 +232,29 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
               {/* Advanced config: Visibility (Public/Private) */}
               <div className="border-t border-white/5 pt-4 space-y-4">
                 <h4 className="text-xs font-black text-[#F4B942] uppercase tracking-wider flex items-center gap-1.5">
-                  <Shield size={14} /> Cấu hình nâng cao (Bàn CG)
+                  <Shield size={14} /> Advanced Settings (Cash Game)
                 </h4>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <FormSelect
-                    label="Trạng thái phòng"
-                    value={visibility}
-                    onChange={(e) => setVisibility(e.target.value)}
+                  <RHFSelect
+                    control={control}
+                    name="visibility"
+                    label="Table Status"
                     options={[
-                      { value: "PUBLIC", label: "Công khai (Public)" },
-                      { value: "PRIVATE", label: "Riêng tư (Private)" },
+                      { value: "PUBLIC", label: "Public" },
+                      { value: "PRIVATE", label: "Private" },
                     ]}
                     size="small"
                   />
 
                   {visibility === "PRIVATE" && (
-                    <FormInput
-                      label="Mật khẩu bàn"
+                    <RHFInput
+                      control={control}
+                      name="password"
+                      label="Table Password"
                       type="password"
                       required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Nhập mật khẩu..."
+                      placeholder="Enter password..."
                       size="small"
                     />
                   )}
@@ -267,27 +262,27 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
 
                 {/* Turn Time & Time Bank */}
                 <div className="grid grid-cols-2 gap-4">
-                  <FormSelect
-                    label="Thời gian lượt (Turn)"
-                    value={turnTime.toString()}
-                    onChange={(e) => setTurnTime(parseInt(e.target.value))}
+                  <RHFSelect
+                    control={control}
+                    name="turnTime"
+                    label="Turn Time"
                     options={[
-                      { value: "10", label: "10 giây (Nhanh)" },
-                      { value: "15", label: "15 giây (Tiêu chuẩn)" },
-                      { value: "20", label: "20 giây" },
-                      { value: "30", label: "30 giây (Thong thả)" },
+                      { value: "10", label: "10 seconds (Fast)" },
+                      { value: "15", label: "15 seconds (Standard)" },
+                      { value: "20", label: "20 seconds" },
+                      { value: "30", label: "30 seconds (Relaxed)" },
                     ]}
                     size="small"
                   />
 
-                  <FormSelect
-                    label="Time Bank dự trữ"
-                    value={timeBank.toString()}
-                    onChange={(e) => setTimeBank(parseInt(e.target.value))}
+                  <RHFSelect
+                    control={control}
+                    name="timeBank"
+                    label="Time Bank Reserve"
                     options={[
-                      { value: "10", label: "10 giây" },
-                      { value: "30", label: "30 giây (Mặc định)" },
-                      { value: "60", label: "60 giây (Nhiều)" },
+                      { value: "10", label: "10 seconds" },
+                      { value: "30", label: "30 seconds (Default)" },
+                      { value: "60", label: "60 seconds (Extended)" },
                     ]}
                     size="small"
                   />
@@ -295,28 +290,28 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
 
                 {/* Max spectators & toggles */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                  <FormSelect
-                    label="Người xem tối đa (Spectators)"
-                    value={maxSpectators.toString()}
-                    onChange={(e) => setMaxSpectators(parseInt(e.target.value))}
+                  <RHFSelect
+                    control={control}
+                    name="maxSpectators"
+                    label="Max Spectators"
                     options={[
-                      { value: "0", label: "Không giới hạn" },
-                      { value: "5", label: "Tối đa 6 người" },
-                      { value: "10", label: "Tối đa 9 người" },
+                      { value: "0", label: "Unlimited" },
+                      { value: "5", label: "Max 6 players" },
+                      { value: "10", label: "Max 9 players" },
                     ]}
                     size="small"
                   />
 
                   <div className="flex gap-4 pt-2">
-                    <FormCheckbox
-                      label="Cho phép Chat"
-                      checked={allowChat}
-                      onChange={(e) => setAllowChat(e.target.checked)}
+                    <RHFCheckbox
+                      control={control}
+                      name="allowChat"
+                      label="Allow Chat"
                     />
-                    <FormCheckbox
-                      label="Cho phép Thả Emote"
-                      checked={allowEmotes}
-                      onChange={(e) => setAllowEmotes(e.target.checked)}
+                    <RHFCheckbox
+                      control={control}
+                      name="allowEmotes"
+                      label="Allow Emotes"
                     />
                   </div>
                 </div>
@@ -331,7 +326,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
                   fullWidth
                   size="large"
                 >
-                  Hủy Bỏ
+                  Cancel
                 </FormButton>
                 <FormButton
                   type="submit"
@@ -340,7 +335,7 @@ export const CreateTableModal: React.FC<CreateTableModalProps> = ({
                   fullWidth
                   size="large"
                 >
-                  Tạo & Vào Bàn
+                  Create & Join Table
                 </FormButton>
               </div>
             </form>

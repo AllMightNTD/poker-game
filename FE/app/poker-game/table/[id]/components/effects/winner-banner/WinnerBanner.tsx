@@ -40,7 +40,7 @@ export const WinnerBanner: React.FC<WinnerBannerProps> = ({
                         >
                             <button
                                 onClick={dismiss}
-                                aria-label="Đóng"
+                                aria-label="Close"
                                 className="absolute top-1.5 right-2 text-[#F7EFDD]/40 hover:text-white transition-colors"
                             >
                                 <X size={12} />
@@ -49,7 +49,7 @@ export const WinnerBanner: React.FC<WinnerBannerProps> = ({
                             <WinnerEyebrow handName={handName} wonByFold={wonByFold} />
 
                             <h2 className="text-lg md:text-xl font-black text-white uppercase tracking-tight my-0.5">
-                                {isSingleWinner ? WINNER_LABELS.winTitle(fmtChips(totalWon)) : "CHIẾN THẮNG"}
+                                {isSingleWinner ? WINNER_LABELS.winTitle(fmtChips(totalWon)) : "WIN"}
                             </h2>
 
                             <WinnerList winners={winners} showHandNames={!wonByFold} />

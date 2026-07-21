@@ -1,6 +1,7 @@
 "use client";
 
-import { FormButton, FormInput } from "@/components/ui/form";
+import { FormButton } from "@/components/ui/form";
+import { RHFInput } from "@/components/ui/form/RhfFields";
 import httpClient from "@/core/api/http-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Cookies from "js-cookie";
@@ -11,8 +12,8 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 const adminLoginSchema = z.object({
-  email: z.string().email("Email không hợp lệ"),
-  password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
+  email: z.string().email("Invalid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type AdminLoginValues = z.infer<typeof adminLoginSchema>;
@@ -22,7 +23,7 @@ export const AdminLoginForm = () => {
   const [error, setError] = useState<string | null>(null);
 
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<AdminLoginValues>({
@@ -36,7 +37,7 @@ export const AdminLoginForm = () => {
   const getErrorMessage = (err: unknown): string => {
     const axiosErr = err as { response?: { data?: { message?: unknown; error?: string } } };
     const data = axiosErr.response?.data;
-    if (!data) return "Sai thông tin đăng nhập.";
+    if (!data) return "Incorrect login credentials.";
 
     const message = data.message;
     if (typeof message === "string") return message;
@@ -57,7 +58,7 @@ export const AdminLoginForm = () => {
 
     if (typeof data.error === "string") return data.error;
 
-    return "Sai thông tin đăng nhập.";
+    return "Incorrect login credentials.";
   };
 
   const onSubmit = async (data: AdminLoginValues) => {
@@ -84,8 +85,8 @@ export const AdminLoginForm = () => {
         <div className="w-11 h-11 bg-slate-800 rounded-xl flex items-center justify-center mb-3">
           <Gamepad2 size={22} className="text-slate-300" />
         </div>
-        <h1 className="text-lg font-semibold text-slate-100">Đăng nhập quản trị</h1>
-        <p className="text-slate-500 text-xs mt-1">Chỉ dành cho nhân viên được cấp quyền</p>
+        <h1 className="text-lg font-semibold text-slate-100">Admin Login</h1>
+        <p className="text-slate-500 text-xs mt-1">Authorized personnel only</p>
       </div>
 
       {/* Error */}
@@ -99,20 +100,22 @@ export const AdminLoginForm = () => {
       <form onSubmit={handleSubmit(onSubmit)}>
         {/* Email */}
         <div className="grid grid-cols-1 gap-4">
-          <FormInput
-            {...register("email")}
+          <RHFInput
+            control={control}
+            name="email"
             type="email"
-            placeholder="Email quản trị"
+            placeholder="Admin Email"
             leftIcon={<Mail size={16} />}
             error={errors.email?.message}
             disabled={isSubmitting}
           />
 
           {/* Password */}
-          <FormInput
-            {...register("password")}
+          <RHFInput
+            control={control}
+            name="password"
             type="password"
-            placeholder="Mật khẩu"
+            placeholder="Password"
             leftIcon={<Lock size={16} />}
             error={errors.password?.message}
             disabled={isSubmitting}
@@ -126,8 +129,8 @@ export const AdminLoginForm = () => {
             fullWidth
             className="mt-2"
           >
-            Đăng nhập
-          </FormButton>
+            Log In
+                                </FormButton>
         </div>
       </form>
     </div>

@@ -76,12 +76,12 @@ export const TableHeader = () => {
   };
 
   const stageLabel =
-    gameStage === "showdown" ? "Ngửa bài"
+    gameStage === "showdown" ? "Show Cards"
       : gameStage === "preflop" ? "Pre-Flop"
         : gameStage === "flop" ? "Flop"
           : gameStage === "turn" ? "Turn"
             : gameStage === "river" ? "River"
-              : gameStage === "ended" ? "Đợi ván..."
+              : gameStage === "ended" ? "Waiting for hand..."
                 : gameStage;
 
   return (
@@ -122,7 +122,7 @@ export const TableHeader = () => {
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg">
             <Users size={10} className="text-slate-500" />
-            <span className="text-[9px] font-bold text-slate-400">{activePlayers} người</span>
+            <span className="text-[9px] font-bold text-slate-400">{activePlayers} players</span>
           </div>
           <div className="bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 py-1.5 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider">
             {stageLabel}
@@ -136,7 +136,7 @@ export const TableHeader = () => {
         <button
           onClick={() => setProvablyFairOpen(true)}
           className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
-          title="Xác minh công bằng"
+          title="Fair play verification"
         >
           <ShieldCheck size={14} />
         </button>
@@ -145,7 +145,7 @@ export const TableHeader = () => {
         <button
           onClick={() => setStatsOpen(true)}
           className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
-          title="Báo cáo phiên chơi"
+          title="Session report"
         >
           <FileText size={14} />
         </button>
@@ -160,14 +160,14 @@ export const TableHeader = () => {
                   ? "bg-rose-500/10 border-rose-500/30 text-rose-500 hover:bg-rose-500/20"
                   : "bg-slate-900 hover:bg-slate-800 border-slate-800 text-amber-500"
               }`}
-              title={roomStatus === 'paused' ? "Mở lại phòng chơi" : "Tạm dừng phòng chơi"}
+              title={roomStatus === 'paused' ? "Reopen room" : "Pause Room"}
             >
               {roomStatus === 'paused' ? <Play size={14} /> : <Pause size={14} className="fill-current" />}
             </button>
             <button
               onClick={() => setHostSettingsOpen(true)}
               className="relative w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
-              title="Quản trị phòng (Chủ phòng)"
+              title="Room Admin (Host)"
             >
               <Sliders size={14} className="text-amber-500" />
               {sitRequests && sitRequests.length > 0 && (

@@ -16,17 +16,17 @@ const roboto = Roboto({
 
 export const metadata: Metadata = {
   title: {
-    default: "PKCG - Cổng Game Poker Online Uy Tín Hàng Đầu Việt Nam",
+    default: "PKCG - Vietnam's Leading Online Poker Portal",
     template: "%s | PKCG",
   },
-  description: "Trải nghiệm PKCG - Cổng game bài Poker online đỉnh cao. Tham gia ngay các bàn đấu Texas Hold'em, Omaha kịch tính cùng hàng ngàn game thủ. Giao dịch nhanh chóng, bảo mật tuyệt đối.",
+  description: "Experience PKCG - The ultimate online Poker portal. Join thrilling Texas Hold'em and Omaha tables with thousands of players. Fast transactions, absolute security.",
   keywords: ["poker online", "poker viet nam", "texas holdem", "omaha plo", "game bai poker", "pkcg", "poker cg"],
   alternates: {
     canonical: "https://pkcg.com",
   },
   openGraph: {
-    title: "PKCG - Cổng Game Poker Online Uy Tín Hàng Đầu Việt Nam",
-    description: "Trải nghiệm PKCG - Cổng game bài Poker online đỉnh cao. Tham gia ngay các bàn đấu Texas Hold'em, Omaha kịch tính cùng hàng ngàn game thủ.",
+    title: "PKCG - Vietnam's Leading Online Poker Portal",
+    description: "Experience PKCG - The ultimate online Poker portal. Join thrilling Texas Hold'em and Omaha tables with thousands of players.",
     url: "https://pkcg.com",
     siteName: "PKCG",
     locale: "vi_VN",
@@ -34,8 +34,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "PKCG - Cổng Game Poker Online Uy Tín Hàng Đầu Việt Nam",
-    description: "Trải nghiệm PKCG - Cổng game bài Poker online đỉnh cao. Tham gia ngay các bàn đấu Texas Hold'em, Omaha kịch tính cùng hàng ngàn game thủ.",
+    title: "PKCG - Vietnam's Leading Online Poker Portal",
+    description: "Experience PKCG - The ultimate online Poker portal. Join thrilling Texas Hold'em and Omaha tables with thousands of players.",
   },
 };
 
@@ -60,7 +60,7 @@ const jsonLd = {
       "@type": "WebSite",
       "@id": "https://pkcg.com/#website",
       "url": "https://pkcg.com",
-      "name": "PKCG - Cổng Game Poker Online",
+      "name": "PKCG - Online Poker Portal",
       "publisher": {
         "@id": "https://pkcg.com/#organization"
       }

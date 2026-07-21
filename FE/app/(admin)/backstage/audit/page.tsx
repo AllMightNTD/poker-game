@@ -1,6 +1,8 @@
 "use client";
 
-import { FormButton, FormInput } from "@/components/ui/form";
+import { FormButton } from "@/components/ui/form";
+import { RHFInput } from "@/components/ui/form/RhfFields";
+import { useForm, useWatch } from "react-hook-form";
 import httpClient from "@/core/api/http-client";
 import { ChevronDown, Clock, Database, Globe, Monitor, Search } from "lucide-react";
 import React, { useEffect, useState } from "react";
@@ -48,8 +50,13 @@ export default function AdminAuditLogsPage() {
     const [loadingMore, setLoadingMore] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [hasMore, setHasMore] = useState(false);
-    const [query, setQuery] = useState("");
     const [expandedId, setExpandedId] = useState<string | null>(null);
+
+    const { control } = useForm({
+        defaultValues: { query: "" },
+    });
+    
+    const query = useWatch({ control, name: "query" });
 
     const fetchLogs = async (cursor?: string | null, searchStr: string = "") => {
         try {
@@ -90,20 +97,20 @@ export default function AdminAuditLogsPage() {
                     <div className="space-y-2">
                         <h1 className="text-2xl font-black tracking-wide text-white uppercase flex items-center gap-2">
                             <Database className="text-teal-400" size={24} />
-                            Nhật ký hệ thống
-                        </h1>
+                            System Logs
+                                                    </h1>
                         <p className="text-slate-400 text-sm font-medium">
-                            Lịch sử chi tiết mọi thao tác và hành động của các quản trị viên trên hệ thống PKCG.
-                        </p>
+                            Detailed history of all actions and operations performed by administrators on the PKCG system.
+                                                    </p>
                     </div>
 
                     <div className="w-full md:w-80 shrink-0">
                         <div className="relative">
-                            <FormInput
+                            <RHFInput
+                                control={control}
+                                name="query"
                                 type="text"
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                placeholder="Lọc theo Admin ID, hành động..."
+                                placeholder="Filter by Admin ID, action..."
                                 leftIcon={<Search size={16} className="text-slate-400" />}
                                 size="small"
                                 className="bg-slate-950/40 border-white/10"
@@ -121,10 +128,10 @@ export default function AdminAuditLogsPage() {
                             <tr className="bg-white/[0.02] border-b border-white/5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                                 <th className="p-4 w-12" />
                                 <th className="p-4">Admin ID</th>
-                                <th className="p-4">Hành động</th>
-                                <th className="p-4">Tài nguyên</th>
+                                <th className="p-4">Action</th>
+                                <th className="p-4">Resource</th>
                                 <th className="p-4">IP Address</th>
-                                <th className="p-4">Thời gian</th>
+                                <th className="p-4">Time</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
@@ -133,15 +140,15 @@ export default function AdminAuditLogsPage() {
                                     <td colSpan={6} className="p-12 text-center text-slate-500">
                                         <div className="flex flex-col items-center justify-center gap-2">
                                             <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
-                                            <span className="text-xs font-semibold tracking-wider text-slate-400">Đang tải dữ liệu kiểm toán...</span>
+                                            <span className="text-xs font-semibold tracking-wider text-slate-400">Loading audit logs...</span>
                                         </div>
                                     </td>
                                 </tr>
                             ) : logs.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="p-12 text-center text-slate-500">
-                                        Không tìm thấy bản ghi nhật ký hoạt động nào.
-                                    </td>
+                                        No activity logs found.
+                                                                                </td>
                                 </tr>
                             ) : (
                                 logs.map((log) => {
@@ -208,8 +215,8 @@ export default function AdminAuditLogsPage() {
                                                             {oldVal && (
                                                                 <div className="space-y-2">
                                                                     <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                                                        Dữ liệu trước (Original State)
-                                                                    </div>
+                                                                        Previous Data (Original State)
+                                                                                                                                            </div>
                                                                     <pre className="text-xs font-mono text-rose-300/90 bg-rose-950/10 border border-rose-900/30 rounded-xl p-4 overflow-x-auto whitespace-pre-wrap max-h-72 scrollbar-thin">
                                                                         {oldVal}
                                                                     </pre>
@@ -218,8 +225,8 @@ export default function AdminAuditLogsPage() {
                                                             {newVal && (
                                                                 <div className="space-y-2">
                                                                     <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                                                        Dữ liệu sau (Modified State)
-                                                                    </div>
+                                                                        Updated Data (Modified State)
+                                                                                                                                            </div>
                                                                     <pre className="text-xs font-mono text-emerald-300/90 bg-emerald-950/10 border border-emerald-900/30 rounded-xl p-4 overflow-x-auto whitespace-pre-wrap max-h-72 scrollbar-thin">
                                                                         {newVal}
                                                                     </pre>
@@ -269,8 +276,8 @@ export default function AdminAuditLogsPage() {
                             size="small"
                             className="bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold px-6 py-2 rounded-xl transition-all duration-200"
                         >
-                            Tải thêm nhật ký
-                        </FormButton>
+                            Load more logs
+                                                    </FormButton>
                     </div>
                 )}
             </div>

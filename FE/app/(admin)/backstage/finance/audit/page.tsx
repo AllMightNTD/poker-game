@@ -1,10 +1,12 @@
 "use client";
 
-import { FormButton, FormInput } from "@/components/ui/form";
+import { FormButton } from "@/components/ui/form";
+import { RHFInput } from "@/components/ui/form/RhfFields";
 import httpClient from "@/core/api/http-client";
 import { AnimatePresence, motion } from "framer-motion";
 import { Ban, Eye, Search, ShieldAlert, TrendingUp, UserX, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 
 export default function FinancialAuditPage() {
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -12,6 +14,19 @@ export default function FinancialAuditPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAlert, setSelectedAlert] = useState<any | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+
+  const { control } = useForm({
+    defaultValues: {
+      searchQuery: "",
+    },
+  });
+  
+  const formSearchQuery = useWatch({ control, name: "searchQuery" });
+  
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSearchQuery(formSearchQuery);
+  }, [formSearchQuery, setSearchQuery]);
 
   const fetchAlerts = useCallback(async () => {
     try {
@@ -52,7 +67,7 @@ export default function FinancialAuditPage() {
     setActionLoading(true);
     try {
       await httpClient.post(`/api/v1/admin/users/${userId}/ban`, {
-        reason: "Hệ thống phát hiện hành vi bơm chip/rửa tiền",
+        reason: "Chip Dumping & Money Laundering Detection System",
       });
       alert(`Đã khóa thành công tài khoản "${username}"`);
       setSelectedAlert(null);
@@ -72,10 +87,10 @@ export default function FinancialAuditPage() {
     setActionLoading(true);
     try {
       await httpClient.post(`/api/v1/admin/users/${dumperId}/ban`, {
-        reason: "Hệ thống phát hiện hành vi bơm chip/rửa tiền (Tài khoản Dumper)",
+        reason: "Chip Dumping & Money Laundering Detection (Dumper)",
       });
       await httpClient.post(`/api/v1/admin/users/${receiverId}/ban`, {
-        reason: "Hệ thống phát hiện hành vi bơm chip/rửa tiền (Tài khoản Receiver)",
+        reason: "Chip Dumping & Money Laundering Detection (Receiver)",
       });
       alert(`Đã khóa thành công cả hai tài khoản "${dumperName}" và "${receiverName}"`);
       setSelectedAlert(null);
@@ -107,19 +122,19 @@ export default function FinancialAuditPage() {
           <div className="space-y-2">
             <h1 className="text-2xl font-black tracking-wide text-white uppercase flex items-center gap-2">
               <ShieldAlert className="text-red-400" size={24} />
-              Phát hiện bơm chip (Chip Dumping)
-            </h1>
+              Chip Dumping Detection
+                                      </h1>
             <p className="text-slate-400 text-sm font-medium">
-              Giám sát giao dịch phi pháp & hành vi chuyển tiền bất thường giữa các tài khoản game thông qua các bàn chơi Poker.
-            </p>
+              Monitor illegal transactions and abnormal fund transfers between game accounts through poker tables.
+                                      </p>
           </div>
 
           <div className="w-full md:w-64 shrink-0">
-            <FormInput
+            <RHFInput
+              control={control}
+              name="searchQuery"
               type="text"
-              placeholder="Tìm kiếm người chơi..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search players..."
               leftIcon={<Search size={16} className="text-slate-400" />}
               size="small"
               className="bg-slate-950/40 border-white/10"
@@ -134,13 +149,13 @@ export default function FinancialAuditPage() {
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-white/[0.02] border-b border-white/5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                <th className="p-4">Tài khoản chuyển (Dumper)</th>
-                <th className="p-4">Tài khoản nhận (Receiver)</th>
-                <th className="p-4">Số ván chơi chung</th>
-                <th className="p-4">Tổng lượng cược</th>
-                <th className="p-4">Chip nhận ròng</th>
-                <th className="p-4">Mức độ rủi ro</th>
-                <th className="p-4 text-right">Chi tiết</th>
+                <th className="p-4">Sender Account (Dumper)</th>
+                <th className="p-4">Receiver Account</th>
+                <th className="p-4">Hands Played Together</th>
+                <th className="p-4">Total Bet</th>
+                <th className="p-4">Net Chips Received</th>
+                <th className="p-4">Risk Level</th>
+                <th className="p-4 text-right">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -149,15 +164,15 @@ export default function FinancialAuditPage() {
                   <td colSpan={7} className="p-12 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-xs font-semibold tracking-wider text-slate-400">Đang phân tích dữ liệu dòng tiền...</span>
+                      <span className="text-xs font-semibold tracking-wider text-slate-400">Analyzing cash flow data...</span>
                     </div>
                   </td>
                 </tr>
               ) : filteredAlerts.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-12 text-center text-slate-500 font-medium">
-                    Chưa phát hiện hành vi bơm chip bất thường nào trong hệ thống.
-                  </td>
+                    No abnormal chip dumping detected in the system.
+                                                            </td>
                 </tr>
               ) : (
                 filteredAlerts.map((alert, idx) => {
@@ -178,7 +193,7 @@ export default function FinancialAuditPage() {
                         <div className="font-semibold text-slate-200">{alert.receiver.username}</div>
                         <div className="text-[10px] text-slate-500 font-mono select-all mt-0.5">ID: {alert.receiver.id.slice(0, 16)}…</div>
                       </td>
-                      <td className="p-4 text-slate-300 font-medium">{alert.joint_hands} ván</td>
+                      <td className="p-4 text-slate-300 font-medium">{alert.joint_hands} hands</td>
                       <td className="p-4 text-slate-400 font-mono text-xs">{Number(alert.total_dumper_bet).toLocaleString()} chips</td>
                       <td className="p-4 text-emerald-400 font-mono font-bold">+{Number(alert.total_receiver_net).toLocaleString()} chips</td>
                       <td className="p-4">
@@ -190,7 +205,7 @@ export default function FinancialAuditPage() {
                         <button
                           onClick={() => setSelectedAlert(alert)}
                           className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 border border-white/5 text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/10 transition-all cursor-pointer inline-flex"
-                          aria-label="Xem chi tiết"
+                          aria-label="View Details"
                         >
                           <Eye size={14} />
                         </button>
@@ -230,14 +245,14 @@ export default function FinancialAuditPage() {
                     <ShieldAlert size={16} />
                   </div>
                   <div>
-                    <h2 className="text-sm font-bold text-white tracking-wide">Chi tiết cảnh báo bơm chip</h2>
+                    <h2 className="text-sm font-bold text-white tracking-wide">Chip Dumping Alert Details</h2>
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Financial Audit Log</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedAlert(null)}
                   className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-white hover:bg-white/5 transition-all"
-                  aria-label="Đóng"
+                  aria-label="Close"
                 >
                   <X size={16} />
                 </button>
@@ -247,12 +262,12 @@ export default function FinancialAuditPage() {
               <div className="p-6 space-y-6 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-bold">Dumper (Chuyển tiền)</span>
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-bold">Dumper (Sender)</span>
                     <span className="text-slate-200 font-bold block text-sm">{selectedAlert.dumper.username}</span>
                     <span className="text-[9px] text-slate-500 font-mono block select-all truncate">ID: {selectedAlert.dumper.id}</span>
                   </div>
                   <div className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl space-y-1">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-bold">Receiver (Nhận tiền)</span>
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-bold">Receiver</span>
                     <span className="text-slate-200 font-bold block text-sm">{selectedAlert.receiver.username}</span>
                     <span className="text-[9px] text-slate-500 font-mono block select-all truncate">ID: {selectedAlert.receiver.id}</span>
                   </div>
@@ -261,8 +276,8 @@ export default function FinancialAuditPage() {
                 <div className="bg-white/[0.01] border border-white/5 rounded-2xl p-5 space-y-4">
                   <div className="flex justify-between items-center pb-3 border-b border-white/5">
                     <span className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                      <TrendingUp size={14} className="text-teal-400" /> Phân tích dòng tiền nghi vấn
-                    </span>
+                      <TrendingUp size={14} className="text-teal-400" /> Suspicious Cash Flow Analysis
+                                                              </span>
                     <span className={`px-2.5 py-0.5 border rounded-full text-[10px] font-bold uppercase tracking-wider ${selectedAlert.risk_level === "HIGH" ? "text-rose-400 bg-rose-950/20 border-rose-900/50" : "text-amber-400 bg-amber-950/20 border-amber-900/50"}`}>
                       {selectedAlert.risk_level} Risk
                     </span>
@@ -270,19 +285,19 @@ export default function FinancialAuditPage() {
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-xs">
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Số ván chơi chung:</span>
-                      <span className="text-slate-200 font-bold text-sm">{selectedAlert.joint_hands} ván đấu</span>
+                      <span className="text-slate-500 block mb-0.5">Hands played together:</span>
+                      <span className="text-slate-200 font-bold text-sm">{selectedAlert.joint_hands} hands</span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Dumper đã cược:</span>
+                      <span className="text-slate-500 block mb-0.5">Dumper bet:</span>
                       <span className="text-slate-200 font-mono font-bold text-sm">{Number(selectedAlert.total_dumper_bet).toLocaleString()} chips</span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Receiver đã thắng:</span>
+                      <span className="text-slate-500 block mb-0.5">Receiver won:</span>
                       <span className="text-slate-200 font-mono font-bold text-sm">{Number(selectedAlert.total_receiver_won).toLocaleString()} chips</span>
                     </div>
                     <div>
-                      <span className="text-slate-500 block mb-0.5">Nhận ròng (Net):</span>
+                      <span className="text-slate-500 block mb-0.5">Net received:</span>
                       <span className="text-emerald-400 font-mono font-black text-sm">+{Number(selectedAlert.total_receiver_net).toLocaleString()} chips</span>
                     </div>
                   </div>
@@ -290,7 +305,7 @@ export default function FinancialAuditPage() {
 
                 {/* Actions panel */}
                 <div className="space-y-3 pt-2 border-t border-white/5">
-                  <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Biện pháp xử lý tài khoản</h3>
+                  <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Account Actions</h3>
                   <div className="flex flex-col gap-2">
                     <FormButton
                       onClick={() => handleBanBoth(selectedAlert.dumper.id, selectedAlert.dumper.username, selectedAlert.receiver.id, selectedAlert.receiver.username)}
@@ -302,8 +317,8 @@ export default function FinancialAuditPage() {
                       className="bg-red-500 hover:bg-red-400 text-slate-950 font-bold py-2.5 rounded-xl transition-all"
                       fullWidth
                     >
-                      Khóa cả hai tài khoản nghi vấn
-                    </FormButton>
+                      Ban both suspect accounts
+                                                              </FormButton>
                     <div className="grid grid-cols-2 gap-2">
                       <FormButton
                         onClick={() => handleBanUser(selectedAlert.dumper.id, selectedAlert.dumper.username)}
@@ -314,8 +329,8 @@ export default function FinancialAuditPage() {
                         startIcon={<UserX size={14} />}
                         className="border-red-500/20 text-red-400 hover:bg-red-950/20 py-2.5 rounded-xl transition-all"
                       >
-                        Khóa Dumper
-                      </FormButton>
+                        Ban Dumper
+                                                                    </FormButton>
                       <FormButton
                         onClick={() => handleBanUser(selectedAlert.receiver.id, selectedAlert.receiver.username)}
                         disabled={actionLoading}
@@ -325,8 +340,8 @@ export default function FinancialAuditPage() {
                         startIcon={<UserX size={14} />}
                         className="border-red-500/20 text-red-400 hover:bg-red-950/20 py-2.5 rounded-xl transition-all"
                       >
-                        Khóa Receiver
-                      </FormButton>
+                        Ban Receiver
+                                                                    </FormButton>
                     </div>
                   </div>
                 </div>

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { AuditLog } from '../../entities/audit_log.entity';
 import {
-  decodeCursor,
   buildCursorPaginationResponse,
+  decodeCursor,
 } from '../../utils/pagination.util';
 
 @Injectable()

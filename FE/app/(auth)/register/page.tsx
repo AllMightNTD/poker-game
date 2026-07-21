@@ -2,14 +2,14 @@ import RegisterClient from "./RegisterClient";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Đăng Ký Tài Khoản Chơi Poker Nhận Chips Miễn Phí | PKCG",
-  description: "Đăng ký ngay tài khoản PKCG để nhận chips miễn phí hàng ngày. Tham gia cộng đồng Poker uy tín hàng đầu Việt Nam và tranh tài cùng hàng ngàn game thủ.",
+  title: "Register Poker Account to Receive Free Chips | PKCG",
+  description: "Register a PKCG account now to receive free daily chips. Join Vietnam's leading reputable poker community and compete with thousands of players.",
   alternates: {
     canonical: "https://pkcg.com/register",
   },
   openGraph: {
-    title: "Đăng Ký Tài Khoản Chơi Poker Nhận Chips Miễn Phí | PKCG",
-    description: "Đăng ký ngay tài khoản PKCG để nhận chips miễn phí hàng ngày. Tham gia cộng đồng Poker uy tín hàng đầu Việt Nam.",
+    title: "Register Poker Account to Receive Free Chips | PKCG",
+    description: "Register a PKCG account now to receive free daily chips. Join Vietnam's leading reputable poker community.",
     url: "https://pkcg.com/register",
     type: "website",
   },

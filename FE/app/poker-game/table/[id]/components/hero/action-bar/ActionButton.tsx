@@ -78,7 +78,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                     >
                         {isRaiseMode ? (
                             <>
-                                <span className="font-black text-xs md:text-sm">XÁC NHẬN</span>
+                                <span className="font-black text-xs md:text-sm">CONFIRM</span>
                                 <span className="text-[9px] font-bold opacity-85">${fmt(raiseAmount)}</span>
                             </>
                         ) : (

@@ -20,7 +20,7 @@ const SeatInfo: React.FC<SeatInfoProps> = React.memo(({ name, chips, isHero, isM
   };
 
   const isSittingOut = status === 'Sit Out';
-  const isDisconnected = status === 'Mất mạng';
+  const isDisconnected = status === 'Disconnected';
   const isWaiting = status === 'Waiting';
 
   return (

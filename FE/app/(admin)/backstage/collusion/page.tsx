@@ -3,7 +3,9 @@
 import httpClient from "@/core/api/http-client";
 import { Ban, Eye, Search, ShieldAlert, UserMinus, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { FormInput, FormButton } from "@/components/ui/form";
+import { FormButton } from "@/components/ui/form";
+import { RHFInput } from "@/components/ui/form/RhfFields";
+import { useForm, useWatch } from "react-hook-form";
 
 export default function AdminCollusionPage() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -11,7 +13,14 @@ export default function AdminCollusionPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  
+  const { control } = useForm({
+    defaultValues: {
+      searchQuery: "",
+    },
+  });
+  
+  const searchQuery = useWatch({ control, name: "searchQuery" });
 
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
   const [detail, setDetail] = useState<any | null>(null);
@@ -40,7 +49,7 @@ export default function AdminCollusionPage() {
       }
     } catch (e) {
       console.error(e);
-      alert("Không thể tải nhật ký cảnh báo bảo mật");
+      alert("Unable to load security alert logs");
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -70,7 +79,7 @@ export default function AdminCollusionPage() {
     setActionLoading(true);
     try {
       await httpClient.post(`/api/v1/admin/users/${userId}/ban`, {
-        reason: "Hệ thống phát hiện thông đồng/gian lận",
+        reason: "System detected collusion/fraud",
       });
       alert(`Đã khóa thành công tài khoản "${username}"`);
       setSelectedLogId(null);
@@ -86,7 +95,7 @@ export default function AdminCollusionPage() {
 
   const handleKickPlayer = async (userId: string, username: string, roomId: string) => {
     if (!roomId) {
-      alert("Thiếu ID phòng chơi để thực hiện trục xuất");
+      alert("Missing room ID to perform eviction");
       return;
     }
     if (!window.confirm(`Bạn có chắc chắn muốn TRỤC XUẤT người chơi "${username}" ra khỏi phòng #${roomId}?`)) {
@@ -115,20 +124,20 @@ export default function AdminCollusionPage() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-100 flex items-center gap-2">
             <ShieldAlert className="text-rose-500" />
-            Cảnh báo chống thông đồng (Anti-Collusion Logs)
-          </h1>
+            Anti-Collusion Logs
+                                </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Tra cứu lịch sử cảnh báo rủi ro người chơi chung mạng/thiết bị hoặc có hành vi rửa tiền.
-          </p>
+            Look up risk alert history for players sharing networks/devices or engaging in money laundering.
+                                </p>
         </div>
 
         <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full md:w-auto items-center">
           <div className="flex-1 md:w-64">
-            <FormInput
+            <RHFInput
+              control={control}
+              name="searchQuery"
               type="text"
-              placeholder="Tìm kiếm username, IP..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search username, IP..."
               leftIcon={<Search size={16} />}
               size="small"
             />
@@ -140,8 +149,8 @@ export default function AdminCollusionPage() {
             size="medium"
             className="shrink-0"
           >
-            Tìm kiếm
-          </FormButton>
+            Search
+                                </FormButton>
         </form>
       </div>
 
@@ -150,23 +159,23 @@ export default function AdminCollusionPage() {
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-slate-800/40 border-b border-slate-800 text-xs text-slate-500">
-                <th className="p-3 font-medium">Thời gian</th>
-                <th className="p-3 font-medium">Người chơi</th>
-                <th className="p-3 font-medium">Phòng chơi</th>
+                <th className="p-3 font-medium">Time</th>
+                <th className="p-3 font-medium">Players</th>
+                <th className="p-3 font-medium">Game room</th>
                 <th className="p-3 font-medium">Risk Score</th>
-                <th className="p-3 font-medium">Lý do chính</th>
-                <th className="p-3 font-medium">Địa chỉ IP</th>
-                <th className="p-3 font-medium text-right">Chi tiết</th>
+                <th className="p-3 font-medium">Primary reason</th>
+                <th className="p-3 font-medium">IP address</th>
+                <th className="p-3 font-medium text-right">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500">Đang tải dữ liệu cảnh báo...</td>
+                  <td colSpan={7} className="p-8 text-center text-slate-500">Loading alert data...</td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500">Chưa ghi nhận cảnh báo thông đồng nào.</td>
+                  <td colSpan={7} className="p-8 text-center text-slate-500">No collusion alerts recorded.</td>
                 </tr>
               ) : (
                 logs.map((log) => {
@@ -230,8 +239,8 @@ export default function AdminCollusionPage() {
               color="primary"
               size="small"
             >
-              Tải thêm
-            </FormButton>
+              Load more
+                                      </FormButton>
           </div>
         )}
       </div>
@@ -244,10 +253,10 @@ export default function AdminCollusionPage() {
               <div>
                 <h2 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
                   <ShieldAlert size={18} className="text-rose-500" />
-                  Cảnh báo thông đồng chi tiết
-                </h2>
+                  Detailed collusion alert
+                                                  </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  ID Cảnh báo: {detail.id}
+                  Alert ID: {detail.id}
                 </p>
               </div>
               <button
@@ -265,12 +274,12 @@ export default function AdminCollusionPage() {
               {/* Summary row */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-xl space-y-1">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">Người chơi bị cảnh báo</span>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">Flagged players</span>
                   <span className="text-slate-200 font-semibold block">{detail.user?.user_name || "Unknown"}</span>
                   <span className="text-[10px] text-slate-500 font-mono block select-all">{detail.user_id}</span>
                 </div>
                 <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-xl space-y-1">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">Bàn chơi liên quan</span>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">Related tables</span>
                   <span className="text-slate-200 font-semibold block">
                     {detail.room?.name ? `${detail.room.name}` : `Phòng #${detail.room_id}`}
                   </span>
@@ -281,7 +290,7 @@ export default function AdminCollusionPage() {
               {/* Collusion Metrics details */}
               <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-5 space-y-4">
                 <div className="flex justify-between items-center pb-3 border-b border-slate-800">
-                  <span className="text-xs font-semibold text-slate-300">Điểm số và Lý do Rủi ro</span>
+                  <span className="text-xs font-semibold text-slate-300">Risk Score and Reasons</span>
                   <span className={`px-2 py-0.5 border rounded text-xs ${(detail.metadata?.risk_score || 0) >= 60
                     ? 'text-rose-400 bg-rose-950/20 border-rose-900/50 font-semibold'
                     : 'text-amber-400 bg-amber-950/20 border-amber-900/50'
@@ -291,7 +300,7 @@ export default function AdminCollusionPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">Danh sách các yếu tố trùng lặp</span>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-medium">List of duplicate factors</span>
                   <ul className="list-disc list-inside space-y-1.5 text-xs text-slate-300">
                     {(detail.metadata?.reasons || []).map((reason: string, idx: number) => (
                       <li key={idx} className="leading-relaxed">{reason}</li>
@@ -302,14 +311,14 @@ export default function AdminCollusionPage() {
 
               {/* Technical context */}
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Thông số Môi trường / Thiết bị</h3>
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Environment / Device Parameters</h3>
                 <div className="grid grid-cols-1 gap-3 text-xs font-mono">
                   <div className="bg-slate-950 p-3 rounded-lg border border-slate-800/60">
-                    <span className="text-slate-500 block text-[10px] uppercase tracking-wider mb-1">Địa chỉ IP</span>
+                    <span className="text-slate-500 block text-[10px] uppercase tracking-wider mb-1">IP address</span>
                     <span className="text-slate-300 select-all">{detail.ip_address || "Unknown"}</span>
                   </div>
                   <div className="bg-slate-950 p-3 rounded-lg border border-slate-800/60">
-                    <span className="text-slate-500 block text-[10px] uppercase tracking-wider mb-1">User Agent trình duyệt</span>
+                    <span className="text-slate-500 block text-[10px] uppercase tracking-wider mb-1">Browser User Agent</span>
                     <span className="text-slate-300 select-all break-all leading-normal text-xs">{detail.user_agent || "N/A"}</span>
                   </div>
                 </div>
@@ -327,8 +336,8 @@ export default function AdminCollusionPage() {
                 variant="outlined"
                 className="text-slate-400 hover:text-slate-200"
               >
-                Đóng
-              </FormButton>
+                Close
+                                            </FormButton>
 
               {detail.room_id && (
                 <FormButton
@@ -339,8 +348,8 @@ export default function AdminCollusionPage() {
                   color="warning"
                   startIcon={<UserMinus size={14} />}
                 >
-                  Kích khỏi bàn
-                </FormButton>
+                  Kick from table
+                                                  </FormButton>
               )}
 
               <FormButton
@@ -351,8 +360,8 @@ export default function AdminCollusionPage() {
                 color="error"
                 startIcon={<Ban size={14} />}
               >
-                Khóa tài khoản
-              </FormButton>
+                Lock account
+                                            </FormButton>
             </div>
           </div>
         </div>

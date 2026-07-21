@@ -8,7 +8,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { FormInput, FormButton } from "@/components/ui/form";
+import { FormButton } from "@/components/ui/form";
+import { RHFInput } from "@/components/ui/form/RhfFields";
 
 const resetPasswordSchema = z
   .object({
@@ -31,7 +32,7 @@ export default function ResetPasswordPage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordFormValues>({
@@ -76,8 +77,8 @@ export default function ResetPasswordPage() {
               className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-[#F4B942] transition-colors mb-6 w-fit uppercase tracking-wider"
             >
               <ArrowLeft size={14} />
-              Quay lại Đăng nhập
-            </Link>
+              Back to Login
+                                      </Link>
 
             <div className="mb-6 text-center">
               <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide uppercase">
@@ -104,18 +105,20 @@ export default function ResetPasswordPage() {
               )}
 
               {/* Password Input */}
-              <FormInput
-                {...register("password")}
+              <RHFInput
+                control={control}
+                name="password"
                 type="password"
-                placeholder="Mật khẩu mới"
+                placeholder="New password"
                 leftIcon={<Lock size={16} />}
                 error={errors.password?.message}
                 disabled={isSubmitting}
               />
 
               {/* Confirm Password Input */}
-              <FormInput
-                {...register("confirmPassword")}
+              <RHFInput
+                control={control}
+                name="confirmPassword"
                 type="password"
                 placeholder="Xác nhận mật khẩu mới"
                 leftIcon={<Lock size={16} />}

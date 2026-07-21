@@ -20,7 +20,7 @@ export default function VerifyOtpPage() {
       fallback={
         <div className="flex flex-col items-center justify-center p-8 text-center min-h-[300px]">
           <Loader2 className="w-8 h-8 text-yellow-400 animate-spin mb-4" />
-          <p className="text-slate-400 text-sm">Đang tải trang xác thực...</p>
+          <p className="text-slate-400 text-sm">Loading authentication page...</p>
         </div>
       }
     >

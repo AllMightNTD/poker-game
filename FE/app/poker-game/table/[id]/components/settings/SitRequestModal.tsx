@@ -28,10 +28,10 @@ export const SitRequestModal: React.FC = () => {
           </div>
           <div>
             <h3 className="text-sm font-black text-slate-100 uppercase tracking-wider">
-              Yêu cầu tham gia bàn
-            </h3>
+              Table Join Requests
+                                      </h3>
             <p className="text-[10px] font-bold text-amber-500 uppercase">
-              {sitRequests.length - 1 > 0 ? `+${sitRequests.length - 1} yêu cầu khác đang chờ` : "Chờ bạn phê duyệt"}
+              {sitRequests.length - 1 > 0 ? `+${sitRequests.length - 1} yêu cầu khác đang chờ` : "Pending Your Approval"}
             </p>
           </div>
         </div>
@@ -59,8 +59,8 @@ export const SitRequestModal: React.FC = () => {
               {req.username || "Player"}
             </h4>
             <p className="text-sm text-slate-400 mt-1">
-              Muốn mang <span className="text-emerald-400 font-black">{parseInt(String(req.amount ?? req.buy_in_amount ?? 0)).toLocaleString()}</span> chips vào bàn
-            </p>
+              Wants to bring <span className="text-emerald-400 font-black">{parseInt(String(req.amount ?? req.buy_in_amount ?? 0)).toLocaleString()}</span> chips to the table
+                                      </p>
           </div>
         </div>
 
@@ -71,15 +71,15 @@ export const SitRequestModal: React.FC = () => {
             className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
           >
             <X size={16} />
-            Từ chối
-          </button>
+            Rejected
+                                </button>
           <button
             onClick={() => respondSitRequest(req.request_id ?? req.id ?? "", true)}
             className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-colors shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] flex items-center justify-center gap-2"
           >
             <Check size={16} strokeWidth={3} />
-            Phê duyệt
-          </button>
+            Approve
+                                </button>
         </div>
       </div>
     </div>

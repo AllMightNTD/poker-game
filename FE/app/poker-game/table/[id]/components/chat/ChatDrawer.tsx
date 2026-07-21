@@ -110,8 +110,8 @@ const ChatContent = ({ onClose }: { onClose?: () => void }) => {
         <div className="flex items-center gap-2">
           <MessageSquare size={13} className="text-emerald-400" />
           <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
-            Chat Bàn
-          </span>
+            Table Chat
+                                </span>
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
         </div>
         {onClose && (
@@ -164,7 +164,7 @@ const ChatContent = ({ onClose }: { onClose?: () => void }) => {
             );
           }
 
-          const isMe = currentUser && (msg.sender === currentUser.user_name || msg.sender === currentUser.username || msg.sender === "Bạn");
+          const isMe = currentUser && (msg.sender === currentUser.user_name || msg.sender === currentUser.username || msg.sender === "You");
           const avatarUrl = msg.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${msg.sender}`;
 
           return (
@@ -188,12 +188,12 @@ const ChatContent = ({ onClose }: { onClose?: () => void }) => {
                   </span>
                   {msg.seatNumber !== null && msg.seatNumber !== undefined ? (
                     <span className="px-1 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-black uppercase tracking-wider">
-                      Ghế #{msg.seatNumber}
+                      Seat #{msg.seatNumber}
                     </span>
                   ) : (
                     <span className="px-1 py-0.5 rounded bg-slate-800 border border-slate-700/60 text-slate-500 text-[8px] font-black uppercase tracking-wider">
-                      Khán giả
-                    </span>
+                      Spectators
+                                                          </span>
                   )}
                 </div>
 
@@ -220,7 +220,7 @@ const ChatContent = ({ onClose }: { onClose?: () => void }) => {
       >
         <input
           type="text"
-          placeholder="Nhập tin nhắn..."
+          placeholder="Type a message..."
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
           className="flex-1 py-2 px-3.5 rounded-xl bg-slate-900 border border-slate-800 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600/30 text-xs text-slate-200 placeholder-slate-600 transition-colors"

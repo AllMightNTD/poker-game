@@ -47,9 +47,9 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
 
   // Mock Missions (can be stored in localStorage later if needed)
   const missions = [
-    { id: 1, title: "Chơi 100 Ván Bài (Texas/Omaha)", progress: 45, target: 100, reward: "500K Chips", status: "in_progress" },
-    { id: 2, title: "Thắng Showdown với Mậu Thầu/Đôi", progress: 3, target: 5, reward: "200K Chips", status: "in_progress" },
-    { id: 3, title: "Nhận Chips miễn phí hôm nay", progress: 1, target: 1, reward: "5M Chips", status: "completed" },
+    { id: 1, title: "Play 100 Hands (Texas/Omaha)", progress: 45, target: 100, reward: "500K Chips", status: "in_progress" },
+    { id: 2, title: "Win Showdown with High Card/Pair", progress: 3, target: 5, reward: "200K Chips", status: "in_progress" },
+    { id: 3, title: "Claim free chips today", progress: 1, target: 1, reward: "5M Chips", status: "completed" },
   ];
 
   return (
@@ -61,7 +61,7 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
           <div>
             <div className="flex items-center gap-2 mb-4 border-b border-white/5 pb-2">
               <History size={16} className="text-[#F4B942]" />
-              <h3 className="font-black text-sm text-[#F7EFDD] uppercase tracking-wider">Bàn chơi vừa qua</h3>
+              <h3 className="font-black text-sm text-[#F7EFDD] uppercase tracking-wider">Recent Tables</h3>
             </div>
 
             {recentRooms.length > 0 ? (
@@ -92,8 +92,8 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-6 text-[#F7EFDD]/40">
-                <span className="text-xs font-medium">Bạn chưa chơi bàn nào gần đây.</span>
-                <span className="text-[10px] uppercase font-bold mt-1 text-[#F4B942]/60">Vào bàn chơi để ghi lịch sử</span>
+                <span className="text-xs font-medium">You haven&apos;t played any tables recently.</span>
+                <span className="text-[10px] uppercase font-bold mt-1 text-[#F4B942]/60">Join a table to record history</span>
               </div>
             )}
           </div>
@@ -104,7 +104,7 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
           <div>
             <div className="flex items-center gap-2 mb-4 border-b border-white/5 pb-2">
               <Users size={16} className="text-[#F4B942]" />
-              <h3 className="font-black text-sm text-[#F7EFDD] uppercase tracking-wider">Cao thủ đang chơi</h3>
+              <h3 className="font-black text-sm text-[#F7EFDD] uppercase tracking-wider">Pros Currently Playing</h3>
             </div>
 
             {activePlayers.length > 0 ? (
@@ -125,7 +125,7 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
                       <div className="space-y-0.5">
                         <span className="text-xs font-bold text-[#F7EFDD] block">{player.username}</span>
                         <span className="text-[9px] text-[#F4B942]/70 font-semibold block flex items-center gap-1">
-                          <Flame size={10} /> Đang chơi tại: {player.table_name}
+                          <Flame size={10} /> Playing at: {player.table_name}
                         </span>
                       </div>
                     </div>
@@ -134,16 +134,16 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
                       onClick={() => onJoinTable({ id: player.table_id.toString(), name: player.table_name })}
                       className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#F4B942] to-[#E0942A] hover:brightness-110 text-[#142019] text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer flex items-center gap-1"
                     >
-                      Vào Bàn
-                      <ChevronRight size={10} />
+                      Join Table
+                                                  <ChevronRight size={10} />
                     </button>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-10 text-[#F7EFDD]/40">
-                <span className="text-xs font-medium">Hiện tại không có người chơi khác trực tuyến.</span>
-                <span className="text-[10px] uppercase font-bold mt-1 text-[#F4B942]/60">Mời thêm bạn bè cùng tham gia</span>
+                <span className="text-xs font-medium">No other players online at the moment.</span>
+                <span className="text-[10px] uppercase font-bold mt-1 text-[#F4B942]/60">Invite friends to join</span>
               </div>
             )}
           </div>
@@ -157,7 +157,7 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
           <div>
             <div className="flex items-center gap-2 mb-4 border-b border-white/5 pb-2">
               <Trophy size={16} className="text-[#F4B942]" />
-              <h3 className="font-black text-sm text-[#F7EFDD] uppercase tracking-wider">Bảng xếp hạng cao thủ</h3>
+              <h3 className="font-black text-sm text-[#F7EFDD] uppercase tracking-wider">Top Players Leaderboard</h3>
             </div>
 
             {leaderboard.length > 0 ? (
@@ -208,7 +208,7 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-[#F7EFDD]/40">
-                <span className="text-xs font-medium">Đang tải bảng xếp hạng...</span>
+                <span className="text-xs font-medium">Loading leaderboard...</span>
               </div>
             )}
           </div>
@@ -219,7 +219,7 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
           <div>
             <div className="flex items-center gap-2 mb-4 border-b border-white/5 pb-2">
               <Award size={16} className="text-[#F4B942]" />
-              <h3 className="font-black text-sm text-[#F7EFDD] uppercase tracking-wider">Nhiệm vụ hàng ngày</h3>
+              <h3 className="font-black text-sm text-[#F7EFDD] uppercase tracking-wider">Daily Quests</h3>
             </div>
 
             <div className="space-y-3.5">
@@ -234,8 +234,8 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
                       <span className="text-[10px] font-black text-[#F4B942]">
                         {isDone ? (
                           <span className="flex items-center gap-1 text-emerald-400">
-                            <CheckCircle2 size={12} /> Đã Nhận
-                          </span>
+                            <CheckCircle2 size={12} /> Claimed
+                                                                  </span>
                         ) : (
                           `Thưởng: ${mission.reward}`
                         )}

@@ -170,7 +170,7 @@ export function PokerHandReplayer({ handId }: { handId: string }): React.ReactEl
       fallback={
         <div className="my-8 rounded-2xl bg-slate-900 border border-slate-700 p-8 flex items-center justify-center gap-3 text-slate-500">
           <Loader2 size={20} className="animate-spin" />
-          <span>Đang tải Hand Replayer...</span>
+          <span>Loading Hand Replayer...</span>
         </div>
       }
     >
@@ -367,9 +367,9 @@ function ReplayerInner({ handId }: { handId: string }): React.ReactElement {
               id={`btn-ai-coach-${handId}`}
             >
               {aiCoachMutation.isPending ? (
-                <><Loader2 size={12} className="animate-spin" /> Đang phân tích...</>
+                <><Loader2 size={12} className="animate-spin" /> Analyzing...</>
               ) : (
-                <><Bot size={12} /> AI Coach nhận xét</>
+                <><Bot size={12} /> AI Coach Feedback</>
               )}
             </button>
 
@@ -403,8 +403,8 @@ function ReplayerInner({ handId }: { handId: string }): React.ReactElement {
                   animate={{ opacity: 1 }}
                   className="mt-2 text-xs text-red-400 bg-red-900/20 border border-red-800/30 rounded-lg p-2"
                 >
-                  ⚠️ Không thể kết nối AI Coach. Thử lại sau.
-                </motion.div>
+                  ⚠️ Failed to connect to AI Coach. Try again later.
+                                                  </motion.div>
               )}
             </AnimatePresence>
           </div>
@@ -416,7 +416,7 @@ function ReplayerInner({ handId }: { handId: string }): React.ReactElement {
         <button
           onClick={() => { stopPlay(); setStep(-1); }}
           className="p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-          title="Về đầu"
+          title="Back to top"
         >
           <SkipBack size={16} />
         </button>
@@ -427,13 +427,13 @@ function ReplayerInner({ handId }: { handId: string }): React.ReactElement {
           id={`btn-play-${handId}`}
         >
           {isPlaying ? <Pause size={15} /> : <Play size={15} />}
-          {isPlaying ? "Tạm dừng" : step >= totalSteps - 1 ? "Phát lại" : "Phát"}
+          {isPlaying ? "Pause" : step >= totalSteps - 1 ? "Replay" : "Play"}
         </button>
 
         <button
           onClick={() => { stopPlay(); setStep(Math.min(step + 1, totalSteps - 1)); }}
           className="p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-          title="Bước tiếp"
+          title="Next step"
         >
           <SkipForward size={16} />
         </button>
@@ -446,7 +446,7 @@ function ReplayerInner({ handId }: { handId: string }): React.ReactElement {
             max={totalSteps - 1}
             value={step}
             onChange={(e) => { stopPlay(); setStep(Number(e.target.value)); }}
-            aria-label="Điều hướng hành động"
+            aria-label="Action Navigation"
             className="w-full accent-yellow-400 h-1.5 rounded-full cursor-pointer"
           />
         </div>

@@ -6,14 +6,14 @@ import { AuthService } from "../services/auth.service";
 const OTP_LENGTH = 6;
 
 const MESSAGES = {
-  missingToken: "Thiếu token xác thực.",
-  invalidOtpLength: "Mã OTP phải có 6 chữ số.",
-  verifySuccess: "Xác thực thành công!",
-  verifySuccessDefault: "Tài khoản của bạn đã được kích hoạt thành công!",
-  verifyFailed: "Xác thực thất bại, vui lòng thử lại.",
-  emptyEmail: "Vui lòng nhập email.",
-  resendSuccess: "Mã OTP mới đã được gửi!",
-  resendFailed: "Không thể gửi lại OTP, vui lòng thử lại.",
+  missingToken: "Missing verification token.",
+  invalidOtpLength: "OTP code must be 6 digits.",
+  verifySuccess: "Verification successful!",
+  verifySuccessDefault: "Your account has been successfully activated!",
+  verifyFailed: "Verification failed, please try again.",
+  emptyEmail: "Please enter your email.",
+  resendSuccess: "A new OTP code has been sent!",
+  resendFailed: "Could not resend OTP, please try again.",
 };
 
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -70,7 +70,7 @@ export function useVerifyOtp(
   const handleVerify = useCallback(
     async (verifyToken: string | null, verifyOtpCode: string) => {
       if (!verifyToken && !email) {
-        setErrorMessage("Thiếu email hoặc token xác thực.");
+        setErrorMessage("Missing email or verification token.");
         return;
       }
       if (verifyOtpCode.length !== OTP_LENGTH) {

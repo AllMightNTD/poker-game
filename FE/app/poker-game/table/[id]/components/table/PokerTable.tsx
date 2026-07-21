@@ -195,15 +195,15 @@ const PokerTableInner = memo(function PokerTableInner() {
               onClick={triggerRabbitHunt}
               className="mt-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-black text-xs font-black tracking-wider uppercase shadow-[0_0_12px_rgba(245,158,11,0.3)] active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
             >
-              🐰 Săn thỏ (Rabbit Hunt)
-            </button>
+              🐰 Rabbit Hunt
+                                      </button>
           )}
 
           {rabbitCards && rabbitCards.length > 0 && (
             <div className="mt-2 flex flex-col items-center gap-1">
               <span className="text-[10px] text-amber-400 font-bold uppercase tracking-widest bg-amber-950/60 px-2 py-0.5 rounded border border-amber-500/20">
-                🐰 Thỏ săn được
-              </span>
+                🐰 Rabbit Hunted
+                                            </span>
               <div className="flex gap-1.5 py-1">
                 {rabbitCards.map((card, idx) => (
                   <div key={`rabbit-${idx}`} className="relative opacity-90 scale-90 border border-amber-500/30 rounded-lg overflow-hidden shadow-[0_0_10px_rgba(245,158,11,0.2)]">
@@ -236,24 +236,24 @@ const PokerTableInner = memo(function PokerTableInner() {
                 🔀 Run It Twice?
               </div>
               <p className="text-xs text-[#FDF1BA]/80 leading-relaxed">
-                Tất cả người chơi đều All-In! Bạn có đồng ý Run It Twice (chia 2 board bài chung, chia đôi Pot) không?
-              </p>
+                All players are All-In! Do you agree to Run It Twice (deal two boards, split the pot)?
+                                            </p>
               <div className="text-xs text-amber-300/60 font-mono">
-                Biểu quyết: {ritVotesYesCount} / {ritVoters.length} Đồng ý
-              </div>
+                Vote: {ritVotesYesCount} / {ritVoters.length} Agree
+                                            </div>
               <div className="flex gap-4 w-full mt-2">
                 <button
                   onClick={() => voteRit(true)}
                   className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-bold shadow-[0_4px_12px_rgba(16,185,129,0.3)] active:scale-95 transition-all cursor-pointer"
                 >
-                  Đồng ý
-                </button>
+                  Agree
+                                                  </button>
                 <button
                   onClick={() => voteRit(false)}
                   className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-rose-700 to-red-800 hover:from-rose-600 hover:to-red-700 text-white text-sm font-bold shadow-[0_4px_12px_rgba(244,63,94,0.3)] active:scale-95 transition-all cursor-pointer"
                 >
-                  Từ chối
-                </button>
+                  Rejected
+                                                  </button>
               </div>
             </div>
           </div>

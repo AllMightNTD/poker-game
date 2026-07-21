@@ -1,18 +1,28 @@
 "use client";
 
+import { RHFInput } from "@/components/ui/form/RhfFields";
 import { useCurrentAdmin } from "@/core/providers/admin-provider";
 import { Bell, Search } from "lucide-react";
-import { FormInput } from "@/components/ui/form";
+import { useForm, useWatch } from "react-hook-form";
 
 export const AdminHeader = () => {
   const { currentAdmin: admin } = useCurrentAdmin();
 
+  const { control } = useForm({
+    defaultValues: { search: "" },
+  });
+  const search = useWatch({ control, name: "search" });
+  console.log('search', search);
+
+
   return (
     <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-40">
       <div className="w-80">
-        <FormInput
+        <RHFInput
+          control={control}
+          name="search"
           type="text"
-          placeholder="Tìm kiếm UID, email, mã giao dịch..."
+          placeholder="Search UID, email, transaction ID..."
           leftIcon={<Search size={16} />}
           size="small"
         />

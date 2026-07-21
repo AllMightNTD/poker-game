@@ -27,7 +27,7 @@ httpClient.interceptors.request.use(
     if (!isNoAuthEndpoint) {
       const isAdminApi =
         config.url?.includes("/api/v1/admin") ||
-        config.url?.includes("/admin/") ||
+        config.url?.includes("/admin") ||
         config.url?.includes("/api/v1/users");
       const token = isAdminApi ? Cookies.get("admin_access_token") : Cookies.get("accessToken");
       if (token) {
@@ -54,7 +54,7 @@ httpClient.interceptors.response.use(
     if (err.response?.status === 401 && !isNoAuthEndpoint && !originalRequest._retry) {
       const isAdminApi =
         originalRequest?.url?.includes("/api/v1/admin") ||
-        originalRequest?.url?.includes("/admin/") ||
+        originalRequest?.url?.includes("/admin") ||
         originalRequest?.url?.includes("/api/v1/users");
 
       originalRequest._retry = true;

@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { Search, Grid, List } from "lucide-react";
-import { FormSelect, FormCheckbox } from "@/components/ui/form";
+
+import { RHFSelect, RHFCheckbox } from "@/components/ui/form/RhfFields";
+import { useForm, useWatch } from "react-hook-form";
+import { useEffect } from "react";
 
 interface SearchFiltersBarProps {
   searchQuery: string;
@@ -22,10 +25,10 @@ interface SearchFiltersBarProps {
 }
 
 const STAKE_FILTERS = [
-  { id: "all", label: "Tất cả", suit: "📱", color: "text-[#F4B942]" },
+  { id: "all", label: "All", suit: "📱", color: "text-[#F4B942]" },
   { id: "micro", label: "Micro (≤2K)", suit: "♠", color: "text-blue-400" },
-  { id: "low", label: "Thấp (2K–10K)", suit: "♣", color: "text-emerald-400" },
-  { id: "medium", label: "Vừa (10K–50K)", suit: "♦", color: "text-amber-400" },
+  { id: "low", label: "Low (2K–10K)", suit: "♣", color: "text-emerald-400" },
+  { id: "medium", label: "Medium (10K–50K)", suit: "♦", color: "text-amber-400" },
   { id: "high", label: "Cao (>50K)", suit: "♥", color: "text-rose-400" },
 ];
 
@@ -49,6 +52,42 @@ export const SearchFiltersBar: React.FC<SearchFiltersBarProps> = ({
 }) => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
+  const { control } = useForm({
+    defaultValues: {
+      gameType: selectedGameType,
+      status: selectedStatus,
+      maxPlayers: selectedMaxPlayers,
+      hideFull: hideFull,
+      hidePrivate: hidePrivate,
+    },
+  });
+
+  const watchGameType = useWatch({ control, name: "gameType" });
+  const watchStatus = useWatch({ control, name: "status" });
+  const watchMaxPlayers = useWatch({ control, name: "maxPlayers" });
+  const watchHideFull = useWatch({ control, name: "hideFull" });
+  const watchHidePrivate = useWatch({ control, name: "hidePrivate" });
+
+  useEffect(() => {
+    setSelectedGameType(watchGameType);
+  }, [watchGameType, setSelectedGameType]);
+
+  useEffect(() => {
+    setSelectedStatus(watchStatus);
+  }, [watchStatus, setSelectedStatus]);
+
+  useEffect(() => {
+    setSelectedMaxPlayers(watchMaxPlayers);
+  }, [watchMaxPlayers, setSelectedMaxPlayers]);
+
+  useEffect(() => {
+    setHideFull(watchHideFull);
+  }, [watchHideFull, setHideFull]);
+
+  useEffect(() => {
+    setHidePrivate(watchHidePrivate);
+  }, [watchHidePrivate, setHidePrivate]);
+
   return (
     <div className="bg-[#0B151F]/45 border border-white/5 rounded-[2rem] p-4.5 space-y-4 shadow-2xl backdrop-blur-md w-full relative z-20">
       {/* Top row: Search, Dropdowns, view mode toggle */}
@@ -60,14 +99,14 @@ export const SearchFiltersBar: React.FC<SearchFiltersBarProps> = ({
             <button
               onClick={() => setIsSearchExpanded(!isSearchExpanded)}
               className="w-8 h-8 rounded-full bg-[#0B151F] hover:bg-[#122230] text-[#F4B942] flex items-center justify-center transition-all cursor-pointer shrink-0"
-              title="Tìm kiếm"
+              title="Search"
             >
               <Search size={14} />
             </button>
             {(isSearchExpanded || searchQuery) && (
               <input
                 type="text"
-                placeholder="Tìm tên bàn..."
+                placeholder="Search table name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-transparent border-none py-1 px-3 text-xs text-[#F7EFDD] placeholder-[#F7EFDD]/30 focus:outline-none w-36 sm:w-44 transition-all"
@@ -80,41 +119,44 @@ export const SearchFiltersBar: React.FC<SearchFiltersBarProps> = ({
           </div>
 
           {/* Game Type Filter Dropdown */}
-          <FormSelect
-            value={selectedGameType}
-            onChange={(e: any) => setSelectedGameType(e.target.value)}
+          <RHFSelect
+            control={control}
+            name="gameType"
+            options={[
+              { value: "all", label: "All Game Types" },
+              { value: "NLH", label: "Texas Hold'em" },
+              { value: "PLO", label: "Omaha" },
+            ]}
             className="w-40 shrink-0"
             size="small"
-          >
-            <option value="all">Mọi loại game</option>
-            <option value="NLH">Texas Hold&apos;em</option>
-            <option value="PLO">Omaha</option>
-          </FormSelect>
+          />
 
           {/* Table Status Dropdown */}
-          <FormSelect
-            value={selectedStatus}
-            onChange={(e: any) => setSelectedStatus(e.target.value)}
+          <RHFSelect
+            control={control}
+            name="status"
+            options={[
+              { value: "all", label: "All Statuses" },
+              { value: "WAITING", label: "Waiting" },
+              { value: "RUNNING", label: "Playing" },
+            ]}
             className="w-40 shrink-0"
             size="small"
-          >
-            <option value="all">Mọi trạng thái</option>
-            <option value="WAITING">Đang chờ</option>
-            <option value="RUNNING">Đang chơi</option>
-          </FormSelect>
+          />
 
           {/* Max Players Dropdown */}
-          <FormSelect
-            value={selectedMaxPlayers}
-            onChange={(e: any) => setSelectedMaxPlayers(e.target.value)}
+          <RHFSelect
+            control={control}
+            name="maxPlayers"
+            options={[
+              { value: "all", label: "All Player Counts" },
+              { value: "9", label: "9 Players (Full)" },
+              { value: "6", label: "6 Players (6-max)" },
+              { value: "2", label: "2 Players (Heads Up)" },
+            ]}
             className="w-40 shrink-0"
             size="small"
-          >
-            <option value="all">Mọi số người</option>
-            <option value="9">9 Players (Full)</option>
-            <option value="6">6 Players (6-max)</option>
-            <option value="2">2 Players (Heads Up)</option>
-          </FormSelect>
+          />
         </div>
 
         {/* View Mode Toggle (Grid/List) */}
@@ -126,7 +168,7 @@ export const SearchFiltersBar: React.FC<SearchFiltersBarProps> = ({
                 ? "bg-gradient-to-br from-[#F4B942] to-[#E0942A] text-[#060e0a] shadow-md shadow-[#F4B942]/10"
                 : "text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
             }`}
-            title="Dạng lưới"
+            title="Grid View"
           >
             <Grid size={13} />
           </button>
@@ -137,7 +179,7 @@ export const SearchFiltersBar: React.FC<SearchFiltersBarProps> = ({
                 ? "bg-gradient-to-br from-[#F4B942] to-[#E0942A] text-[#060e0a] shadow-md shadow-[#F4B942]/10"
                 : "text-[#F7EFDD]/40 hover:text-[#F7EFDD]"
             }`}
-            title="Dạng danh sách"
+            title="List View"
           >
             <List size={13} />
           </button>
@@ -171,16 +213,16 @@ export const SearchFiltersBar: React.FC<SearchFiltersBarProps> = ({
 
         {/* Boolean Toggle Checkboxes */}
         <div className="flex items-center gap-4 text-xs font-bold text-[#F7EFDD]/50">
-          <FormCheckbox
-            label="Ẩn bàn đầy"
-            checked={hideFull}
-            onChange={(e: any) => setHideFull(e.target.checked)}
+          <RHFCheckbox
+            control={control}
+            name="hideFull"
+            label="Hide Full Tables"
           />
 
-          <FormCheckbox
-            label="Ẩn bàn riêng tư"
-            checked={hidePrivate}
-            onChange={(e: any) => setHidePrivate(e.target.checked)}
+          <RHFCheckbox
+            control={control}
+            name="hidePrivate"
+            label="Hide Private Tables"
           />
         </div>
       </div>

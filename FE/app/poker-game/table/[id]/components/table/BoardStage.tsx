@@ -9,7 +9,7 @@ const STAGE_LABELS: Record<string, string> = {
   flop: "Flop",
   turn: "Turn",
   river: "River",
-  showdown: "Ngửa Bài",
+  showdown: "Show Cards",
 };
 
 const STAGE_COLORS: Record<string, string> = {

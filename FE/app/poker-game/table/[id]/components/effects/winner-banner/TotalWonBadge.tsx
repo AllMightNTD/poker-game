@@ -10,7 +10,7 @@ interface TotalWonBadgeProps {
 export const TotalWonBadge: React.FC<TotalWonBadgeProps> = ({ total }) => {
     return (
         <span className="mt-1.5 text-[9px] md:text-[10px] font-bold text-[#F7EFDD]/50 uppercase tracking-widest">
-            Tổng cộng +{fmtChips(total)}
+            Total +{fmtChips(total)}
         </span>
     );
 };

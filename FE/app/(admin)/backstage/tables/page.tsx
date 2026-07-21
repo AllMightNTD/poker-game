@@ -1,13 +1,14 @@
 "use client";
 
+import { FormButton } from "@/components/ui/form";
+import { RHFCheckbox, RHFInput, RHFSelect } from "@/components/ui/form/RhfFields";
 import httpClient from "@/core/api/http-client";
-import { CircleDollarSign, PowerOff, Users, Play, Pause, Plus, X } from "lucide-react";
-import { useState } from "react";
-import { useQueryClient, useInfiniteQuery, useMutation } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { CircleDollarSign, Pause, Play, Plus, PowerOff, Users, X } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { FormInput, FormSelect, FormCheckbox, FormButton } from "@/components/ui/form";
 
 const adminKeys = {
   all: ["admin"] as const,
@@ -22,15 +23,15 @@ const fetchTablesPage = async ({ pageParam }: { pageParam: string | null }) => {
 };
 
 const tableSchema = z.object({
-  name: z.string().min(1, "Tên bàn chơi không được để trống"),
+  name: z.string().min(1, "Table name cannot be empty"),
   game_type: z.string(),
-  small_blind: z.string().min(1, "Small Blind là bắt buộc").refine((val) => Number(val) > 0, "Phải lớn hơn 0"),
-  ante: z.string().min(1, "Ante là bắt buộc").refine((val) => Number(val) >= 0, "Không được nhỏ hơn 0"),
+  small_blind: z.string().min(1, "Small Blind is required").refine((val) => Number(val) > 0, "Must be greater than 0"),
+  ante: z.string().min(1, "Ante is required").refine((val) => Number(val) >= 0, "Cannot be less than 0"),
   max_players: z.number(),
-  min_buyin: z.string().min(1, "Min Buy-in là bắt buộc").refine((val) => Number(val) > 0, "Phải lớn hơn 0"),
-  max_buyin: z.string().min(1, "Max Buy-in là bắt buộc").refine((val) => Number(val) > 0, "Phải lớn hơn 0"),
-  rake_rate: z.number().min(0, "Tỉ lệ Rake không được nhỏ hơn 0").max(10, "Tỉ lệ Rake tối đa 10%"),
-  rake_cap: z.string().min(1, "Trần Rake Cap là bắt buộc").refine((val) => Number(val) >= 0, "Không được nhỏ hơn 0"),
+  min_buyin: z.string().min(1, "Min Buy-in is required").refine((val) => Number(val) > 0, "Must be greater than 0"),
+  max_buyin: z.string().min(1, "Max Buy-in is required").refine((val) => Number(val) > 0, "Must be greater than 0"),
+  rake_rate: z.number().min(0, "Rake rate cannot be less than 0").max(10, "Maximum rake rate is 10%"),
+  rake_cap: z.string().min(1, "Trần Rake Cap là bắt buộc").refine((val) => Number(val) >= 0, "Cannot be less than 0"),
   allow_bomb_pot: z.boolean(),
   allow_rit: z.boolean(),
 }).refine(
@@ -63,7 +64,7 @@ export default function AdminTablesPage() {
 
   // React Hook Form setup
   const {
-    register,
+    control,
     handleSubmit,
     reset,
     formState: { errors, isValid },
@@ -238,7 +239,7 @@ export default function AdminTablesPage() {
                   <span className="font-medium text-slate-200">{table.rake_rate}% / ${table.rake_cap}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-500">Trạng thái</span>
+                  <span className="text-slate-500">Status</span>
                   <span className={`text-xs px-2 py-0.5 rounded ${table.status === "paused" ? "bg-amber-500/10 text-amber-400" : "bg-emerald-500/10 text-emerald-400"}`}>
                     {table.status?.toUpperCase() || "WAITING"}
                   </span>
@@ -264,7 +265,7 @@ export default function AdminTablesPage() {
                     size="small"
                     startIcon={<Pause size={13} />}
                   >
-                    Tạm dừng
+                    Pause
                   </FormButton>
                 )}
                 <FormButton
@@ -291,7 +292,7 @@ export default function AdminTablesPage() {
             variant="outlined"
             color="primary"
           >
-            Tải thêm
+            Load more
           </FormButton>
         </div>
       )}
@@ -311,74 +312,83 @@ export default function AdminTablesPage() {
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              <FormInput
-                label="Tên bàn chơi"
+              <RHFInput
+                control={control}
+                name="name"
+                label="Table Name"
                 required
                 placeholder="Ví dụ: High Roller Club"
                 error={errors.name?.message}
-                {...register("name")}
               />
 
               <div className="grid grid-cols-2 gap-4">
-                <FormInput
+                <RHFInput
+                  control={control}
+                  name="small_blind"
                   label="Small Blind ($)"
                   type="number"
                   required
                   min="1"
                   error={errors.small_blind?.message}
-                  {...register("small_blind")}
                 />
-                <FormInput
+                <RHFInput
+                  control={control}
+                  name="ante"
                   label="Ante ($)"
                   type="number"
                   required
                   min="0"
                   error={errors.ante?.message}
-                  {...register("ante")}
                 />
               </div>
 
               <div className="grid grid-cols-3 gap-4">
-                <FormSelect
+                <RHFSelect
+                  control={control}
+                  name="max_players"
                   label="Số ghế"
-                  {...register("max_players", { valueAsNumber: true })}
                 >
                   <option value="9">9 players</option>
                   <option value="6">6 players</option>
                   <option value="2">Heads Up (2)</option>
-                </FormSelect>
+                </RHFSelect>
 
-                <FormSelect
+                <RHFSelect
+                  control={control}
+                  name="game_type"
                   label="Kiểu chơi"
                   className="col-span-2"
-                  {...register("game_type")}
                 >
                   <option value="TEXAS">Texas Hold&apos;em</option>
                   <option value="OMAHA">Omaha (PLO)</option>
-                </FormSelect>
+                </RHFSelect>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <FormInput
+                <RHFInput
+                  control={control}
+                  name="min_buyin"
                   label="Min Buy-in ($)"
                   type="number"
                   required
                   min="1"
                   error={errors.min_buyin?.message}
-                  {...register("min_buyin")}
                 />
-                <FormInput
+                <RHFInput
+                  control={control}
+                  name="max_buyin"
                   label="Max Buy-in ($)"
                   type="number"
                   required
                   min="1"
                   error={errors.max_buyin?.message}
-                  {...register("max_buyin")}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <FormInput
+                <RHFInput
+                  control={control}
+                  name="rake_rate"
                   label="Tỉ lệ Rake (%)"
                   type="number"
                   step="0.1"
@@ -386,27 +396,29 @@ export default function AdminTablesPage() {
                   max="10"
                   required
                   error={errors.rake_rate?.message}
-                  {...register("rake_rate", { valueAsNumber: true })}
                 />
-                <FormInput
+                <RHFInput
+                  control={control}
+                  name="rake_cap"
                   label="Trần Rake Cap ($)"
                   type="number"
                   required
                   min="0"
                   error={errors.rake_cap?.message}
-                  {...register("rake_cap")}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
-                <FormCheckbox
+                <RHFCheckbox
+                  control={control}
+                  name="allow_bomb_pot"
                   label="Cho phép Bomb Pot"
-                  {...register("allow_bomb_pot")}
                 />
 
-                <FormCheckbox
+                <RHFCheckbox
+                  control={control}
+                  name="allow_rit"
                   label="Cho phép RIT"
-                  {...register("allow_rit")}
                 />
               </div>
 
@@ -417,7 +429,7 @@ export default function AdminTablesPage() {
                   variant="outlined"
                   className="flex-1"
                 >
-                  Hủy bỏ
+                  Cancel
                 </FormButton>
                 <FormButton
                   type="submit"

@@ -3,23 +3,24 @@
 import { useRegister } from "@/features/auth/hooks/use-register";
 import { AtSign, Lock, Mail } from "lucide-react";
 import Link from "next/link";
-import { FormInput, FormCheckbox, FormButton } from "@/components/ui/form";
+import { FormButton } from "@/components/ui/form";
+import { RHFCheckbox, RHFInput } from "@/components/ui/form/RhfFields";
 
 const uiText: Record<string, string> = {
-  createYourAccount: "TẠO TÀI KHOẢN",
-  join: "Tham gia trải nghiệm poker đỉnh cao",
-  yourUsername: "Tên đăng nhập",
-  yourEmailAddress: "Địa chỉ Email",
-  password: "Mật khẩu",
-  confirmPassword: "Xác nhận mật khẩu",
-  acceptTerm: "Tôi đồng ý với Điều khoản và Điều kiện",
-  registerButton: "ĐĂNG KÝ",
-  alreadyHaveAccount: "Đã có tài khoản?",
-  login: "ĐĂNG NHẬP",
+  createYourAccount: "CREATE ACCOUNT",
+  join: "Join the ultimate poker experience",
+  yourUsername: "Username",
+  yourEmailAddress: "Email Address",
+  password: "Password",
+  confirmPassword: "Confirm password",
+  acceptTerm: "I agree to the Terms and Conditions",
+  registerButton: "REGISTER",
+  alreadyHaveAccount: "Already have an account?",
+  login: "LOG IN",
 };
 
 export default function RegisterClient() {
-  const { register, handleSubmit, errors, isSubmitting } = useRegister();
+  const { control, handleSubmit, errors, isSubmitting } = useRegister();
 
   return (
     <div className="relative w-full max-w-md mx-auto">
@@ -33,8 +34,9 @@ export default function RegisterClient() {
 
         <form className="space-y-4" onSubmit={handleSubmit} noValidate>
           {/* Username */}
-          <FormInput
-            {...register("user_name")}
+          <RHFInput
+            control={control}
+            name="user_name"
             placeholder={uiText.yourUsername}
             leftIcon={<AtSign size={16} />}
             error={errors.user_name?.message}
@@ -42,8 +44,9 @@ export default function RegisterClient() {
           />
 
           {/* Email */}
-          <FormInput
-            {...register("email")}
+          <RHFInput
+            control={control}
+            name="email"
             type="email"
             placeholder={uiText.yourEmailAddress}
             leftIcon={<Mail size={16} />}
@@ -52,8 +55,9 @@ export default function RegisterClient() {
           />
 
           {/* Password */}
-          <FormInput
-            {...register("password")}
+          <RHFInput
+            control={control}
+            name="password"
             type="password"
             placeholder={uiText.password}
             leftIcon={<Lock size={16} />}
@@ -62,8 +66,9 @@ export default function RegisterClient() {
           />
 
           {/* Confirm Password */}
-          <FormInput
-            {...register("confirmPassword")}
+          <RHFInput
+            control={control}
+            name="confirmPassword"
             type="password"
             placeholder={uiText.confirmPassword}
             leftIcon={<Lock size={16} />}
@@ -72,8 +77,9 @@ export default function RegisterClient() {
           />
 
           {/* Terms */}
-          <FormCheckbox
-            {...register("terms")}
+          <RHFCheckbox
+            control={control}
+            name="terms"
             label={uiText.acceptTerm}
             error={errors.terms?.message}
             disabled={isSubmitting}

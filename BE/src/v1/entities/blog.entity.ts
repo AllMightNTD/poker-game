@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { User } from './user.entity';
+import { Admin } from './admin.entity';
 
 @Entity('blogs')
 export class Blog extends BaseEntity {
@@ -39,9 +39,9 @@ export class Blog extends BaseEntity {
   @Column({ type: 'varchar', length: 36, nullable: true })
   author_id: string;
 
-  @ManyToOne(() => User, { onDelete: 'SET NULL' })
+  @ManyToOne(() => Admin, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'author_id' })
-  author: User;
+  author: Admin;
 
   @Column({ type: 'int', default: 0 })
   views_count: number;

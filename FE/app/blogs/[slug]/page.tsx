@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     if (!blog) {
       return {
-        title: "Bài viết không tồn tại | PKCG",
+        title: "Post Not Found | PKCG",
       };
     }
 
@@ -50,8 +50,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   } catch (error) {
     console.error("Failed to generate blog detail metadata:", error);
     return {
-      title: "Bài viết Poker | PKCG",
-      description: "Tin tức chiến thuật, cẩm nang và hướng dẫn chơi Poker đỉnh cao tại PKCG.",
+      title: "Poker Articles | PKCG",
+      description: "Top poker strategy news, guides, and tutorials at PKCG.",
       alternates: {
         canonical: "https://pkcg.com/blogs",
       },

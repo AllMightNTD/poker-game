@@ -1,35 +1,51 @@
 "use client";
 
-import React from "react";
+import { FormButton } from "@/components/ui/form";
+import { RHFInput } from "@/components/ui/form/RhfFields";
 import { Lock } from "lucide-react";
 import Link from "next/link";
-import { FormInput, FormButton } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
 
 export default function ChangePasswordPage() {
+  const { control, handleSubmit } = useForm({
+    defaultValues: {
+      oldPassword: "",
+      newPassword: "",
+    },
+  });
+
+  const onSubmit = (data: any) => {
+    console.log(data);
+  };
+
   return (
     <div className="relative w-full max-w-md mx-auto">
       <div className="rounded-2xl bg-[#081326] border border-[#16294A] p-6 sm:p-8">
         <div className="mb-6 text-center">
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide uppercase">
-            Đổi mật khẩu
+            Change password
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1.5">
-            Nhập mật khẩu hiện tại và mật khẩu mới của bạn.
+            Enter your current password and your new password.
           </p>
         </div>
 
-        <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           {/* Old Password Input */}
-          <FormInput
+          <RHFInput
+            control={control}
+            name="oldPassword"
             type="password"
-            placeholder="Mật khẩu hiện tại"
+            placeholder="Current password"
             leftIcon={<Lock size={16} />}
           />
 
           {/* New Password Input */}
-          <FormInput
+          <RHFInput
+            control={control}
+            name="newPassword"
             type="password"
-            placeholder="Mật khẩu mới"
+            placeholder="New password"
             leftIcon={<Lock size={16} />}
           />
 
@@ -42,12 +58,12 @@ export default function ChangePasswordPage() {
             size="large"
             className="mt-6"
           >
-            ĐỔI MẬT KHẨU
+            CHANGE PASSWORD
           </FormButton>
 
           <p className="text-center text-xs text-slate-400 pt-1">
             <Link href="/login" className="text-[#F4B942] font-semibold hover:underline">
-              Quay lại Đăng nhập
+              Back to Login
             </Link>
           </p>
         </form>

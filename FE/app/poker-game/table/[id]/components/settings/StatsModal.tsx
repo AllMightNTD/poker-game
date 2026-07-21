@@ -58,8 +58,8 @@ export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center gap-2">
             <FileText className="text-emerald-500 w-5 h-5" />
             <h3 className="text-base font-black text-slate-100 uppercase tracking-wider">
-              Thống Kê Tài Chính & Báo Cáo Phiên Chơi
-            </h3>
+              Financial Statistics & Session Reports
+                                      </h3>
           </div>
           <button
             onClick={onClose}
@@ -73,39 +73,39 @@ export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         <div className="p-6 overflow-y-auto max-h-[70vh] space-y-4">
           <div className="flex justify-between items-center">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-              Chi tiết lãi/lỗ từng người chơi
-            </span>
+              Player Profit/Loss Details
+                                      </span>
             <button
               onClick={handleExportCsv}
               className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-colors flex items-center gap-2 shadow-lg shadow-emerald-950/40"
             >
-              <Download size={14} /> Xuất Báo Cáo CSV
-            </button>
+              <Download size={14} /> Export CSV Report
+                                      </button>
           </div>
 
           {loading ? (
             <div className="text-center py-10 text-xs text-slate-500 animate-pulse">
-              Đang tải báo cáo từ máy chủ...
-            </div>
+              Loading report from server...
+                                      </div>
           ) : (
             <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950/40">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
-                    <th className="p-3">Ghế</th>
-                    <th className="p-3">Tên Người Chơi</th>
-                    <th className="p-3 text-right">Tổng Mua (Buy-in)</th>
-                    <th className="p-3 text-right">Còn Lại (Stack)</th>
-                    <th className="p-3 text-right">Đã Rút (Cashout)</th>
-                    <th className="p-3 text-right">Lãi/Lỗ ròng (P&L)</th>
+                    <th className="p-3">Seat</th>
+                    <th className="p-3">Player Name</th>
+                    <th className="p-3 text-right">Total Buy-in</th>
+                    <th className="p-3 text-right">Stack</th>
+                    <th className="p-3 text-right">Cashout</th>
+                    <th className="p-3 text-right">Net P&L</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/40">
                   {stats.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="p-4 text-center text-slate-600">
-                        Chưa có dữ liệu thống kê nào.
-                      </td>
+                        No stats available.
+                                                                        </td>
                     </tr>
                   ) : (
                     stats.map((s) => {

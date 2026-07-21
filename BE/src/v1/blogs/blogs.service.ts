@@ -1,3 +1,4 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import {
   Injectable,
   InternalServerErrorException,
@@ -5,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Repository } from 'typeorm';
 import { Blog } from '../entities/blog.entity';
 import { GameHand } from '../entities/game_hand.entity';
@@ -194,6 +194,8 @@ export class BlogsService {
   async create(data: any, authorId: string) {
     const slugBase = this.slugify(data.title);
     const slug = `${slugBase}-${Date.now()}`;
+    console.log('authorId', authorId);
+
     const blog = this.blogRepository.create({
       ...data,
       slug,

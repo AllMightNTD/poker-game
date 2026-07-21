@@ -58,7 +58,7 @@ const BuyInModal: React.FC<BuyInModalProps> = ({ seatNumber, smallBlind, default
 
   const handleJoin = async () => {
     if (!customName || customName.trim().length === 0) {
-      showToast("Vui lòng nhập tên hiển thị hợp lệ.", "error");
+      showToast("Please enter a valid display name.", "error");
       return;
     }
     if (amount < minBuyIn || amount > maxBuyIn) {
@@ -76,14 +76,14 @@ const BuyInModal: React.FC<BuyInModalProps> = ({ seatNumber, smallBlind, default
 
       const data = response.data;
       if (data.auto_approved) {
-        showToast("Tham gia bàn chơi thành công!", "success");
+        showToast("Successfully joined the table!", "success");
       } else {
-        showToast("Yêu cầu xin ngồi của bạn đang chờ chủ phòng duyệt.", "success");
+        showToast("Your request to join is pending host approval.", "success");
       }
       onSubmit();
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
-      const errorMsg = error?.response?.data?.message || "Không thể thực hiện yêu cầu tham gia.";
+      const errorMsg = error?.response?.data?.message || "Unable to process join request.";
       showToast(errorMsg, "error");
     } finally {
       setIsLoading(false);
@@ -97,7 +97,7 @@ const BuyInModal: React.FC<BuyInModalProps> = ({ seatNumber, smallBlind, default
           <div className="flex items-center gap-2">
             <Coins className="text-emerald-400 w-4 h-4" />
             <h3 className="text-sm font-black text-slate-100 uppercase tracking-wider">
-              Đăng Ký Vào Ghế #{seatNumber}
+              Register for Seat #{seatNumber}
             </h3>
           </div>
           <button onClick={onClose} disabled={isLoading} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors disabled:opacity-50">
@@ -106,17 +106,17 @@ const BuyInModal: React.FC<BuyInModalProps> = ({ seatNumber, smallBlind, default
         </div>
         <div className="p-4 space-y-4">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Tên hiển thị</label>
-            <input type="text" value={customName} onChange={(e) => setCustomName(e.target.value)} disabled={isLoading} placeholder="Nhập tên..." className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm font-bold text-slate-200 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 outline-none transition-all disabled:opacity-50" />
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Display name</label>
+            <input type="text" value={customName} onChange={(e) => setCustomName(e.target.value)} disabled={isLoading} placeholder="Enter name..." className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm font-bold text-slate-200 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 outline-none transition-all disabled:opacity-50" />
           </div>
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1 flex justify-between">
-              <span>Số phỉnh mang vào</span>
+              <span>Chips to bring</span>
               <span className="text-amber-500/80">Min: {minBuyIn.toLocaleString()} - Max: {maxBuyIn.toLocaleString()}</span>
             </label>
             <div className="relative">
               <input type="number" inputMode="numeric" value={amount || ""} onChange={(e) => handleAmountChange(parseInt(e.target.value))} onBlur={handleAmountBlur} disabled={isLoading} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm font-black text-amber-400 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 outline-none transition-all disabled:opacity-50" />
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 uppercase">Phỉnh</div>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 uppercase">Chips</div>
             </div>
             <input type="range" min={minBuyIn} max={maxBuyIn} step={smallBlind} value={amount} onChange={(e) => setAmount(parseInt(e.target.value) || minBuyIn)} disabled={isLoading} className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500 disabled:opacity-50 mt-2" />
             <div className="flex justify-between text-[9px] text-slate-500 font-bold uppercase mt-1">
@@ -128,10 +128,10 @@ const BuyInModal: React.FC<BuyInModalProps> = ({ seatNumber, smallBlind, default
         </div>
         <div className="p-4 bg-slate-950/40 border-t border-slate-800/60 flex gap-2">
           <button onClick={onClose} disabled={isLoading} className="flex-1 bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-white py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-colors disabled:opacity-50">
-            Hủy
-          </button>
+            Cancel
+                                </button>
           <button onClick={handleJoin} disabled={isLoading} className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
-            {isLoading ? <span className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" /> : isOwner ? "NGỒI VÀO BÀN" : "GỬI YÊU CẦU"}
+            {isLoading ? <span className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" /> : isOwner ? "TAKE SEAT" : "SEND REQUEST"}
           </button>
         </div>
       </div>
@@ -281,7 +281,7 @@ const Seat: React.FC<SeatProps> = ({
       <SeatPanel
         isActive={player.isActive}
         isFolded={player.isFolded}
-        isSittingOut={player.lastAction === 'Sit Out' || player.lastAction === 'Mất mạng'}
+        isSittingOut={player.lastAction === 'Sit Out' || player.lastAction === 'Disconnected'}
       >
 
         {/* Avatar + Timer Ring */}

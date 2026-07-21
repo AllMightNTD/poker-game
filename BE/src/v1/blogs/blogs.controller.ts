@@ -9,6 +9,7 @@ import {
   Query,
   Request,
   UseGuards,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -94,7 +95,10 @@ export class BlogsController {
   @ApiOperation({ summary: '[Admin] Tạo bài viết mới' })
   @ApiResponse({ status: 201, description: 'Bài viết đã được tạo thành công' })
   async create(@Body() dto: CreateBlogDto, @Request() req) {
-    const adminId = req.admin?.sub ?? 'system';
+    const adminId = req.admin?.sub;
+    if (!adminId) {
+      throw new UnauthorizedException('Không tìm thấy thông tin admin');
+    }
     return this.blogsService.create(dto, adminId);
   }
 

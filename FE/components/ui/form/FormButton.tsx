@@ -13,8 +13,11 @@ export const FormButton = forwardRef<HTMLButtonElement, FormButtonProps>(
     return (
       <Button
         ref={ref}
+        className="font-medium"
         disabled={disabled || isLoading}
-        startIcon={isLoading ? <CircularProgress size={16} color="inherit" /> : startIcon}
+        startIcon={
+          isLoading ? <CircularProgress size={16} color="inherit" /> : startIcon
+        }
         {...props}
       >
         {children}

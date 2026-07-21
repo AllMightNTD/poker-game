@@ -82,7 +82,7 @@ export const ActionBar: React.FC = () => {
           onChange={(e) => setMuckOption(e.target.checked)}
           className="rounded border-[#FDF1BA]/20 bg-black/40 text-amber-500 focus:ring-amber-500/50 w-3.5 h-3.5 cursor-pointer"
         />
-        <span>Tự động úp bài (Auto Muck)</span>
+        <span>Auto Muck</span>
       </label>
     </div>
   );
@@ -97,8 +97,8 @@ export const ActionBar: React.FC = () => {
             onClick={triggerRabbitHunt}
             className="px-3 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/50 rounded hover:bg-amber-500 hover:text-black transition text-xs font-bold"
           >
-            🐇 Săn Thỏ (Rabbit Hunt)
-          </button>
+            🐇 Rabbit Hunt
+                                </button>
         ) : <div />}
         {muckOptionBar}
       </div>
@@ -115,8 +115,8 @@ export const ActionBar: React.FC = () => {
               onClick={triggerRabbitHunt}
               className="px-3 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/50 rounded hover:bg-amber-500 hover:text-black transition text-xs font-bold"
             >
-              🐇 Săn Thỏ (Rabbit Hunt)
-            </button>
+              🐇 Rabbit Hunt
+                                    </button>
           ) : <div />}
           {muckOptionBar}
         </div>

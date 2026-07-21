@@ -2,14 +2,14 @@ import { LoginForm } from "@/features/auth";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Đăng Nhập Tài Khoản Poker - PKCG",
-  description: "Đăng nhập cổng game PKCG để tham gia các bàn đấu Texas Hold'em, Omaha đỉnh cao cùng hàng ngàn người chơi khác.",
+  title: "Log In Poker Account - PKCG",
+  description: "Log in to the PKCG gaming portal to join top-tier Texas Hold'em and Omaha tables with thousands of other players.",
   alternates: {
     canonical: "https://pkcg.com/login",
   },
   openGraph: {
-    title: "Đăng Nhập Tài Khoản Poker - PKCG",
-    description: "Đăng nhập cổng game PKCG để tham gia các bàn đấu Texas Hold'em, Omaha đỉnh cao.",
+    title: "Log In Poker Account - PKCG",
+    description: "Log in to the PKCG gaming portal to join top-tier Texas Hold'em and Omaha tables.",
     url: "https://pkcg.com/login",
     type: "website",
   },

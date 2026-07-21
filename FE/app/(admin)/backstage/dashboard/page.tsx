@@ -43,10 +43,10 @@ export default function AdminDashboardPage() {
   }, []);
 
   const stats = [
-    { title: "Tổng người dùng", value: statsData.users, change: "Đã đăng ký" },
-    { title: "Bàn đang hoạt động", value: statsData.tables, change: "Real-time" },
-    { title: "Nạp tiền chờ duyệt", value: statsData.pendingAmount, change: statsData.pendingCount },
-    { title: "Cảnh báo bảo mật", value: "0", change: "Hệ thống ổn định" },
+    { title: "Total users", value: statsData.users, change: "Registered" },
+    { title: "Active tables", value: statsData.tables, change: "Real-time" },
+    { title: "Pending deposits", value: statsData.pendingAmount, change: statsData.pendingCount },
+    { title: "Security alerts", value: "0", change: "System stable" },
   ];
 
   const icons = [Users, Gamepad2, WalletCards, ShieldCheck];
@@ -54,8 +54,8 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-100">Tổng quan hệ thống</h1>
-        <p className="text-slate-500 text-sm mt-1">Số liệu và tình trạng hoạt động theo thời gian thực.</p>
+        <h1 className="text-2xl font-semibold text-slate-100">System overview</h1>
+        <p className="text-slate-500 text-sm mt-1">Real-time metrics and operational status.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -78,14 +78,14 @@ export default function AdminDashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5 h-80 flex flex-col">
-          <h2 className="text-sm font-medium text-slate-300 mb-4">Doanh thu & phí bàn (7 ngày qua)</h2>
+          <h2 className="text-sm font-medium text-slate-300 mb-4">Revenue & table fees (last 7 days)</h2>
           <div className="flex-1 flex items-center justify-center text-sm text-slate-600 border border-dashed border-slate-800 rounded-lg">
             [ Chart component ]
           </div>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col">
-          <h2 className="text-sm font-medium text-slate-300 mb-4">Nhật ký gần đây</h2>
+          <h2 className="text-sm font-medium text-slate-300 mb-4">Recent logs</h2>
           <div className="flex-1 flex items-center justify-center text-sm text-slate-600 border border-dashed border-slate-800 rounded-lg">
             [ Audit log feed ]
           </div>

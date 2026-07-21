@@ -48,20 +48,20 @@ function evaluateHand(hole: Card[], board: Card[]): string | null {
   const isBroadway =
     [10, 11, 12, 13, 14].every((v) => uniqueVals.includes(v));
 
-  if (hasFlush && isBroadway) return "Thùng Hoàng Gia 🏆";
-  if (hasFlush && hasStraight) return "Thùng Sảnh 🔥";
-  if (counts[0] >= 4) return "Tứ Quý (4 of a Kind)";
-  if (counts[0] >= 3 && counts[1] >= 2) return "Cù Lũ (Full House)";
-  if (hasFlush) return "Thùng (Flush)";
+  if (hasFlush && isBroadway) return "Royal Flush 🏆";
+  if (hasFlush && hasStraight) return "Straight Flush 🔥";
+  if (counts[0] >= 4) return "Four of a Kind";
+  if (counts[0] >= 3 && counts[1] >= 2) return "Full House";
+  if (hasFlush) return "Flush";
   if (hasStraight) {
-    if (isBroadway) return "Sảnh Broadway (A-K-Q-J-10)";
-    return "Sảnh (Straight)";
+    if (isBroadway) return "Broadway Straight (A-K-Q-J-10)";
+    return "Straight";
   }
   if (counts[0] >= 3) {
     const rank = Object.entries(rc).find(([, c]) => c >= 3)?.[0];
     return `Bộ Ba ${rank ?? ""}`;
   }
-  if (counts[0] >= 2 && counts[1] >= 2) return "Hai Đôi (Two Pair)";
+  if (counts[0] >= 2 && counts[1] >= 2) return "Two Pair";
   if (counts[0] >= 2) {
     const rank = Object.entries(rc).find(([, c]) => c >= 2)?.[0];
     return `Đôi ${rank ?? ""}`;
@@ -107,8 +107,8 @@ export const HeroPanel: React.FC = () => {
             />
           </div>
           <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wider animate-pulse shrink-0">
-            Lượt của bạn!
-          </span>
+            Your turn!
+                                </span>
           <div className="flex-1 h-0.5 bg-slate-900 rounded-full overflow-hidden">
             <div
               className={`h-full ${timerColor} transition-all duration-1000 ml-auto`}
@@ -175,7 +175,7 @@ export const HeroPanel: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <p className={`font-black text-slate-100 uppercase tracking-wide truncate
               ${isMobile ? "text-[10px]" : "text-xs"}`}>
-              {currentUser?.name || currentUser?.username || "Hero (Bạn)"}
+              {currentUser?.name || currentUser?.username || "Hero (You)"}
             </p>
             {hero.isBigBlind && (
               <span className="px-1.5 py-0.5 rounded bg-teal-500/20 border border-teal-500/30 text-teal-300 text-[7px] font-black uppercase shrink-0">BB</span>

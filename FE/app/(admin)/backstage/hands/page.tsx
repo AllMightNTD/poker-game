@@ -61,7 +61,7 @@ export default function AdminHandsPage() {
       }
     } catch (e) {
       console.error(e);
-      alert("Không thể tải chi tiết ván bài");
+      alert("Failed to load hand details");
     } finally {
       setDetailLoading(false);
     }
@@ -97,13 +97,13 @@ export default function AdminHandsPage() {
       if (isMatch) {
         setVerificationResult({
           success: true,
-          message: "Xác thực thành công! Bộ bài tự sinh từ hạt giống khớp 100% với bộ bài lưu trong database.",
+          message: "Verification successful! The self-generated deck from the seed matches the database deck 100%.",
           calculatedDeck,
         });
       } else {
         setVerificationResult({
           success: false,
-          message: "CẢNH BÁO: Bộ bài tự sinh không khớp với bộ bài lưu trong database! Dữ liệu có thể đã bị can thiệp.",
+          message: "WARNING: The self-generated deck does not match the database deck! Data may have been tampered with.",
           calculatedDeck,
         });
       }
@@ -174,8 +174,8 @@ export default function AdminHandsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-100">Lịch sử ván bài</h1>
-        <p className="text-slate-500 text-sm mt-1">Tra cứu chi tiết từng ván bài đã kết thúc, bài tẩy showdown và timeline cược.</p>
+        <h1 className="text-2xl font-semibold text-slate-100">Hand History</h1>
+        <p className="text-slate-500 text-sm mt-1">Look up details of finished hands, showdown hole cards, and betting timeline.</p>
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
@@ -184,22 +184,22 @@ export default function AdminHandsPage() {
             <thead>
               <tr className="bg-slate-800/40 border-b border-slate-800 text-xs text-slate-500">
                 <th className="p-3 font-medium">Hand ID</th>
-                <th className="p-3 font-medium">Tên bàn chơi</th>
-                <th className="p-3 font-medium">Tổng Pot</th>
-                <th className="p-3 font-medium">Phí Rake thu</th>
+                <th className="p-3 font-medium">Table Name</th>
+                <th className="p-3 font-medium">Total Pot</th>
+                <th className="p-3 font-medium">Rake Fee Collected</th>
                 <th className="p-3 font-medium">Community Cards</th>
-                <th className="p-3 font-medium">Thời gian</th>
-                <th className="p-3 font-medium text-right">Chi tiết</th>
+                <th className="p-3 font-medium">Time</th>
+                <th className="p-3 font-medium text-right">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500">Đang tải dữ liệu...</td>
+                  <td colSpan={7} className="p-8 text-center text-slate-500">Loading data...</td>
                 </tr>
               ) : hands.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500">Chưa có ván bài nào được lưu.</td>
+                  <td colSpan={7} className="p-8 text-center text-slate-500">No hands have been saved yet.</td>
                 </tr>
               ) : (
                 hands.map((hand) => (
@@ -216,7 +216,7 @@ export default function AdminHandsPage() {
                       <button
                         onClick={() => handleViewDetail(hand.id)}
                         className="p-1.5 rounded-md text-slate-400 hover:bg-indigo-500/10 hover:text-indigo-400 transition-colors"
-                        title="Xem chi tiết"
+                        title="View Details"
                       >
                         <Eye size={16} />
                       </button>
@@ -237,8 +237,8 @@ export default function AdminHandsPage() {
               color="primary"
               size="small"
             >
-              Tải thêm
-            </FormButton>
+              Load more
+                                      </FormButton>
           </div>
         )}
       </div>
@@ -249,9 +249,9 @@ export default function AdminHandsPage() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl relative flex flex-col max-h-[85vh]">
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-800 shrink-0">
               <div>
-                <h2 className="text-lg font-semibold text-slate-100">Chi tiết ván bài #{selectedHandId}</h2>
+                <h2 className="text-lg font-semibold text-slate-100">Hand Details #{selectedHandId}</h2>
                 {detail && (
-                  <p className="text-xs text-slate-500 mt-0.5">Bàn chơi: {detail.hand.table_name} • Thời gian: {new Date(detail.hand.ended_at).toLocaleString("vi-VN")}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Table: {detail.hand.table_name} • Time: {new Date(detail.hand.ended_at).toLocaleString("vi-VN")}</p>
                 )}
               </div>
               <button
@@ -267,13 +267,13 @@ export default function AdminHandsPage() {
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {detailLoading ? (
-                <div className="text-center py-12 text-slate-500">Đang tải chi tiết ván bài...</div>
+                <div className="text-center py-12 text-slate-500">Loading hand details...</div>
               ) : detail ? (
                 <>
                   {/* Summary row */}
                   <div className="grid grid-cols-4 gap-4 bg-slate-950 border border-slate-850 p-4 rounded-xl text-center">
                     <div>
-                      <span className="text-[11px] text-slate-500 uppercase tracking-wider block">Tổng Pot</span>
+                      <span className="text-[11px] text-slate-500 uppercase tracking-wider block">Total Pot</span>
                       <span className="text-xl font-bold text-emerald-400 mt-1 block">${detail.hand.total_pot}</span>
                     </div>
                     <div>
@@ -281,7 +281,7 @@ export default function AdminHandsPage() {
                       <span className="text-xl font-bold text-amber-500 mt-1 block">${detail.hand.rake_amount}</span>
                     </div>
                     <div>
-                      <span className="text-[11px] text-slate-500 uppercase tracking-wider block">Ghế Dealer</span>
+                      <span className="text-[11px] text-slate-500 uppercase tracking-wider block">Dealer Seat</span>
                       <span className="text-xl font-semibold text-slate-300 mt-1 block">Seat {detail.hand.dealer_seat}</span>
                     </div>
                     <div className="flex flex-col items-center justify-center">
@@ -292,17 +292,17 @@ export default function AdminHandsPage() {
 
                   {/* Player Hand info */}
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-100 mb-3">Người chơi & Showdown</h3>
+                    <h3 className="text-sm font-semibold text-slate-100 mb-3">Players & Showdown</h3>
                     <div className="bg-slate-950/40 border border-slate-800 rounded-xl overflow-hidden">
                       <table className="w-full text-left border-collapse text-sm">
                         <thead>
                           <tr className="bg-slate-800/20 border-b border-slate-800 text-xs text-slate-500">
-                            <th className="p-3 font-medium">Ghế</th>
-                            <th className="p-3 font-medium">Tên người chơi</th>
-                            <th className="p-3 font-medium">Bài tẩy</th>
-                            <th className="p-3 font-medium">Trước ván</th>
-                            <th className="p-3 font-medium">Đã cược</th>
-                            <th className="p-3 font-medium">Thắng Pot</th>
+                            <th className="p-3 font-medium">Seat</th>
+                            <th className="p-3 font-medium">Player Name</th>
+                            <th className="p-3 font-medium">Hole Cards</th>
+                            <th className="p-3 font-medium">Pre-hand</th>
+                            <th className="p-3 font-medium">Bet</th>
+                            <th className="p-3 font-medium">Pot Won</th>
                             <th className="p-3 font-medium text-right">Net</th>
                           </tr>
                         </thead>
@@ -327,10 +327,10 @@ export default function AdminHandsPage() {
 
                   {/* Action Timeline */}
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-100 mb-3">Nhật ký Timeline cược</h3>
+                    <h3 className="text-sm font-semibold text-slate-100 mb-3">Beting Timeline Log</h3>
                     <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-4 space-y-3 font-mono text-xs">
                       {detail.actions.length === 0 ? (
-                        <div className="text-slate-500 text-center py-4">Không ghi nhận hành động cược nào.</div>
+                        <div className="text-slate-500 text-center py-4">No betting actions recorded.</div>
                       ) : (
                         detail.actions.map((act: any) => {
                           let actionColor = "text-slate-300";
@@ -359,30 +359,30 @@ export default function AdminHandsPage() {
                   <div className="border-t border-slate-800 pt-6">
                     <h3 className="text-sm font-semibold text-slate-100 mb-3 flex items-center gap-2">
                       <ShieldCheck size={18} className="text-indigo-400" />
-                      Xác thực minh bạch (Provably Fair)
-                    </h3>
+                      Provably Fair Verification
+                                                                  </h3>
 
                     {detail.provably_fair ? (
                       <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-5 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
                           <div className="space-y-1 bg-slate-950 p-3 rounded-lg border border-slate-900">
-                            <span className="text-slate-500 block text-[10px] uppercase tracking-wider">Server Seed Hash (Công bố trước ván)</span>
+                            <span className="text-slate-500 block text-[10px] uppercase tracking-wider">Server Seed Hash (Pre-announced)</span>
                             <span className="text-slate-300 break-all select-all block">{detail.provably_fair.server_seed_hash}</span>
                           </div>
                           <div className="space-y-1 bg-slate-950 p-3 rounded-lg border border-slate-900">
-                            <span className="text-slate-500 block text-[10px] uppercase tracking-wider">Client Seed (Từ người chơi)</span>
+                            <span className="text-slate-500 block text-[10px] uppercase tracking-wider">Client Seed (From player)</span>
                             <span className="text-slate-300 break-all select-all block">{detail.provably_fair.client_seed || 'N/A'}</span>
                           </div>
                           <div className="space-y-1 bg-slate-950 p-3 rounded-lg border border-slate-900">
-                            <span className="text-slate-500 block text-[10px] uppercase tracking-wider">Server Seed Plain (Mã thô giải mã)</span>
+                            <span className="text-slate-500 block text-[10px] uppercase tracking-wider">Server Seed Plain (Decrypted)</span>
                             <span className="text-emerald-400 break-all select-all block font-bold">
-                              {detail.hand.server_seed || 'Chưa giải mã (Ván bài chưa kết thúc)'}
+                              {detail.hand.server_seed || 'Not decrypted yet (Hand has not ended)'}
                             </span>
                           </div>
                           <div className="space-y-1 bg-slate-950 p-3 rounded-lg border border-slate-900">
-                            <span className="text-slate-500 block text-[10px] uppercase tracking-wider">Nonce & Phiên bản thuật toán</span>
+                            <span className="text-slate-500 block text-[10px] uppercase tracking-wider">Nonce & Algorithm Version</span>
                             <span className="text-slate-300 block">
-                              Nonce: {detail.provably_fair.nonce} • Phiên bản: {detail.provably_fair.algorithm_version || 'v1.0'}
+                              Nonce: {detail.provably_fair.nonce} • Version: {detail.provably_fair.algorithm_version || 'v1.0'}
                             </span>
                           </div>
                         </div>
@@ -402,13 +402,13 @@ export default function AdminHandsPage() {
                               color="primary"
                               startIcon={<ShieldCheck size={14} />}
                             >
-                              Bắt đầu chạy xác thực bộ bài
-                            </FormButton>
+                              Run deck verification
+                                                                                          </FormButton>
                           </div>
                         ) : (
                           <p className="text-xs text-amber-500 bg-amber-950/20 border border-amber-900/50 p-3 rounded-lg">
-                            Ván bài này chưa được giải phóng hạt giống thô (Chưa kết thúc hoặc chưa showdown). Không thể chạy thuật toán xác thực.
-                          </p>
+                            The raw seed for this hand has not been released yet (not finished or showdown not reached). Verification algorithm cannot be run.
+                                                                                        </p>
                         )}
 
                         {/* Verification Result Display */}
@@ -429,8 +429,8 @@ export default function AdminHandsPage() {
                             {verificationResult.calculatedDeck && (
                               <div className="space-y-2">
                                 <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-semibold">
-                                  Bộ bài tự sinh tính toán trên Client (52 lá):
-                                </span>
+                                  Self-generated deck calculated on Client (52 cards):
+                                                                                                      </span>
                                 <div className="flex flex-wrap gap-1 bg-slate-950/60 p-3 rounded-lg border border-slate-900 max-h-[120px] overflow-y-auto">
                                   {verificationResult.calculatedDeck.map((card, idx) => (
                                     <span key={idx} className="scale-90 transform origin-center">
@@ -445,13 +445,13 @@ export default function AdminHandsPage() {
                       </div>
                     ) : (
                       <p className="text-slate-500 text-xs italic bg-slate-950/40 p-4 rounded-xl border border-slate-800">
-                        Không tìm thấy dữ liệu Provably Fair cho ván bài này.
-                      </p>
+                        Provably Fair data not found for this hand.
+                                                                            </p>
                     )}
                   </div>
                 </>
               ) : (
-                <div className="text-center py-12 text-slate-500">Không có dữ liệu.</div>
+                <div className="text-center py-12 text-slate-500">No data available.</div>
               )}
             </div>
           </div>

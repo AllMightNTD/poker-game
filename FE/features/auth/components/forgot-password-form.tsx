@@ -3,24 +3,25 @@
 import { ArrowLeft, CheckCircle, Mail } from "lucide-react";
 import Link from "next/link";
 import { useForgotPassword } from "../hooks/use-forgot-password";
-import { FormInput, FormButton } from "@/components/ui/form";
+import { FormButton } from "@/components/ui/form";
+import { RHFInput } from "@/components/ui/form/RhfFields";
 
 export function ForgotPasswordForm() {
   const t = (key: string) => {
     const translations: Record<string, string> = {
-      "returnLogin": "Quay lại Đăng nhập",
-      "passwordRecovery": "KHÔI PHỤC MẬT KHẨU",
-      "description": "Nhập email của bạn để nhận liên kết đặt lại mật khẩu",
-      "email": "Địa chỉ Email",
-      "sendResetLink": "GỬI LIÊN KẾT ĐẶT LẠI",
-      "requestSent": "ĐÃ GỬI YÊU CẦU",
-      "sendResetLinkDifferentEmail": "THỬ EMAIL KHÁC"
+      "returnLogin": "Back to Login",
+      "passwordRecovery": "RESET PASSWORD",
+      "description": "Enter your email to receive a password reset link",
+      "email": "Email Address",
+      "sendResetLink": "SEND RESET LINK",
+      "requestSent": "REQUEST SENT",
+      "sendResetLinkDifferentEmail": "TRY ANOTHER EMAIL"
     };
     return translations[key] || key;
   };
 
   const {
-    register,
+    control,
     handleSubmit,
     errors,
     isSubmitting,
@@ -62,8 +63,9 @@ export function ForgotPasswordForm() {
               )}
 
               {/* Email Input */}
-              <FormInput
-                {...register("email")}
+              <RHFInput
+                control={control}
+                name="email"
                 type="email"
                 placeholder={t("email")}
                 leftIcon={<Mail size={16} />}

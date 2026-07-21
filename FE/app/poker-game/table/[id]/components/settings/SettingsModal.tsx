@@ -80,8 +80,8 @@ export const SettingsModal = () => {
                 </div>
                 <div>
                   <h3 className="text-xs font-black uppercase tracking-wider text-emerald-400">
-                    Cài Đặt Bàn Chơi
-                  </h3>
+                    Table Settings
+                                                        </h3>
                   <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wide">Table Configuration</p>
                 </div>
               </div>
@@ -100,13 +100,13 @@ export const SettingsModal = () => {
               <div className="space-y-3.5">
                 <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                   <span className="w-1 h-3 rounded-full bg-emerald-500" />
-                  Âm thanh & Hiệu ứng
-                </h4>
+                  Sound & Effects
+                                                  </h4>
                 
                 {/* Mute All Voice */}
                 <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/40 border border-slate-850">
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-slate-300">Tắt tiếng toàn bộ</span>
+                    <span className="text-xs font-bold text-slate-300">Mute All</span>
                     <span className="text-[9px] text-slate-500 font-medium">Mute all voice & audio feedback</span>
                   </div>
                   <button
@@ -131,8 +131,8 @@ export const SettingsModal = () => {
                   <div className="flex items-center justify-between text-xs font-bold text-slate-400">
                     <span className="flex items-center gap-1.5">
                       <Volume2 size={13} className="text-slate-400" />
-                      Giọng nói Dealer
-                    </span>
+                      Dealer Voice
+                                                              </span>
                     <span className="font-mono text-emerald-400">{draftDealerVoiceVol}%</span>
                   </div>
                   <input
@@ -142,7 +142,7 @@ export const SettingsModal = () => {
                     value={draftDealerVoiceVol}
                     disabled={draftMuteAllVoice}
                     onChange={(e) => setDraftDealerVoiceVol(Number(e.target.value))}
-                    aria-label="Âm lượng giọng nói Dealer"
+                    aria-label="Dealer Voice Volume"
                     className="w-full h-1 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                   />
                 </div>
@@ -154,8 +154,8 @@ export const SettingsModal = () => {
                   <div className="flex items-center justify-between text-xs font-bold text-slate-400">
                     <span className="flex items-center gap-1.5">
                       <Volume2 size={13} className="text-slate-400" />
-                      Hiệu ứng âm thanh
-                    </span>
+                      Sound Effects
+                                                              </span>
                     <span className="font-mono text-emerald-400">{draftSoundEffectsVol}%</span>
                   </div>
                   <input
@@ -165,7 +165,7 @@ export const SettingsModal = () => {
                     value={draftSoundEffectsVol}
                     disabled={draftMuteAllVoice}
                     onChange={(e) => setDraftSoundEffectsVol(Number(e.target.value))}
-                    aria-label="Âm lượng hiệu ứng âm thanh"
+                    aria-label="Sound Effects Volume"
                     className="w-full h-1 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                   />
                 </div>
@@ -175,18 +175,18 @@ export const SettingsModal = () => {
               <div className="space-y-3">
                 <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                   <span className="w-1 h-3 rounded-full bg-emerald-500" />
-                  Chủ đề & Giao diện
-                </h4>
+                  Theme & Interface
+                                                  </h4>
 
                 {/* Table Background / Felt Color */}
                 <div className="space-y-2">
-                  <span className="text-xs font-bold text-slate-400 block">Màu nỉ bàn chơi</span>
+                  <span className="text-xs font-bold text-slate-400 block">Table Felt Color</span>
                   <div className="grid grid-cols-4 gap-2">
                     {[
-                      { id: "classic_green", name: "Lục cổ điển", color: "bg-emerald-800", ring: "ring-emerald-400" },
-                      { id: "royal_blue", name: "Lam hoàng gia", color: "bg-blue-800", ring: "ring-blue-400" },
-                      { id: "ruby_red", name: "Đỏ Ruby", color: "bg-rose-800", ring: "ring-rose-400" },
-                      { id: "shadow_black", name: "Đen bóng đêm", color: "bg-slate-800", ring: "ring-slate-400" },
+                      { id: "classic_green", name: "Classic Green", color: "bg-emerald-800", ring: "ring-emerald-400" },
+                      { id: "royal_blue", name: "Royal Blue", color: "bg-blue-800", ring: "ring-blue-400" },
+                      { id: "ruby_red", name: "Ruby Red", color: "bg-rose-800", ring: "ring-rose-400" },
+                      { id: "shadow_black", name: "Midnight Black", color: "bg-slate-800", ring: "ring-slate-400" },
                     ].map((tc) => (
                       <button
                         key={tc.id}
@@ -211,12 +211,12 @@ export const SettingsModal = () => {
 
                 {/* Card Deck Style */}
                 <div className="space-y-2">
-                  <span className="text-xs font-bold text-slate-400 block">Họa tiết mặt sau lá bài</span>
+                  <span className="text-xs font-bold text-slate-400 block">Card Back Pattern</span>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { id: "classic", name: "Cổ điển (Đỏ)", bg: "from-red-700 via-red-800 to-red-950", accent: "text-rose-500/20", coin: "text-amber-400" },
-                      { id: "modern", name: "Hiện đại (Xanh)", bg: "from-indigo-800 via-indigo-900 to-slate-950", accent: "text-indigo-500/20", coin: "text-indigo-400" },
-                      { id: "cyberpunk", name: "Tương lai (Vàng)", bg: "from-slate-900 via-yellow-950 to-black", accent: "text-yellow-500/20", coin: "text-yellow-400" },
+                      { id: "classic", name: "Classic (Red)", bg: "from-red-700 via-red-800 to-red-950", accent: "text-rose-500/20", coin: "text-amber-400" },
+                      { id: "modern", name: "Modern (Blue)", bg: "from-indigo-800 via-indigo-900 to-slate-950", accent: "text-indigo-500/20", coin: "text-indigo-400" },
+                      { id: "cyberpunk", name: "Futuristic (Yellow)", bg: "from-slate-900 via-yellow-950 to-black", accent: "text-yellow-500/20", coin: "text-yellow-400" },
                     ].map((cb) => (
                       <button
                         key={cb.id}
@@ -251,10 +251,10 @@ export const SettingsModal = () => {
               <div className="border-t border-slate-850 my-2 pt-3 space-y-3">
                 <div className="text-[10px] text-slate-500 leading-relaxed font-semibold flex justify-between items-center">
                   <div>
-                    ID bàn: <span className="font-mono text-slate-400 select-all">{tableId}</span>
+                    Table ID: <span className="font-mono text-slate-400 select-all">{tableId}</span>
                     <br />
-                    Loại trò chơi: Texas Hold&apos;em No Limit Cash Game
-                  </div>
+                    Game Type: Texas Hold&apos;em No Limit Cash Game
+                                                        </div>
                   <button
                     type="button"
                     onClick={() => {
@@ -278,8 +278,8 @@ export const SettingsModal = () => {
                   <div className="flex items-center gap-2 text-left">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
                     <div>
-                      <span className="text-xs font-bold text-emerald-400 block">Hệ thống Provably Fair</span>
-                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wide">Cấu hình & Xác thực Hạt giống</span>
+                      <span className="text-xs font-bold text-emerald-400 block">Provably Fair System</span>
+                      <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wide">Seed Configuration & Verification</span>
                     </div>
                   </div>
                   <span className="text-emerald-500 text-xs font-black">➔</span>
@@ -297,19 +297,19 @@ export const SettingsModal = () => {
                   setDraftDealerVoiceVol(80);
                   setDraftSoundEffectsVol(100);
                   setDraftMuteAllVoice(false);
-                  showToast("Cài đặt đã reset về mặc định", "info");
+                  showToast("Settings reset to default", "info");
                 }}
                 className="flex-1 py-2.5 rounded-xl border border-slate-800 bg-slate-950/20 hover:bg-slate-950/60 text-slate-400 hover:text-slate-200 font-black text-[10px] uppercase tracking-wider transition-colors text-center"
               >
-                Mặc định
-              </button>
+                Default
+                                            </button>
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
                 className="flex-1 py-2.5 rounded-xl border border-slate-800 bg-slate-950/20 hover:bg-slate-950/60 text-slate-400 hover:text-slate-200 font-black text-[10px] uppercase tracking-wider transition-colors text-center"
               >
-                Hủy
-              </button>
+                Cancel
+                                            </button>
               <button
                 type="button"
                 onClick={() => {
@@ -320,12 +320,12 @@ export const SettingsModal = () => {
                   setMuteAllVoice(draftMuteAllVoice);
                   setSoundEnabled(!draftMuteAllVoice);
                   setIsSettingsOpen(false);
-                  showToast("Cập nhật cài đặt thành công!", "success");
+                  showToast("Settings updated successfully!", "success");
                 }}
                 className="flex-[2] py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-[10px] uppercase tracking-wider transition-colors text-center shadow-lg shadow-emerald-950/20"
               >
-                Lưu cài đặt
-              </button>
+                Save Settings
+                                            </button>
             </div>
           </motion.div>
         </div>

@@ -31,36 +31,36 @@ const STATIC_BANNERS: BannerItem[] = [
   {
     id: "s1",
     title: "Weekly Freeroll $5,000 GTD",
-    subtitle: "Giải Đấu Miễn Phí Mỗi Chủ Nhật",
-    description: "Đăng ký tham gia hoàn toàn miễn phí, thử thách bản lĩnh cùng 1,000+ cao thủ toàn quốc và rinh giải thưởng khủng.",
-    badge: "Sự Kiện Hot",
+    subtitle: "Free Sunday Tournament",
+    description: "Register completely free, challenge 1,000+ top players nationwide, and win huge prizes.",
+    badge: "Hot Events",
     color: "from-amber-500/20 via-orange-600/10 to-[#0b141d]",
     icon: <Trophy className="text-[#F4B942] w-12 h-12" />,
   },
   {
     id: "s2",
     title: "Golden Spade Season 5",
-    subtitle: "Mùa Giải Xếp Hạng Mới Đã Mở",
-    description: "Leo rank tích điểm VPIP và Hand thắng để nhận ngay Avatar VIP đặc quyền, khung sảnh lấp lánh và hàng triệu chip thưởng.",
-    badge: "Mùa Giải Mới",
+    subtitle: "New Ranked Season Open",
+    description: "Climb the ranks, accumulate VPIP points and winning hands to instantly receive exclusive VIP Avatars, glowing lobby frames, and millions of bonus chips.",
+    badge: "New Season",
     color: "from-blue-500/20 via-[#0a2540]/10 to-[#0b141d]",
     icon: <Sparkles className="text-blue-400 w-12 h-12" />,
   },
   {
     id: "s3",
     title: "Deposit Bonus: +100% Chips",
-    subtitle: "Khuyến Mãi Nạp Đầu Không Giới Hạn",
-    description: "Nhân đôi số phỉnh nạp đầu tiên vào tài khoản. Độc quyền hỗ trợ nạp rút siêu tốc trong 30 giây qua ngân hàng.",
-    badge: "Khuyến Mãi",
+    subtitle: "Unlimited First Deposit Bonus",
+    description: "Double your first deposit chips. Exclusive 30-second deposit and withdrawal support via bank transfer.",
+    badge: "Promotions",
     color: "from-emerald-500/20 via-teal-900/10 to-[#0b141d]",
     icon: <Coins className="text-[#F4B942] w-12 h-12" />,
   },
   {
     id: "s4",
     title: "Weekly Leaderboard Race",
-    subtitle: "Đua Top Tuần - Nhận 50,000,000 Chips",
-    description: "Top 3 người chơi tích lũy lợi nhuận Pot lớn nhất trong tuần sẽ nhận thưởng trực tiếp vào ví chính vào sáng Thứ 2.",
-    badge: "Bảng Xếp Hạng",
+    subtitle: "Weekly Leaderboard - Win 50,000,000 Chips",
+    description: "The top 3 players with the highest accumulated weekly pot profit will receive rewards directly into their main wallet on Monday morning.",
+    badge: "Leaderboards",
     color: "from-rose-500/20 via-purple-900/10 to-[#0b141d]",
     icon: <Zap className="text-rose-400 w-12 h-12" />,
   },
@@ -89,7 +89,7 @@ export const EventBanner: React.FC = () => {
           setBanners(STATIC_BANNERS);
         }
       } catch (e) {
-        console.error("Lỗi lấy danh sách banner từ server:", e);
+        console.error("Error fetching banner list from server:", e);
         setBanners(STATIC_BANNERS);
       }
     };

@@ -3,14 +3,14 @@ import { BlogList, FeedPostSkeleton } from "@/features/blogs";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Cẩm Nang Chiến Thuật Poker & Tin Tức Mới Nhất | PKCG",
-  description: "Tổng hợp các bài viết hướng dẫn luật chơi Poker, chiến thuật preflop, postflop nâng cao và tin tức giải đấu Poker hot nhất từ PKCG.",
+  title: "Poker Strategy Guide & Latest News | PKCG",
+  description: "Compilation of Poker guide articles, advanced preflop and postflop strategies, and the hottest Poker tournament news from PKCG.",
   alternates: {
     canonical: "https://pkcg.com/blogs",
   },
   openGraph: {
-    title: "Cẩm Nang Chiến Thuật Poker & Tin Tức Mới Nhất | PKCG",
-    description: "Tổng hợp các bài viết hướng dẫn luật chơi Poker, chiến thuật preflop, postflop nâng cao và tin tức giải đấu Poker hot nhất từ PKCG.",
+    title: "Poker Strategy Guide & Latest News | PKCG",
+    description: "Compilation of Poker guide articles, advanced preflop and postflop strategies, and the hottest Poker tournament news from PKCG.",
     type: "website",
   },
 };

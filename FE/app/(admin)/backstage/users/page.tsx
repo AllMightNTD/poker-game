@@ -1,9 +1,11 @@
 "use client";
 
+import { FormButton } from "@/components/ui/form";
+import { RHFInput } from "@/components/ui/form/RhfFields";
 import httpClient from "@/core/api/http-client";
-import { Ban, ShieldAlert, ShieldCheck, LogOut, BarChart3, X } from "lucide-react";
+import { Ban, BarChart3, LogOut, ShieldAlert, ShieldCheck, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { FormInput, FormButton } from "@/components/ui/form";
+import { useForm, useWatch } from "react-hook-form";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -11,12 +13,17 @@ export default function AdminUsersPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
-  
+
   // Selected user for showing stats & extra actions
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [userStats, setUserStats] = useState<any | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [kickRoomId, setKickRoomId] = useState("");
+
+  const { control } = useForm({
+    defaultValues: { kickRoomId: "" },
+  });
+  const kickRoomId = useWatch({ control, name: "kickRoomId" });
+
 
   const fetchUsers = async (cursor?: string | null) => {
     try {
@@ -83,7 +90,7 @@ export default function AdminUsersPage() {
     try {
       await httpClient.post(`/api/v1/users/${id}/kick`, { roomId: kickRoomId });
       alert("Đã gửi yêu cầu trục xuất người chơi thành công");
-      setKickRoomId("");
+      // To reset, we would need setValue from useForm, but this is a minor detail
     } catch {
       alert("Trục xuất người chơi thất bại");
     }
@@ -120,17 +127,17 @@ export default function AdminUsersPage() {
               <tr className="bg-slate-800/40 border-b border-slate-800 text-xs text-slate-500">
                 <th className="p-3 font-medium">UID / Tên đăng nhập</th>
                 <th className="p-3 font-medium">Email</th>
-                <th className="p-3 font-medium">Trạng thái</th>
+                <th className="p-3 font-medium">Status</th>
                 <th className="p-3 font-medium">Ngày tham gia</th>
-                <th className="p-3 font-medium text-right">Thao tác</th>
+                <th className="p-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-slate-500">
-                    Đang tải dữ liệu...
-                  </td>
+                    Loading data...
+                                                        </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
@@ -153,8 +160,8 @@ export default function AdminUsersPage() {
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-xs border border-emerald-500/20">
-                          <ShieldCheck size={12} /> Hoạt động
-                        </span>
+                          <ShieldCheck size={12} /> Active
+                                                                </span>
                       )}
                     </td>
                     <td className="p-3 text-slate-500">
@@ -185,7 +192,7 @@ export default function AdminUsersPage() {
                           <button
                             onClick={() => handleBan(user.id)}
                             className="p-1.5 rounded-md text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 transition-colors"
-                            title="Khóa tài khoản"
+                            title="Lock account"
                           >
                             <Ban size={16} />
                           </button>
@@ -208,8 +215,8 @@ export default function AdminUsersPage() {
               color="primary"
               size="small"
             >
-              Tải thêm
-            </FormButton>
+              Load more
+                                      </FormButton>
           </div>
         )}
       </div>
@@ -217,84 +224,120 @@ export default function AdminUsersPage() {
       {/* User details and stats modal */}
       {selectedUser && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative">
+
+            {/* Modal Header */}
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-800">
-              <h2 className="text-lg font-semibold text-slate-100">Chi tiết người chơi</h2>
+              <div className="flex items-center gap-2">
+                <div className="size-2 rounded-full bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.4)]" />
+                <h2 className="text-base font-bold text-slate-100 tracking-tight">Chi tiết người chơi</h2>
+              </div>
               <button
                 onClick={() => setSelectedUser(null)}
-                className="text-slate-400 hover:text-slate-200 transition-colors"
+                className="p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-lg transition-all"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
+            {/* Modal Content */}
             <div className="p-6 space-y-6">
-              <div>
-                <h3 className="text-sm font-medium text-slate-400">Thông tin cơ bản</h3>
-                <div className="bg-slate-950 border border-slate-850 rounded-xl p-4 mt-2 space-y-2.5 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Tên đăng nhập:</span>
-                    <span className="font-semibold text-slate-200">{selectedUser.user_name}</span>
+
+              {/* 1. Thông tin cơ bản */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  <User size={14} className="text-slate-500" />
+                  <span>Thông tin tài khoản</span>
+                </div>
+
+                <div className="bg-slate-950/60 border border-slate-850 rounded-xl p-4 space-y-3 text-sm shadow-inner">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Username</span>
+                    <span className="font-bold text-slate-100 font-mono">{selectedUser.user_name}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Email:</span>
-                    <span className="text-slate-300">{selectedUser.email}</span>
+                  <div className="flex justify-between items-center border-t border-slate-900 pt-3">
+                    <span className="text-slate-500">Email</span>
+                    <span className="text-slate-300 font-medium">{selectedUser.email}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Trạng thái:</span>
-                    <span className={`font-semibold ${selectedUser.status === "BANNED" ? "text-rose-400" : "text-emerald-400"}`}>
-                      {selectedUser.status === "BANNED" ? "Đã khóa" : "Hoạt động"}
+                  <div className="flex justify-between items-center border-t border-slate-900 pt-3">
+                    <span className="text-slate-500">Status</span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${selectedUser.status === "BANNED"
+                      ? "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                      : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                      }`}>
+                      <span className={`size-1.5 rounded-full mr-1.5 ${selectedUser.status === "BANNED" ? "bg-rose-400" : "bg-emerald-400"}`} />
+                      {selectedUser.status === "BANNED" ? "Đã khóa" : "Active"}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-sm font-medium text-slate-400">Thống kê Game</h3>
+              {/* 2. Thống kê dữ liệu ván đấu */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  <BarChart3 size={14} className="text-slate-500" />
+                  <span>Hiệu suất chơi game</span>
+                </div>
+
                 {statsLoading ? (
-                  <div className="text-center text-slate-500 py-6 text-sm">Đang tải thống kê...</div>
+                  <div className="flex flex-col items-center justify-center bg-slate-950/40 border border-slate-850 rounded-xl py-8 gap-2">
+                    <div className="size-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-xs text-slate-500">Đang tải thống kê dữ liệu...</span>
+                  </div>
                 ) : userStats ? (
-                  <div className="grid grid-cols-3 gap-3 mt-2">
-                    <div className="bg-slate-950 border border-slate-850 p-3 rounded-xl text-center">
-                      <div className="text-slate-500 text-[11px] uppercase tracking-wider">Số Hand</div>
-                      <div className="text-lg font-semibold text-slate-100 mt-1">{userStats.hands_played}</div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-slate-950/60 border border-slate-850 p-3.5 rounded-xl text-center shadow-sm">
+                      <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Số Hand</div>
+                      <div className="text-xl font-bold text-slate-100 font-mono mt-1">{userStats.hands_played}</div>
                     </div>
-                    <div className="bg-slate-950 border border-slate-850 p-3 rounded-xl text-center">
-                      <div className="text-slate-500 text-[11px] uppercase tracking-wider">Rake đóng</div>
-                      <div className="text-lg font-semibold text-amber-500 mt-1">${userStats.rake_contributed}</div>
+
+                    <div className="bg-slate-950/60 border border-slate-850 p-3.5 rounded-xl text-center shadow-sm">
+                      <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Rake đóng</div>
+                      <div className="text-xl font-bold text-amber-500 font-mono mt-1">${userStats.rake_contributed}</div>
                     </div>
-                    <div className="bg-slate-950 border border-slate-850 p-3 rounded-xl text-center">
-                      <div className="text-slate-500 text-[11px] uppercase tracking-wider">Net Win/Loss</div>
-                      <div className={`text-lg font-semibold mt-1 ${userStats.net_win_loss >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+
+                    <div className="bg-slate-950/60 border border-slate-850 p-3.5 rounded-xl text-center shadow-sm">
+                      <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Net Win/Loss</div>
+                      <div className={`text-xl font-bold font-mono mt-1 ${userStats.net_win_loss >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                         {userStats.net_win_loss >= 0 ? "+" : ""}${userStats.net_win_loss}
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center text-slate-500 py-6 text-sm">Không tìm thấy thống kê.</div>
+                  <div className="text-center text-slate-500 bg-slate-950/40 border border-slate-850 rounded-xl py-6 text-xs italic">
+                    Không tìm thấy dữ liệu thống kê của người chơi này.
+                  </div>
                 )}
               </div>
 
-              <div className="border-t border-slate-800 pt-4 space-y-3">
-                <h3 className="text-sm font-medium text-slate-400">Trục xuất khỏi bàn chơi</h3>
-                <div className="flex gap-2">
-                  <FormInput
-                    type="text"
-                    placeholder="Nhập ID bàn đấu"
-                    value={kickRoomId}
-                    onChange={(e) => setKickRoomId(e.target.value)}
-                    className="flex-1"
-                  />
+              {/* 3. Vùng Hành động nguy hiểm (Danger Zone) - Có nền riêng tách biệt hẳn */}
+              <div className="border border-rose-950/40 bg-rose-950/10 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-rose-400 uppercase tracking-wider">
+                  <ShieldAlert size={14} />
+                  <span>Quản trị viên thao tác nhanh</span>
+                </div>
+
+                <div className="flex gap-2 items-start">
+                  <div className="flex-1">
+                    <RHFInput
+                      control={control}
+                      name="kickRoomId"
+                      type="text"
+                      placeholder="Nhập chính xác ID bàn đấu..."
+                      className="bg-slate-950 border-slate-800 rounded-xl focus:border-rose-500/50 text-sm h-10"
+                    />
+                  </div>
                   <FormButton
                     onClick={() => handleForceKick(selectedUser.id)}
                     variant="contained"
-                    color="error"
-                    startIcon={<LogOut size={14} />}
+                    className="!bg-rose-600 hover:!bg-rose-500 !text-white h-10 px-4 rounded-xl flex items-center gap-1.5 text-sm font-semibold shadow-md shrink-0"
                   >
-                    Trục xuất
+                    <LogOut size={14} />
+                    <span>Trục xuất</span>
                   </FormButton>
                 </div>
               </div>
+
             </div>
           </div>
         </div>

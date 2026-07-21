@@ -4,6 +4,7 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
@@ -96,9 +97,11 @@ export class AuditLog extends BaseEntity {
   user_agent?: string;
 
   @ManyToOne(() => User, (user) => user.auditLog)
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
   @ManyToOne(() => PokerTable, (room) => room.auditLog)
+  @JoinColumn({ name: 'room_id' })
   room: PokerTable;
 
   /**
@@ -111,6 +114,7 @@ export class AuditLog extends BaseEntity {
   actor_id?: string;
 
   @ManyToOne(() => User, (user) => user.auditLog)
+  @JoinColumn({ name: 'actor_id' })
   actor: User;
 
   /**

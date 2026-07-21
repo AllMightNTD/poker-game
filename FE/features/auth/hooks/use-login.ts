@@ -5,23 +5,24 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Cookies from "js-cookie";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { AuthService } from "../services/auth.service";
 
 const REMEMBER_EMAIL_KEY = "sociala_remembered_email";
 
 export const getLoginSchema = (t: any) => z.object({
-  email: z.string().min(1, t("Email không được bỏ trống")).email(t("Email không hợp lệ")),
+  email: z.string().min(1, t("Email is required")).email(t("Invalid email")),
   password: z
     .string()
-    .min(1, "Mật khẩu không được bỏ trống")
-    .min(6, "Mật khẩu tối thiểu 6 ký tự")
-    .max(32, "Mật khẩu tối đa 32 ký tự")
+    .min(1, "Password is required")
+    .min(6, "Password must be at least 6 characters")
+    .max(32, "Password must not exceed 32 characters")
     .regex(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
-      "Mật khẩu phải có chữ hoa, chữ thường và số"
+      "Password must contain uppercase, lowercase letters, and numbers"
     ),
+  rememberMe: z.boolean().optional(),
 })
 
 export type LoginFormValues = z.infer<ReturnType<typeof getLoginSchema>>;
@@ -41,9 +42,15 @@ export function useLogin(t: any) {
     register,
     handleSubmit,
     setValue,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(getLoginSchema(t)),
+    defaultValues: {
+      email: "",
+      password: "",
+      rememberMe: false,
+    }
   });
 
   useEffect(() => {
@@ -60,12 +67,26 @@ export function useLogin(t: any) {
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  const watchEmail = useWatch({ control, name: "email" });
+  const watchPassword = useWatch({ control, name: "password" });
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    clearFieldError("email");
+  }, [watchEmail]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    clearFieldError("password");
+  }, [watchPassword]);
+
   const onSubmit = async (data: LoginFormValues) => {
     setFieldErrors({});
     try {
       const result = await AuthService.login({
-        ...data,
-        rememberMe,
+        email: data.email,
+        password: data.password,
+        rememberMe: !!data.rememberMe,
       });
 
       const token = result?.metadata?.access_token || result?.access_token || result?.accessToken;
@@ -74,7 +95,7 @@ export function useLogin(t: any) {
         Cookies.set("accessToken", token, { expires: 15 / 1440, path: "/" }); // 15 minutes
       }
 
-      if (rememberMe) {
+      if (data.rememberMe) {
         localStorage.setItem(REMEMBER_EMAIL_KEY, data.email);
       } else {
         localStorage.removeItem(REMEMBER_EMAIL_KEY);
@@ -117,6 +138,7 @@ export function useLogin(t: any) {
 
   return {
     register,
+    control,
     handleSubmit: handleSubmit(onSubmit),
     setValue,
     errors,

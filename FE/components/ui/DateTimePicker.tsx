@@ -1,8 +1,8 @@
 "use client";
 
-import React, { forwardRef } from "react";
 import { DateTimePicker as MuiDateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import dayjs from "dayjs";
+import { forwardRef } from "react";
 
 export interface DateTimePickerProps {
   label?: string;
@@ -16,6 +16,8 @@ export interface DateTimePickerProps {
 
 export const DateTimePicker = forwardRef<any, DateTimePickerProps>(
   ({ label, error, value, onChange, name, disabled, className }, ref) => {
+    console.log('value', value);
+
     // Parse value string to dayjs object, handle invalid or empty strings gracefully
     const parsedValue = value ? dayjs(value) : null;
 

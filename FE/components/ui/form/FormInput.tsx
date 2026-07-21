@@ -1,11 +1,29 @@
 "use client";
 
-import React, { forwardRef, useState, useEffect, useRef, useCallback } from "react";
-import TextField from "@mui/material/TextField";
-import InputAdornment from "@mui/material/InputAdornment";
-import IconButton from "@mui/material/IconButton";
+/**
+ * FormInput
+ *
+ * Bọc MUI TextField — đây là component CONTROLLED. Phải dùng với
+ * react-hook-form `Controller` (không dùng `register()`), vì register()
+ * không truyền `value` xuống nên input sẽ không hiển thị đúng giá trị
+ * khi load/edit dữ liệu (ví dụ khi gọi `reset()`).
+ *
+ * Cách dùng đúng:
+ *   <Controller
+ *     control={control}
+ *     name="title"
+ *     render={({ field, fieldState }) => (
+ *       <FormInput {...field} label="Tiêu đề" error={fieldState.error?.message} />
+ *     )}
+ *   />
+ */
+
 import CircularProgress from "@mui/material/CircularProgress";
+import IconButton from "@mui/material/IconButton";
+import InputAdornment from "@mui/material/InputAdornment";
+import TextField from "@mui/material/TextField";
 import { Eye, EyeOff, Search } from "lucide-react";
+import React, { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 
 export interface FormInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "size"> {
   label?: string;
@@ -38,27 +56,28 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
       debounceTime = 0,
       onChange,
       size = "medium",
+      value,
       ...props
     },
     ref
   ) => {
     const [showPassword, setShowPassword] = useState(false);
-    const [localValue, setLocalValue] = useState<string>(
-      String(props.value ?? props.defaultValue ?? "")
-    );
 
     const isPassword = type === "password";
     const isSearch = type === "search";
     const actualType = isPassword ? (showPassword ? "text" : "password") : type;
 
+    // Chỉ dùng để hiển thị mượt trong lúc debounce đang chờ bắn onChange lên
+    // cha. KHÔNG dùng để "mirror" value như bản cũ (tránh xung đột khi cha
+    // cập nhật lại value, ví dụ form.reset()).
+    const [pendingDisplayValue, setPendingDisplayValue] = useState<string | null>(null);
     const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Sync external value changes
+    // Bất kỳ khi nào giá trị từ cha (react-hook-form) thay đổi, hủy buffer
+    // tạm để value hiển thị luôn đồng bộ với nguồn sự thật (form state).
     useEffect(() => {
-      if (props.value !== undefined) {
-        setLocalValue(String(props.value));
-      }
-    }, [props.value]);
+      setPendingDisplayValue(null);
+    }, [value]);
 
     useEffect(() => {
       return () => {
@@ -97,9 +116,8 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
       // Client-side XSS Sanitization
       const sanitizedValue = rawValue.replace(/<script[^>]*>([\S\s]*?)<\/script>|<[^>]*>/gi, "");
 
-      setLocalValue(sanitizedValue);
-
       if (debounceTime > 0) {
+        setPendingDisplayValue(sanitizedValue);
         triggerDebouncedChange(sanitizedValue, e);
       } else if (onChange) {
         const eventClone = {
@@ -153,12 +171,16 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
       </InputAdornment>
     ) : null;
 
+    // Luôn controlled theo `value` do cha truyền vào (qua Controller).
+    // pendingDisplayValue chỉ "che" tạm trong lúc debounce chưa kịp bắn lên.
+    const displayValue = pendingDisplayValue ?? (value ?? "");
+
     return (
       <TextField
         {...(props as any)}
         type={actualType}
         label={label}
-        value={localValue}
+        value={displayValue}
         onChange={handleInputChange}
         onPaste={handlePaste}
         onCopy={handleCopy}

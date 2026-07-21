@@ -18,13 +18,13 @@ function ProfileContent() {
   const [sessionRefresh, setSessionRefresh] = useState(0);
 
   const handleRevoke = async (id: string) => {
-    if (!confirm("Bạn có chắc chắn muốn đăng xuất thiết bị này từ xa?")) return;
+    if (!confirm("Are you sure you want to log out of this device remotely?")) return;
     try {
       await AuthService.revokeSession(id);
       setSessionRefresh((prev) => prev + 1);
     } catch (err) {
       console.error("Failed to revoke user session", err);
-      alert("Không thể thu hồi phiên đăng nhập.");
+      alert("Failed to revoke session.");
     }
   };
 
@@ -214,19 +214,19 @@ function ProfileContent() {
               <div className="p-2 bg-indigo-500/20 rounded-lg">
                 <Laptop className="text-indigo-400 w-6 h-6" />
               </div>
-              <h2 className="text-2xl font-black text-white">Thiết bị hoạt động</h2>
+              <h2 className="text-2xl font-black text-white">Active Device</h2>
             </div>
             <button
               onClick={() => setSessionRefresh((prev) => prev + 1)}
               className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition cursor-pointer"
             >
-              Làm mới
-            </button>
+              Refresh
+                                      </button>
           </div>
 
           <p className="text-slate-400 text-sm leading-relaxed mb-6">
-            Danh sách các thiết bị/trình duyệt đang đăng nhập vào tài khoản của bạn. Bạn có thể đăng xuất bất kỳ phiên hoạt động đáng ngờ nào từ xa.
-          </p>
+            List of devices/browsers currently logged into your account. You can remotely log out of any suspicious active sessions.
+                                </p>
 
           <div className="space-y-4">
             {loadingSessions ? (
@@ -235,8 +235,8 @@ function ProfileContent() {
               </div>
             ) : sessions.length === 0 ? (
               <div className="text-center py-8 text-slate-500 text-sm border-2 border-dashed border-slate-800 rounded-xl">
-                Không tìm thấy phiên hoạt động nào.
-              </div>
+                No active sessions found.
+                                                </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {sessions.map((session) => (
@@ -250,7 +250,7 @@ function ProfileContent() {
                       </div>
                       <div className="space-y-1 min-w-0">
                         <p className="text-sm font-bold text-slate-200 truncate">
-                          {session.device_info || "Thiết bị không xác định"}
+                          {session.device_info || "Unknown device"}
                         </p>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 font-mono">
                           <span className="flex items-center gap-1">
@@ -267,7 +267,7 @@ function ProfileContent() {
                     <button
                       onClick={() => handleRevoke(session.id)}
                       className="p-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 hover:text-rose-300 rounded-xl transition-colors cursor-pointer shrink-0 ml-3"
-                      title="Thu hồi phiên đăng nhập"
+                      title="Revoke Session"
                     >
                       <Trash2 size={16} />
                     </button>

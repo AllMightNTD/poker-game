@@ -82,10 +82,10 @@ export const LABELS = {
   min: "MIN",
   halfPot: "1/2 POT",
   pot: "POT",
-  customizeTitle: "TÙY CHỈNH MỨC CƯỢC",
-  waitingFold: "Đã bỏ bài — Chờ ván tiếp theo...",
-  waitingTurn: (name?: string) => (name ? `Đang chờ lượt của ${name}...` : "Đang chờ ván đấu..."),
-  startGame: "Bắt đầu ván đấu",
+  customizeTitle: "CUSTOMIZE BETS",
+  waitingFold: "Folded — Waiting for next hand...",
+  waitingTurn: (name?: string) => (name ? `Đang chờ lượt của ${name}...` : "Waiting for hand..."),
+  startGame: "Start Hand",
 } as const;
 
 
@@ -94,8 +94,8 @@ export const DEFAULT_AUTO_DISMISS_MS = 4500;
 export const BANNER_TRANSITION = { duration: 0.25, ease: "easeOut" as const };
 
 export const WINNER_LABELS = {
-  wonByFold: "THẮNG DO ĐỐI THỦ BỎ BÀI",
+  wonByFold: "WON - OPPONENTS FOLDED",
   winTitle: (amount: string) => `CHIẾN THẮNG (+${amount})`,
-  splitSuffix: "— chia đều",
-  defaultPot: "Ván bài",
+  splitSuffix: "— split",
+  defaultPot: "Hand",
 } as const;

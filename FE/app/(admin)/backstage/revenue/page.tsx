@@ -17,7 +17,7 @@ export default function AdminRevenuePage() {
       }
     } catch (e) {
       console.error(e);
-      alert("Không thể tải báo cáo doanh thu");
+      alert("Failed to load revenue report");
     } finally {
       setLoading(false);
     }
@@ -32,19 +32,19 @@ export default function AdminRevenuePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-100">Báo cáo doanh thu</h1>
-        <p className="text-slate-500 text-sm mt-1">Giám sát dòng tiền nạp rút, thống kê phí Rake thu về từ các ván bài Poker.</p>
+        <h1 className="text-2xl font-semibold text-slate-100">Revenue Reports</h1>
+        <p className="text-slate-500 text-sm mt-1">Monitor deposit and withdrawal cash flow, track rake fee statistics collected from poker hands.</p>
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-slate-500">Đang tải dữ liệu doanh thu...</div>
+        <div className="p-12 text-center text-slate-500">Loading revenue data...</div>
       ) : stats ? (
         <>
           {/* Summary Row */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between hover:border-slate-700 transition-colors">
               <div>
-                <span className="text-xs text-slate-500 uppercase tracking-wider block">Phí Rake thu về</span>
+                <span className="text-xs text-slate-500 uppercase tracking-wider block">Collected Rake Fees</span>
                 <span className="text-2xl font-bold text-amber-500 mt-1 block">${stats.summary.total_rake}</span>
               </div>
               <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
@@ -54,7 +54,7 @@ export default function AdminRevenuePage() {
 
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between hover:border-slate-700 transition-colors">
               <div>
-                <span className="text-xs text-slate-500 uppercase tracking-wider block">Tổng tiền Nạp</span>
+                <span className="text-xs text-slate-500 uppercase tracking-wider block">Total Deposits</span>
                 <span className="text-2xl font-bold text-emerald-500 mt-1 block">${stats.summary.total_deposit}</span>
               </div>
               <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
@@ -64,7 +64,7 @@ export default function AdminRevenuePage() {
 
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between hover:border-slate-700 transition-colors">
               <div>
-                <span className="text-xs text-slate-500 uppercase tracking-wider block">Tổng tiền Rút</span>
+                <span className="text-xs text-slate-500 uppercase tracking-wider block">Total Withdrawals</span>
                 <span className="text-2xl font-bold text-rose-500 mt-1 block">${stats.summary.total_withdraw}</span>
               </div>
               <div className="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center">
@@ -74,7 +74,7 @@ export default function AdminRevenuePage() {
 
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between hover:border-slate-700 transition-colors">
               <div>
-                <span className="text-xs text-slate-500 uppercase tracking-wider block">Dòng tiền ròng (Net Flow)</span>
+                <span className="text-xs text-slate-500 uppercase tracking-wider block">Net Cash Flow</span>
                 <span className={`text-2xl font-bold mt-1 block ${stats.summary.net_flow >= 0 ? "text-indigo-400" : "text-rose-400"}`}>
                   {stats.summary.net_flow >= 0 ? "+" : ""}${stats.summary.net_flow}
                 </span>
@@ -90,20 +90,20 @@ export default function AdminRevenuePage() {
             {/* Daily Rake */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-800 bg-slate-900/60">
-                <h3 className="text-sm font-semibold text-slate-100">Báo cáo phí Rake theo ngày</h3>
+                <h3 className="text-sm font-semibold text-slate-100">Daily Rake Report</h3>
               </div>
               <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
                     <tr className="bg-slate-800/20 border-b border-slate-800 text-xs text-slate-500">
-                      <th className="p-3 font-medium">Ngày</th>
-                      <th className="p-3 font-medium text-right">Phí Rake</th>
+                      <th className="p-3 font-medium">Date</th>
+                      <th className="p-3 font-medium text-right">Rake Fee</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
                     {stats.daily_rake.length === 0 ? (
                       <tr>
-                        <td colSpan={2} className="p-6 text-center text-slate-500">Không có dữ liệu 30 ngày qua.</td>
+                        <td colSpan={2} className="p-6 text-center text-slate-500">No data for the last 30 days.</td>
                       </tr>
                     ) : (
                       stats.daily_rake.map((item: any, idx: number) => (
@@ -121,21 +121,21 @@ export default function AdminRevenuePage() {
             {/* Daily Transactions */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-800 bg-slate-900/60">
-                <h3 className="text-sm font-semibold text-slate-100">Báo cáo nạp rút theo ngày</h3>
+                <h3 className="text-sm font-semibold text-slate-100">Daily Deposit & Withdrawal Report</h3>
               </div>
               <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
                     <tr className="bg-slate-800/20 border-b border-slate-800 text-xs text-slate-500">
-                      <th className="p-3 font-medium">Ngày</th>
-                      <th className="p-3 font-medium text-right">Nạp tiền</th>
-                      <th className="p-3 font-medium text-right">Rút tiền</th>
+                      <th className="p-3 font-medium">Date</th>
+                      <th className="p-3 font-medium text-right">Deposit</th>
+                      <th className="p-3 font-medium text-right">Withdraw</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
                     {stats.daily_transactions.length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="p-6 text-center text-slate-500">Không có dữ liệu 30 ngày qua.</td>
+                        <td colSpan={3} className="p-6 text-center text-slate-500">No data for the last 30 days.</td>
                       </tr>
                     ) : (
                       stats.daily_transactions.map((item: any, idx: number) => (
@@ -153,7 +153,7 @@ export default function AdminRevenuePage() {
           </div>
         </>
       ) : (
-        <div className="p-12 text-center text-slate-500">Không có dữ liệu.</div>
+        <div className="p-12 text-center text-slate-500">No data available.</div>
       )}
     </div>
   );

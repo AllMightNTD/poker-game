@@ -132,8 +132,8 @@ function HandCard({
           flex items-center justify-center gap-1.5"
       >
         <Coins size={12} />
-        Nhúng ván bài này
-      </button>
+        Embed this hand
+                    </button>
     </motion.div>
   );
 }
@@ -195,7 +195,7 @@ export function PokerHandPickerModal({
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           aria-modal="true"
           role="dialog"
-          aria-label="Chọn ván bài Poker"
+          aria-label="Select Poker Hand"
         >
           {/* Backdrop */}
           <motion.div
@@ -225,8 +225,8 @@ export function PokerHandPickerModal({
                 </div>
                 <div>
                   <h2 className="text-sm font-bold text-white tracking-wide">
-                    Lịch Sử Ván Bài
-                  </h2>
+                    Hand History
+                                                        </h2>
                   <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">
                     Poker Hand History
                   </p>
@@ -238,7 +238,7 @@ export function PokerHandPickerModal({
                 id="btn-close-hand-picker"
                 className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500
                   hover:text-white hover:bg-white/8 transition-all duration-200"
-                aria-label="Đóng"
+                aria-label="Close"
               >
                 <X size={15} />
               </button>
@@ -255,10 +255,10 @@ export function PokerHandPickerModal({
                   ref={inputRef}
                   type="text"
                   id="input-hand-search"
-                  placeholder="Tìm theo Table ID..."
+                  placeholder="Search by Table ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  aria-label="Tìm ván bài theo Table ID"
+                  aria-label="Search hand by Table ID"
                   className="w-full bg-white/[0.04] border border-white/8 rounded-xl
                     pl-9 pr-8 py-2.5 text-sm text-slate-200 placeholder-slate-600
                     focus:outline-none focus:border-yellow-500/40 focus:bg-white/[0.06]
@@ -268,7 +268,7 @@ export function PokerHandPickerModal({
                   <button
                     onClick={() => setSearchTerm("")}
                     className="absolute right-3 text-slate-600 hover:text-slate-300 transition-colors"
-                    aria-label="Xóa tìm kiếm"
+                    aria-label="Clear search"
                   >
                     <X size={13} />
                   </button>
@@ -292,9 +292,9 @@ export function PokerHandPickerModal({
                 <div className="flex flex-col items-center justify-center py-16 gap-3">
                   <div className="text-3xl">⚠️</div>
                   <p className="text-sm text-red-400 font-medium">
-                    Không thể kết nối API ván bài.
-                  </p>
-                  <p className="text-xs text-slate-600">Vui lòng thử lại sau.</p>
+                    Failed to connect to hand API.
+                                                        </p>
+                  <p className="text-xs text-slate-600">Please try again later.</p>
                 </div>
               )}
 
@@ -305,7 +305,7 @@ export function PokerHandPickerModal({
                   <p className="text-sm text-slate-500 font-medium">
                     {debouncedSearch
                       ? `Không tìm thấy ván bài cho "${debouncedSearch}"`
-                      : "Chưa có ván bài nào trong hệ thống."}
+                      : "No hands found in the system."}
                   </p>
                 </div>
               )}
@@ -326,8 +326,8 @@ export function PokerHandPickerModal({
 
               <span className="text-xs text-slate-600">
                 {isLoading
-                  ? "Đang tải..."
-                  : `${hands.length} ván bài${debouncedSearch ? " (đã lọc)" : ""}`}
+                  ? "Loading..."
+                  : `${hands.length} ván bài${debouncedSearch ? "(filtered)" : ""}`}
               </span>
 
               <button
@@ -339,8 +339,8 @@ export function PokerHandPickerModal({
                   transition-colors duration-200"
               >
                 <ChevronDown size={13} />
-                Tải thêm ván bài
-              </button>
+                Load more hands
+                                            </button>
             </div>
           </motion.div>
         </motion.div>

@@ -71,7 +71,7 @@ export const ProvablyFairModal = () => {
 
   const handleSaveSeed = () => {
     if (!clientSeedInput.trim()) {
-      showToast("Hạt giống không được để trống", "error");
+      showToast("Seed cannot be empty", "error");
       return;
     }
     updateClientSeed(clientSeedInput.trim());
@@ -79,7 +79,7 @@ export const ProvablyFairModal = () => {
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    showToast("Đã sao chép vào bộ nhớ tạm", "success");
+    showToast("Copied to clipboard", "success");
   };
 
   const handleLoadToVerify = () => {
@@ -91,22 +91,22 @@ export const ProvablyFairModal = () => {
       setVerifyNonce(lastNonce);
       setActiveTab("verify");
       setVerificationResult(null);
-      showToast("Đã nạp hạt giống ván trước vào trình xác thực", "info");
+      showToast("Loaded previous hand seed into verifier", "info");
     }
   };
 
   const handleVerify = async () => {
     if (!verifyServerSeed.trim()) {
-      showToast("Vui lòng nhập Server Seed", "error");
+      showToast("Please enter Server Seed", "error");
       return;
     }
     if (!verifyClientSeed.trim()) {
-      showToast("Vui lòng nhập Client Seed", "error");
+      showToast("Please enter Client Seed", "error");
       return;
     }
     const nonceNum = parseInt(verifyNonce);
     if (isNaN(nonceNum) || nonceNum < 1) {
-      showToast("Nonce không hợp lệ", "error");
+      showToast("Invalid Nonce", "error");
       return;
     }
 
@@ -118,7 +118,7 @@ export const ProvablyFairModal = () => {
       );
       const hash = await calculateDeckHash(deck);
       setVerificationResult({ deck, hash });
-      showToast("Xác thực và xáo bài thành công!", "success");
+      showToast("Verification and shuffling successful!", "success");
     } catch (e: any) {
       showToast(`Lỗi xác thực: ${e.message}`, "error");
     }
@@ -151,11 +151,11 @@ export const ProvablyFairModal = () => {
               </div>
               <div>
                 <h3 className="text-sm font-black uppercase tracking-wider text-emerald-400">
-                  Hệ Thống Provably Fair
-                </h3>
+                  Provably Fair System
+                                                  </h3>
                 <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wide">
-                  Đảm bảo tính công bằng và minh bạch tuyệt đối
-                </p>
+                  Ensuring absolute fairness and transparency
+                                                  </p>
               </div>
             </div>
             <button
@@ -176,8 +176,8 @@ export const ProvablyFairModal = () => {
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              Cấu hình Hạt giống
-            </button>
+              Seed Configuration
+                                      </button>
             <button
               onClick={() => setActiveTab("verify")}
               className={`flex-1 py-2 text-center text-xs font-bold rounded-lg transition-all ${
@@ -186,8 +186,8 @@ export const ProvablyFairModal = () => {
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              Trình xác thực ván chơi
-            </button>
+              Game Verifier
+                                      </button>
           </div>
 
           {/* Body */}
@@ -196,14 +196,14 @@ export const ProvablyFairModal = () => {
               <div className="space-y-4">
                 {/* Seed explanation */}
                 <div className="p-3.5 rounded-xl bg-slate-950/20 border border-slate-850 text-[11px] leading-relaxed text-slate-400">
-                  Hệ thống sử dụng mật mã học để xáo bài. Trước mỗi ván, server tạo một <strong className="text-slate-200">Server Seed</strong> ngẫu nhiên và chỉ hiển thị mã băm <strong className="text-slate-200">SHA-256 Hash</strong> của nó để cam kết không thay đổi bài. Người chơi có thể tự đặt <strong className="text-emerald-400">Client Seed</strong> để tham gia vào quá trình xới bài.
-                </div>
+                  The system uses cryptography to shuffle cards. Before each hand, the server generates a <strong className="text-slate-200">Server Seed</strong> randomly and only displays the hash <strong className="text-slate-200">SHA-256 Hash</strong> of it to guarantee the deck is not altered. Players can set their own <strong className="text-emerald-400">Client Seed</strong> to participate in the shuffling process.
+                                                  </div>
 
                 {/* Client Seed Input */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-400 flex items-center justify-between">
-                    <span>Hạt giống của bạn (Client Seed)</span>
-                    <span className="text-[9px] text-slate-500">Được dùng cho các ván bài tiếp theo</span>
+                    <span>Your Seed (Client Seed)</span>
+                    <span className="text-[9px] text-slate-500">Used for subsequent hands</span>
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -211,13 +211,13 @@ export const ProvablyFairModal = () => {
                       value={clientSeedInput}
                       onChange={(e) => setClientSeedInput(e.target.value)}
                       className="flex-1 bg-slate-950/60 border border-slate-800 hover:border-slate-750 focus:border-emerald-500 rounded-xl px-4 py-2.5 text-xs text-white font-mono focus:outline-none transition-colors"
-                      placeholder="Nhập hạt giống bất kỳ..."
+                      placeholder="Enter any seed..."
                     />
                     <button
                       type="button"
                       onClick={handleRandomizeSeed}
                       className="px-3 rounded-xl bg-slate-850 hover:bg-slate-750 border border-slate-800 flex items-center justify-center text-slate-300 transition-colors"
-                      title="Tự động sinh hạt giống"
+                      title="Auto-generate seed"
                     >
                       <RefreshCw size={15} />
                     </button>
@@ -226,8 +226,8 @@ export const ProvablyFairModal = () => {
                       onClick={handleSaveSeed}
                       className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-colors"
                     >
-                      Lưu
-                    </button>
+                      Save
+                                                              </button>
                   </div>
                 </div>
 
@@ -235,14 +235,14 @@ export const ProvablyFairModal = () => {
                 <div className="space-y-2.5 p-4 rounded-xl bg-slate-950/40 border border-slate-850">
                   <h4 className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
                     <span className="w-1 h-3 rounded-full bg-emerald-500" />
-                    Ván chơi hiện tại
-                  </h4>
+                    Current Hand
+                                                        </h4>
                   
                   <div className="grid grid-cols-3 gap-3 text-[11px]">
                     <div className="col-span-3 space-y-1">
-                      <span className="text-slate-500 font-bold">Mã băm Server Seed (SHA-256)</span>
+                      <span className="text-slate-500 font-bold">Server Seed Hash (SHA-256)</span>
                       <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-2 rounded-lg border border-slate-850/60 font-mono text-[10px] text-slate-300">
-                        <span className="truncate flex-1 select-all">{provablyFair?.server_seed_hash || "Đang chờ bắt đầu..."}</span>
+                        <span className="truncate flex-1 select-all">{provablyFair?.server_seed_hash || "Waiting to start..."}</span>
                         {provablyFair?.server_seed_hash && (
                           <button onClick={() => handleCopy(provablyFair.server_seed_hash)} className="text-slate-500 hover:text-slate-300">
                             <Clipboard size={12} />
@@ -252,21 +252,21 @@ export const ProvablyFairModal = () => {
                     </div>
 
                     <div className="space-y-1">
-                      <span className="text-slate-500 font-bold">Client Seed hiện tại</span>
+                      <span className="text-slate-500 font-bold">Current Client Seed</span>
                       <div className="bg-slate-950 px-3 py-2 rounded-lg border border-slate-850/60 font-mono text-slate-300 truncate select-all">
-                        {provablyFair?.client_seed || "Mặc định"}
+                        {provablyFair?.client_seed || "Default"}
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <span className="text-slate-500 font-bold">Nonce ván này</span>
+                      <span className="text-slate-500 font-bold">Nonce for this hand</span>
                       <div className="bg-slate-950 px-3 py-2 rounded-lg border border-slate-850/60 font-mono text-slate-300">
                         {provablyFair?.client_seed ? (provablyFair as any).nonce || "1" : "1"}
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <span className="text-slate-500 font-bold">Thuật toán</span>
+                      <span className="text-slate-500 font-bold">Algorithm</span>
                       <div className="bg-slate-950 px-3 py-2 rounded-lg border border-slate-850/60 font-mono text-slate-400 font-black">
                         ChaCha20
                       </div>
@@ -280,20 +280,20 @@ export const ProvablyFairModal = () => {
                     <div className="flex justify-between items-center">
                       <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                         <span className="w-1 h-3 rounded-full bg-slate-500" />
-                        Kết quả ván vừa qua
-                      </h4>
+                        Previous Hand Results
+                                                                    </h4>
                       <button
                         onClick={handleLoadToVerify}
                         className="text-[9px] font-black uppercase tracking-wider text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
                       >
                         <Eye size={10} />
-                        Nạp vào trình xác thực
-                      </button>
+                        Load into verifier
+                                                                    </button>
                     </div>
 
                     <div className="space-y-2 text-[11px]">
                       <div className="space-y-1">
-                        <span className="text-slate-500 font-bold">Server Seed (Thô - Đã công khai)</span>
+                        <span className="text-slate-500 font-bold">Server Seed (Raw - Revealed)</span>
                         <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-2 rounded-lg border border-slate-850/60 font-mono text-[10px] text-emerald-400">
                           <span className="truncate flex-1 select-all">{prevProvablyFair.server_seed_plain}</span>
                           <button onClick={() => handleCopy(prevProvablyFair.server_seed_plain!)} className="text-slate-500 hover:text-slate-300">
@@ -304,14 +304,14 @@ export const ProvablyFairModal = () => {
 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <span className="text-slate-500 font-bold">Client Seed dùng ở ván trước</span>
+                          <span className="text-slate-500 font-bold">Client Seed used in previous hand</span>
                           <div className="bg-slate-950 px-3 py-2 rounded-lg border border-slate-850/60 font-mono text-slate-300 truncate select-all">
                             {prevProvablyFair.client_seed}
                           </div>
                         </div>
 
                         <div className="space-y-1">
-                          <span className="text-slate-500 font-bold">Nonce ván trước</span>
+                          <span className="text-slate-500 font-bold">Previous hand Nonce</span>
                           <div className="bg-slate-950 px-3 py-2 rounded-lg border border-slate-850/60 font-mono text-slate-300">
                             {(prevProvablyFair as any).nonce || "1"}
                           </div>
@@ -324,19 +324,19 @@ export const ProvablyFairModal = () => {
             ) : (
               <div className="space-y-4">
                 <div className="p-3 rounded-xl bg-slate-950/20 border border-slate-850 text-[11px] leading-relaxed text-slate-400">
-                  Tự chạy lại thuật toán xáo bài Fisher-Yates bằng ChaCha20 ngay trên trình duyệt để kiểm tra chéo xem kết quả bộ bài tạo ra có khớp hoàn toàn với ván chơi của hệ thống hay không.
-                </div>
+                  Re-run the Fisher-Yates shuffle algorithm using ChaCha20 in your browser to cross-check if the generated deck matches the system&apos;s game result.
+                                                      </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {/* Server seed input */}
                   <div className="col-span-1 md:col-span-3 space-y-1">
-                    <label className="text-[11px] font-bold text-slate-400">Server Seed (Thô - Hex)</label>
+                    <label className="text-[11px] font-bold text-slate-400">Server Seed (Raw - Hex)</label>
                     <input
                       type="text"
                       value={verifyServerSeed}
                       onChange={(e) => setVerifyServerSeed(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none"
-                      placeholder="Nhập Server Seed đã công khai..."
+                      placeholder="Enter revealed Server Seed..."
                     />
                   </div>
 
@@ -348,7 +348,7 @@ export const ProvablyFairModal = () => {
                       value={verifyClientSeed}
                       onChange={(e) => setVerifyClientSeed(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none"
-                      placeholder="Nhập Client Seed..."
+                      placeholder="Enter Client Seed..."
                     />
                   </div>
 
@@ -366,13 +366,13 @@ export const ProvablyFairModal = () => {
 
                   {/* Expected Deck Hash */}
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-400">Deck Hash dự kiến (Không bắt buộc)</label>
+                    <label className="text-[11px] font-bold text-slate-400">Expected Deck Hash (Optional)</label>
                     <input
                       type="text"
                       value={verifyExpectedHash}
                       onChange={(e) => setVerifyExpectedHash(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none"
-                      placeholder="Mã băm bộ bài trong lịch sử..."
+                      placeholder="Deck hash from history..."
                     />
                   </div>
                 </div>
@@ -383,8 +383,8 @@ export const ProvablyFairModal = () => {
                     onClick={handleVerify}
                     className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-colors shadow-lg shadow-emerald-950/20"
                   >
-                    Xác thực & Trộn bộ bài
-                  </button>
+                    Verify & Shuffle Deck
+                                                            </button>
                 </div>
 
                 {/* Results block */}
@@ -393,24 +393,24 @@ export const ProvablyFairModal = () => {
                     <h4 className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
                         <span className="w-1 h-3 rounded-full bg-emerald-500" />
-                        Kết quả xáo bài
-                      </span>
+                        Shuffle Result
+                                                                        </span>
                       {verifyExpectedHash && (
                         verificationResult.hash === verifyExpectedHash.trim() ? (
                           <span className="text-emerald-400 bg-emerald-950/60 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-bold tracking-wider uppercase flex items-center gap-1">
-                            <Check size={8} /> Khớp 100%
-                          </span>
+                            <Check size={8} /> 100% Match
+                                                                                    </span>
                         ) : (
                           <span className="text-red-400 bg-red-950/60 border border-red-500/20 px-2 py-0.5 rounded text-[8px] font-bold tracking-wider uppercase">
-                            Không khớp
-                          </span>
+                            Mismatch
+                                                                                        </span>
                         )
                       )}
                     </h4>
 
                     {/* Computed Deck Hash */}
                     <div className="space-y-1">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Mã băm SHA-256 của bộ bài</span>
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Deck SHA-256 Hash</span>
                       <div className="flex items-center gap-1.5 bg-slate-950 px-3 py-2 rounded-lg border border-slate-850/60 font-mono text-[9px] text-slate-300">
                         <span className="truncate flex-1 select-all">{verificationResult.hash}</span>
                         <button onClick={() => handleCopy(verificationResult.hash)} className="text-slate-500 hover:text-slate-300">
@@ -421,7 +421,7 @@ export const ProvablyFairModal = () => {
 
                     {/* Visually Shuffled Cards */}
                     <div className="space-y-1.5">
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide block">Danh sách 52 lá bài (được xới từ trên xuống)</span>
+                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wide block">List of 52 cards (shuffled from top to bottom)</span>
                       <div className="grid grid-cols-10 sm:grid-cols-13 gap-1 bg-slate-950/50 p-2.5 rounded-xl border border-slate-900 max-h-[160px] overflow-y-auto">
                         {verificationResult.deck.map((card, idx) => (
                           <div
@@ -448,8 +448,8 @@ export const ProvablyFairModal = () => {
               onClick={() => setIsProvablyFairOpen(false)}
               className="px-5 py-2.5 rounded-xl border border-slate-800 bg-slate-950/20 hover:bg-slate-950/60 text-slate-400 hover:text-slate-200 font-black text-[10px] uppercase tracking-wider transition-colors text-center"
             >
-              Đóng
-            </button>
+              Close
+                                      </button>
           </div>
         </motion.div>
       </div>

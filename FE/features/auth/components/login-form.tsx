@@ -1,6 +1,7 @@
 "use client";
 
-import { FormButton, FormCheckbox, FormInput } from "@/components/ui/form";
+import { FormButton } from "@/components/ui/form";
+import { RHFCheckbox, RHFInput } from "@/components/ui/form/RhfFields";
 import { Lock, Mail } from "lucide-react";
 import Link from "next/link";
 import { useLogin } from "../hooks/use-login";
@@ -8,29 +9,26 @@ import { useLogin } from "../hooks/use-login";
 export function LoginForm() {
   const t = (key: string) => {
     const translations: Record<string, string> = {
-      welcomeBackDescription: "CHÀO MỪNG TRỞ LẠI",
-      discoverMore: "Tiếp tục hành trình poker của bạn",
-      yourEmailAddress: "Địa chỉ Email",
-      password: "Mật khẩu",
-      rememberMe: "Ghi nhớ đăng nhập",
-      forgotPassword: "Quên mật khẩu?",
-      loginButton: "ĐĂNG NHẬP",
-      dontHaveAccount: "Bạn chưa có tài khoản?",
-      registerNow: "ĐĂNG KÝ NGAY",
-      orContinueWith: "HOẶC TIẾP TỤC VỚI",
+      welcomeBackDescription: "WELCOME BACK",
+      discoverMore: "Continue your poker journey",
+      yourEmailAddress: "Email Address",
+      password: "Password",
+      rememberMe: "Remember me",
+      forgotPassword: "Forgot password?",
+      loginButton: "LOG IN",
+      dontHaveAccount: "Don't have an account?",
+      registerNow: "REGISTER NOW",
+      orContinueWith: "OR CONTINUE WITH",
     };
     return translations[key] || key;
   };
 
   const {
-    register,
+    control,
     handleSubmit,
     errors,
     isSubmitting,
     fieldErrors,
-    rememberMe,
-    setRememberMe,
-    clearFieldError,
   } = useLogin(t);
 
   const handleFacebookLogin = () => {
@@ -58,35 +56,33 @@ export function LoginForm() {
         <form className="space-y-4" onSubmit={handleSubmit}>
           {/* Email Input */}
           <div className="grid grid-cols-1 gap-4">
-            <FormInput
+            <RHFInput
+              control={control}
+              name="email"
               id="email"
               type="email"
               label={t("yourEmailAddress")}
               leftIcon={<Mail className="w-4 h-4 text-slate-500" />}
               error={emailError}
-              {...register("email", {
-                onChange: () => clearFieldError("email"),
-              })}
             />
 
             {/* Password Input */}
-            <FormInput
+            <RHFInput
+              control={control}
+              name="password"
               id="password"
               type="password"
               label={t("password")}
               leftIcon={<Lock className="w-4 h-4 text-slate-500" />}
               error={passwordError}
-              {...register("password", {
-                onChange: () => clearFieldError("password"),
-              })}
             />
 
             {/* Remember Me + Forgot Password */}
             <div className="flex items-center justify-between py-1">
-              <FormCheckbox
+              <RHFCheckbox
+                control={control}
+                name="rememberMe"
                 label={t("rememberMe")}
-                checked={rememberMe}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRememberMe(e.target.checked)}
               />
 
               <Link

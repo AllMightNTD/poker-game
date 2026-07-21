@@ -17,7 +17,7 @@ const HistoryContent = ({ onClose }: { onClose?: () => void }) => {
   const getEntryStyle = (entry: string) => {
     if (entry.startsWith("---")) return "text-amber-400/90 font-black font-sans not-italic border-t border-slate-800/60 pt-1 mt-1";
     if (entry.includes("Hero")) return "text-emerald-400/90";
-    if (entry.includes("thắng")) return "text-yellow-400/90 font-bold";
+    if (entry.includes("won")) return "text-yellow-400/90 font-bold";
     return "text-slate-500";
   };
 
@@ -28,8 +28,8 @@ const HistoryContent = ({ onClose }: { onClose?: () => void }) => {
         <div className="flex items-center gap-2">
           <ScrollText size={13} className="text-amber-400" />
           <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
-            Nhật Ký Bàn
-          </span>
+            Table Log
+                                </span>
         </div>
         {onClose && (
           <button
@@ -45,7 +45,7 @@ const HistoryContent = ({ onClose }: { onClose?: () => void }) => {
       <div className="px-4 py-2 border-b border-slate-800/40 shrink-0">
         <div className="flex items-center gap-1.5 text-[9px] text-slate-500">
           <Clock size={10} />
-          <span className="font-bold">{handHistory.length} sự kiện trong ván này</span>
+          <span className="font-bold">{handHistory.length} events in this hand</span>
         </div>
       </div>
 

@@ -5,7 +5,9 @@ import { AlertCircle, CheckCircle2, Loader2, Mail, RefreshCw } from "lucide-reac
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useVerifyOtp } from "../hooks/use-verify-otp";
-import { FormInput, FormButton } from "@/components/ui/form";
+import { FormButton } from "@/components/ui/form";
+import { RHFInput } from "@/components/ui/form/RhfFields";
+import { useForm, useWatch } from "react-hook-form";
 
 interface VerifyOtpFormProps {
   token: string | null;
@@ -30,6 +32,15 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
     handleManualVerify,
     handleResend,
   } = useVerifyOtp(initialToken, initialOtp, emailParam);
+
+  const { control } = useForm({
+    defaultValues: { email: emailParam || "" },
+  });
+  const formEmail = useWatch({ control, name: "email" });
+
+  useEffect(() => {
+    setEmail(formEmail);
+  }, [formEmail, setEmail]);
 
   const maskEmail = (emailStr: string) => {
     if (!emailStr) return "";
@@ -125,12 +136,12 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
                 <CheckCircle2 className="w-7 h-7 sm:w-8 sm:h-8 animate-bounce" />
               </motion.div>
               <h3 className="text-lg sm:text-xl font-bold text-white mb-2 uppercase tracking-wide">
-                KÍCH HOẠT THÀNH CÔNG!
-              </h3>
+                ACTIVATION SUCCESSFUL!
+                                            </h3>
               <p className="text-slate-300 text-xs sm:text-sm max-w-xs mb-4">{successMessage}</p>
               <div className="flex items-center gap-2 text-yellow-400/80 text-[11px] sm:text-xs mt-4">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Đang chuyển hướng về trang Đăng nhập...</span>
+                <span>Redirecting to Login page...</span>
               </div>
             </motion.div>
           )}
@@ -149,10 +160,10 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
                 <div className="absolute w-14 h-14 rounded-full border-4 border-yellow-400/20 border-t-yellow-400 animate-spin" />
                 <Loader2 className="w-7 h-7 text-yellow-400 animate-pulse" />
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-white uppercase tracking-wide">ĐANG KÍCH HOẠT...</h3>
+              <h3 className="text-base sm:text-lg font-bold text-white uppercase tracking-wide">ACTIVATING...</h3>
               <p className="text-[11px] sm:text-xs text-slate-400 mt-2">
-                Hệ thống đang kiểm tra chữ ký token và mã OTP...
-              </p>
+                Verifying token signature and OTP...
+                                            </p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -166,24 +177,24 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
 
             <div className="space-y-1.5 sm:space-y-2">
               <h3 className="text-lg sm:text-2xl font-bold text-white tracking-wide uppercase bg-gradient-to-r from-yellow-400 via-[#F4B942] to-amber-500 bg-clip-text text-transparent">
-                Chào mừng đến với Bàn chơi Elite!
-              </h3>
+                Welcome to the Elite Table!
+                                            </h3>
               <p className="text-xs sm:text-sm text-slate-400 px-1 leading-relaxed">
-                Email xác thực đã được gửi đến hộp thư của bạn. Vui lòng kiểm tra để kích hoạt tài khoản CG Poker.
-              </p>
+                A verification email has been sent to your inbox. Please check it to activate your CG Poker account.
+                                            </p>
             </div>
 
             {email && (
               <div className="inline-flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-[#0B1B33] border border-[#1E3A5F] w-full max-w-sm mx-auto">
-                <span className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest">EMAIL ĐĂNG KÝ</span>
+                <span className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest">REGISTERED EMAIL</span>
                 <span className="text-xs sm:text-sm font-semibold text-[#F4B942] mt-1 break-all">{maskEmail(email)}</span>
               </div>
             )}
 
             <div className="space-y-2.5 pt-1 text-left">
               <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest text-center">
-                Mở nhanh hộp thư của bạn
-              </p>
+                Open your inbox
+                                            </p>
               <div className="grid grid-cols-3 gap-2">
                 <a
                   href="https://mail.google.com"
@@ -232,11 +243,11 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
 
             <div className="pt-1 space-y-3">
               {!emailParam && (
-                <FormInput
+                <RHFInput
+                  control={control}
+                  name="email"
                   type="email"
-                  placeholder="Nhập email của bạn để gửi lại OTP"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email to resend OTP"
                   disabled={cooldown > 0 || isVerifying}
                   size="small"
                 />
@@ -250,14 +261,14 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
                 fullWidth
                 startIcon={<RefreshCw className={`w-3.5 h-3.5 ${cooldown > 0 ? "animate-spin" : ""}`} />}
               >
-                {cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Gửi lại email kích hoạt"}
+                {cooldown > 0 ? `Gửi lại sau ${cooldown}s` : "Resend activation email"}
               </FormButton>
             </div>
 
             <div className="text-center pt-1">
               <Link href="/login" className="text-xs text-[#F4B942] font-semibold hover:underline uppercase tracking-wide">
-                Quay lại Đăng nhập
-              </Link>
+                Back to Login
+                                            </Link>
             </div>
           </div>
         ) : (
@@ -265,30 +276,30 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
           <div className="space-y-5 sm:space-y-6">
             <div className="text-center">
               <h2 className="text-lg sm:text-2xl font-bold text-white tracking-wide uppercase">
-                KÍCH HOẠT TÀI KHOẢN
-              </h2>
+                ACTIVATE ACCOUNT
+                                                </h2>
               <p className="mt-1 text-xs sm:text-sm text-slate-400">
-                Vui lòng hoàn tất kích hoạt để bắt đầu hành trình
-              </p>
+                Please complete activation to start your journey
+                                                </p>
             </div>
 
             <div className="p-3.5 sm:p-4 rounded-xl bg-[#0B1B33] border border-[#1E3A5F] flex gap-3 text-left">
               <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-[#F4B942] shrink-0 mt-0.5" />
               <div className="text-[11px] sm:text-xs">
                 <p className="font-semibold text-white">
-                  Chúng tôi đã gửi mã OTP vào email của bạn.
-                </p>
+                  We have sent an OTP code to your email.
+                                                      </p>
                 <p className="text-slate-400 mt-1">
-                  Kiểm tra hộp thư và nhập mã 6 số phía dưới để kích hoạt nhanh tài khoản.
-                </p>
+                  Check your inbox and enter the 6-digit code below to quickly activate your account.
+                                                      </p>
               </div>
             </div>
 
             <div className="space-y-5 sm:space-y-6">
               <div>
                 <label className="block text-slate-400 text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-2.5">
-                  MÃ XÁC THỰC OTP (6 SỐ)
-                </label>
+                  OTP VERIFICATION CODE (6 DIGITS)
+                                                      </label>
 
                 {/* 
                   - Sử dụng grid hệ 6 cột (grid-cols-6) để tự động căn chỉnh khoảng cách đều đặn.
@@ -324,7 +335,7 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
                   ))}
                 </div>
                 {!isOtpComplete && (
-                  <p className="text-slate-500 text-[10px] sm:text-xs mt-2 ml-1">Mã OTP phải có đúng 6 chữ số.</p>
+                  <p className="text-slate-500 text-[10px] sm:text-xs mt-2 ml-1">OTP code must be exactly 6 digits.</p>
                 )}
               </div>
 
@@ -353,15 +364,15 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
                   fullWidth
                   size="large"
                 >
-                  XÁC NHẬN KÍCH HOẠT
-                </FormButton>
+                  CONFIRM ACTIVATION
+                                                      </FormButton>
 
                 {!emailParam && (
-                  <FormInput
+                  <RHFInput
+                    control={control}
+                    name="email"
                     type="email"
-                    placeholder="Nhập email của bạn để gửi lại OTP"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email to resend OTP"
                     disabled={cooldown > 0 || isVerifying || isSuccess}
                     size="small"
                   />
@@ -375,14 +386,14 @@ export function VerifyOtpForm({ token: initialToken, otp: initialOtp, email: ema
                   fullWidth
                   startIcon={<RefreshCw className={`w-3.5 h-3.5 ${cooldown > 0 ? "animate-spin" : ""}`} />}
                 >
-                  {cooldown > 0 ? `GỬI LẠI SAU ${cooldown}S` : "GỬI LẠI OTP"}
+                  {cooldown > 0 ? `GỬI LẠI SAU ${cooldown}S` : "RESEND OTP"}
                 </FormButton>
               </div>
 
               <div className="text-center pt-1">
                 <Link href="/login" className="text-xs text-[#F4B942] font-semibold hover:underline uppercase tracking-wide">
-                  Quay lại Đăng nhập
-                </Link>
+                  Back to Login
+                                                      </Link>
               </div>
             </div>
           </div>

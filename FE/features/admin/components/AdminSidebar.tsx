@@ -7,19 +7,19 @@ import { usePathname, useRouter } from "next/navigation";
 import { httpClient } from "../../../core/api/http-client";
 
 const SIDEBAR_ITEMS = [
-  { name: "Tổng quan", href: "/backstage/dashboard", icon: LayoutDashboard },
-  { name: "Người dùng & Bảo mật", href: "/backstage/users", icon: Users },
-  { name: "Cảnh báo gian lận", href: "/backstage/collusion", icon: ShieldAlert },
-  { name: "Kiểm toán bơm chip", href: "/backstage/finance/audit", icon: AlertTriangle },
-  { name: "Tài chính & Giao dịch", href: "/backstage/finance", icon: WalletCards },
-  { name: "Bàn Poker", href: "/backstage/tables", icon: Gamepad2 },
-  { name: "Lịch sử ván bài", href: "/backstage/hands", icon: History },
-  { name: "Quản lý Blog", href: "/backstage/blogs", icon: BookOpen },
-  { name: "Báo cáo doanh thu", href: "/backstage/revenue", icon: BarChart3 },
-  { name: "Thông điệp hệ thống", href: "/backstage/system", icon: Megaphone },
-  { name: "Quản lý sự kiện", href: "/backstage/events", icon: Trophy },
-  { name: "Nhật ký hệ thống", href: "/backstage/audit", icon: Activity },
-  { name: "Cài đặt hệ thống", href: "/backstage/settings", icon: Settings },
+  { name: "Overview", href: "/backstage/dashboard", icon: LayoutDashboard },
+  { name: "Users & Security", href: "/backstage/users", icon: Users },
+  { name: "Fraud Alerts", href: "/backstage/collusion", icon: ShieldAlert },
+  { name: "Chip Dumping Audit", href: "/backstage/finance/audit", icon: AlertTriangle },
+  { name: "Finance & Transactions", href: "/backstage/finance", icon: WalletCards },
+  { name: "Poker Tables", href: "/backstage/tables", icon: Gamepad2 },
+  { name: "Hand History", href: "/backstage/hands", icon: History },
+  { name: "Blog Management", href: "/backstage/blogs", icon: BookOpen },
+  { name: "Revenue Reports", href: "/backstage/revenue", icon: BarChart3 },
+  { name: "System Messages", href: "/backstage/system", icon: Megaphone },
+  { name: "Event Management", href: "/backstage/events", icon: Trophy },
+  { name: "System Logs", href: "/backstage/audit", icon: Activity },
+  { name: "System Settings", href: "/backstage/settings", icon: Settings },
 ];
 
 export const AdminSidebar = () => {
@@ -46,7 +46,7 @@ export const AdminSidebar = () => {
             <Gamepad2 size={18} className="text-slate-300" />
           </div>
           <div>
-            <h1 className="text-slate-100 font-semibold text-sm leading-none">Quản trị</h1>
+            <h1 className="text-slate-100 font-semibold text-sm leading-none">Admin</h1>
             <p className="text-slate-500 text-xs mt-0.5">Backstage</p>
           </div>
         </div>
@@ -80,7 +80,7 @@ export const AdminSidebar = () => {
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 transition-colors"
         >
           <LogOut size={18} />
-          <span>Đăng xuất</span>
+          <span>Log Out</span>
         </button>
       </div>
     </div>

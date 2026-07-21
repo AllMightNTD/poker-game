@@ -238,14 +238,14 @@ export function BlogList(): React.ReactElement {
       <div className="max-w-3xl mx-auto px-6 pb-24">
         {isError && (
           <div className="text-center text-red-400 py-20 font-medium">
-            Không thể tải bài viết. Vui lòng thử lại sau.
-          </div>
+            Could not load articles. Please try again later.
+                                </div>
         )}
 
         {allItems.length === 0 && !isError && (
           <div className="text-center text-slate-500 py-20">
-            Chưa có bài viết nào. Quay lại sau nhé!
-          </div>
+            No articles yet. Check back later!
+                                </div>
         )}
 
         {allItems.map((item, i) => (
@@ -272,11 +272,11 @@ export function BlogList(): React.ReactElement {
           >
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-yellow-500/10 rounded-full blur-[80px] pointer-events-none" />
             <h3 className="relative text-2xl md:text-3xl font-black uppercase tracking-wide text-white mb-4">
-              Bạn đã đọc hết bài viết
-            </h3>
+              You have read all articles
+                                      </h3>
             <p className="relative text-blue-300 mb-8 max-w-xl">
-              Đừng chỉ đọc — thử sức ngay với người chơi thật tại phòng cược cao của chúng tôi.
-            </p>
+              Don&apos;t just read — test your skills against real players in our high-stakes rooms now.
+                                      </p>
             <Link href="/poker-game" className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-xl blur opacity-40 group-hover:opacity-80 transition duration-500" />
               <button className="relative px-12 py-5 bg-gradient-to-b from-[#FFF6B3] via-[#FFD84D] to-[#C79500] rounded-xl text-[#091321] font-black uppercase tracking-[0.25em] text-sm hover:-translate-y-1 transition-transform shadow-[0_0_40px_rgba(255,215,0,0.4)]">

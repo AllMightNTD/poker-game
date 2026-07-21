@@ -47,8 +47,8 @@ def get_shuffled_deck(server_seed, client_seed):
           <div className="flex items-center gap-2">
             <ShieldAlert className="text-amber-500 w-5 h-5" />
             <h3 className="text-base font-black text-slate-100 uppercase tracking-wider">
-              Xác Minh Tính Công Bằng (Provably Fair)
-            </h3>
+              Provably Fair Verification
+                                      </h3>
           </div>
           <button
             onClick={onClose}
@@ -68,8 +68,8 @@ def get_shuffled_deck(server_seed, client_seed):
                 : "border-transparent text-slate-400 hover:text-slate-200"
             }`}
           >
-            Ván Hiện Tại (Active Hand)
-          </button>
+            Active Hand
+                                </button>
           <button
             onClick={() => setActiveTab("previous")}
             className={`flex-1 py-3 text-xs font-black uppercase tracking-wider border-b-2 transition-all ${
@@ -78,8 +78,8 @@ def get_shuffled_deck(server_seed, client_seed):
                 : "border-transparent text-slate-400 hover:text-slate-200"
             }`}
           >
-            Xác Minh Ván Trước (Verify Last Hand)
-          </button>
+            Verify Last Hand
+                                </button>
         </div>
 
         {/* Content */}
@@ -87,9 +87,8 @@ def get_shuffled_deck(server_seed, client_seed):
           {activeTab === "current" ? (
             <div className="space-y-4">
               <p className="text-slate-400 leading-relaxed">
-                Khi ván bài bắt đầu, hệ thống đã mã hóa Server Seed dưới dạng mã băm SHA-256 để đảm bảo tính
-                khách quan. Sau khi kết thúc ván, Server Seed gốc sẽ được công bố để bạn đối chiếu.
-              </p>
+                At the start of the hand, the system encrypted the Server Seed as a SHA-256 hash to ensure fairness. Once the hand ends, the original Server Seed will be revealed for verification.
+                                            </p>
               
               <div className="space-y-3">
                 <div className="space-y-1.5">
@@ -97,7 +96,7 @@ def get_shuffled_deck(server_seed, client_seed):
                     Server Seed Hash (SHA-256)
                   </label>
                   <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-amber-500 break-all select-all flex justify-between items-start gap-2">
-                    <span>{provablyFair?.server_seed_hash || "Chưa có ván bài nào bắt đầu"}</span>
+                    <span>{provablyFair?.server_seed_hash || "No hands have started yet"}</span>
                     {provablyFair?.server_seed_hash && (
                       <button
                         onClick={() => handleCopy(provablyFair.server_seed_hash)}
@@ -114,20 +113,20 @@ def get_shuffled_deck(server_seed, client_seed):
                     Client Seed (Dealer Seat Seed)
                   </label>
                   <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-slate-300 break-all">
-                    {provablyFair?.client_seed || "Chưa thiết lập"}
+                    {provablyFair?.client_seed || "Not set"}
                   </div>
                 </div>
 
                 <div className="space-y-2 border-t border-slate-800/60 pt-4">
                   <label className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                    Đặt Hạt Giống Tiếp Theo (Next Client Seed)
-                  </label>
+                    Set Next Client Seed
+                                                        </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={customClientSeed}
                       onChange={(e) => setCustomClientSeed(e.target.value)}
-                      placeholder="Nhập hạt giống tuỳ ý (Ví dụ: myseed123)"
+                      placeholder="Enter a custom seed (e.g., myseed123)"
                       className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-500 transition-colors font-mono"
                     />
                     <button
@@ -138,21 +137,20 @@ def get_shuffled_deck(server_seed, client_seed):
                       }}
                       className="px-4 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 font-black rounded-xl transition-all uppercase tracking-wider text-[10px]"
                     >
-                      Cập Nhật
-                    </button>
+                      Update
+                                                              </button>
                   </div>
                   <p className="text-[10px] text-slate-500 leading-normal">
-                    * Hạt giống này sẽ được kết hợp với hạt giống của Server để tạo ra bộ bài xáo trộn hoàn toàn ngẫu nhiên và minh bạch cho ván đấu tiếp theo.
-                  </p>
+                    * This seed will be combined with the Server Seed to generate a completely random and transparent deck for the next hand.
+                                                        </p>
                 </div>
               </div>
             </div>
           ) : (
             <div className="space-y-4">
               <p className="text-slate-400 leading-relaxed">
-                Dưới đây là Server Seed gốc và Client Seed của ván bài vừa kết thúc. Bạn có thể sử dụng mã nguồn mẫu
-                ở dưới để kiểm chứng lại tính công bằng trong việc xáo bài (Fisher-Yates Shuffle).
-              </p>
+                Below are the original Server Seed and Client Seed of the ended hand. You can use the sample code below to verify the fairness of the shuffle (Fisher-Yates Shuffle).
+                                                </p>
 
               <div className="space-y-3">
                 <div className="space-y-1.5">
@@ -160,7 +158,7 @@ def get_shuffled_deck(server_seed, client_seed):
                     Server Seed (Plain text)
                   </label>
                   <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-emerald-400 break-all flex justify-between items-start gap-2">
-                    <span>{prevProvablyFair?.server_seed_plain || "Chưa có dữ liệu ván trước"}</span>
+                    <span>{prevProvablyFair?.server_seed_plain || "No previous hand data"}</span>
                     {prevProvablyFair?.server_seed_plain && (
                       <button
                         onClick={() => handleCopy(prevProvablyFair.server_seed_plain || "")}
@@ -177,14 +175,14 @@ def get_shuffled_deck(server_seed, client_seed):
                     Client Seed
                   </label>
                   <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-slate-300 break-all">
-                    {prevProvablyFair?.client_seed || "Chưa có dữ liệu ván trước"}
+                    {prevProvablyFair?.client_seed || "No previous hand data"}
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">
-                    Đoạn mã python kiểm thử (Fisher-Yates verification)
-                  </label>
+                    Python test code (Fisher-Yates verification)
+                                                            </label>
                   <pre className="bg-slate-950 border border-slate-800 rounded-xl p-3 font-mono text-slate-400 overflow-x-auto text-[10px] leading-relaxed">
                     {verifyCodeSnippet}
                   </pre>

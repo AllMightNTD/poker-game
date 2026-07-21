@@ -36,7 +36,7 @@ export const CreateArticleModal = ({ onClose }: CreateArticleModalProps) => {
               id="modal-title"
               className="text-2xl font-black text-[#102A43] flex items-center gap-2"
             >
-              Gieo mầm kiến thức{" "}
+              Sowing Seeds of Knowledge{" "}
               <Sparkles
                 className="text-[#00FFD1] animate-pulse"
                 size={24}
@@ -45,7 +45,7 @@ export const CreateArticleModal = ({ onClose }: CreateArticleModalProps) => {
             </h2>
             <button
               onClick={onClose}
-              aria-label="Đóng cửa sổ"
+              aria-label="Close"
               className="w-10 h-10 flex items-center justify-center rounded-2xl bg-[#F4FDFF] text-[#102A43]/30 hover:text-[#00C2FF] hover:bg-[#00C2FF]/10 transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#00C2FF]"
             >
               <X size={24} strokeWidth={3} />
@@ -56,48 +56,48 @@ export const CreateArticleModal = ({ onClose }: CreateArticleModalProps) => {
           <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="article-title" className="sr-only">
-                Tiêu đề bài viết
-              </label>
+                Article Title
+                                            </label>
               <input
                 id="article-title"
                 name="title"
                 autoFocus
                 className="w-full text-2xl font-black border-none focus:ring-0 placeholder:text-[#102A43]/20 text-[#102A43] bg-transparent"
-                placeholder="Tiêu đề bài viết rực rỡ..."
+                placeholder="Brilliant article title..."
               />
             </div>
 
             <div className="space-y-2">
               <label htmlFor="article-content" className="sr-only">
-                Nội dung bài viết
-              </label>
+                Article Content
+                                            </label>
               <textarea
                 id="article-content"
                 name="content"
                 className="w-full h-48 border-none focus:ring-0 placeholder:text-[#102A43]/20 resize-none text-[#102A43]/80 font-bold text-lg leading-relaxed bg-transparent"
-                placeholder="Bạn muốn truyền cảm hứng gì hôm nay?"
+                placeholder="What do you want to inspire today?"
               />
             </div>
 
             {/* Tagging & Category Section */}
             <nav
               className="flex items-center gap-3 flex-wrap mb-10"
-              aria-label="Tùy chọn bài viết"
+              aria-label="Article Options"
             >
               <button
                 type="button"
                 className="flex items-center gap-2 px-5 py-2.5 bg-[#F4FDFF] rounded-2xl text-[11px] font-black text-[#00C2FF] border border-[#BEEFFF] hover:bg-[#00C2FF] hover:text-white transition-all shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[#00C2FF]"
               >
                 <Hash size={14} />
-                Thêm Hashtag
-              </button>
+                Add Hashtag
+                                            </button>
               <button
                 type="button"
                 className="flex items-center gap-2 px-5 py-2.5 bg-white rounded-2xl text-[11px] font-black text-[#102A43]/40 border border-[#BEEFFF] hover:border-[#00C2FF]/30 transition-all shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[#00C2FF]"
               >
                 <LayoutGrid size={14} />
-                Chọn danh mục
-              </button>
+                Select Category
+                                            </button>
             </nav>
 
             {/* Action Buttons */}
@@ -106,15 +106,15 @@ export const CreateArticleModal = ({ onClose }: CreateArticleModalProps) => {
                 type="submit"
                 className="flex-[2] py-5 bg-gradient-to-r from-[#00C2FF] to-[#00AEEF] text-white rounded-[1.8rem] font-black text-lg shadow-lg shadow-[#00C2FF]/30 hover:shadow-[#00C2FF]/50 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 outline-none focus-visible:ring-4 focus-visible:ring-[#00FFD1]"
               >
-                Xuất bản ngay ✨
-              </button>
+                Publish Now ✨
+                                            </button>
               <button
                 type="button"
                 onClick={onClose}
                 className="flex-1 py-5 bg-[#F4FDFF] text-[#102A43]/40 rounded-[1.8rem] font-black hover:bg-[#BEEFFF]/30 hover:text-[#102A43]/60 transition-all outline-none"
               >
-                Để sau
-              </button>
+                Later
+                                            </button>
             </div>
           </form>
         </div>

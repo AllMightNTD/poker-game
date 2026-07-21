@@ -11,35 +11,35 @@ export const registerSchema = z
     user_name: z
       .string()
       .trim()
-      .min(1, "Tên tài khoản không được bỏ trống")
-      .min(3, "Tên tài khoản tối thiểu 3 ký tự")
-      .max(20, "Tên tài khoản tối đa 20 ký tự")
-      .regex(/^[a-zA-Z0-9_]+$/, "Tên tài khoản chỉ gồm chữ, số và dấu gạch dưới"),
+      .min(1, "Username is required")
+      .min(3, "Username must be at least 3 characters")
+      .max(20, "Username must not exceed 20 characters")
+      .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
 
     email: z
       .string()
       .trim()
-      .min(1, "Email không được bỏ trống")
-      .email("Email không hợp lệ"),
+      .min(1, "Email is required")
+      .email("Invalid email"),
 
     password: z
       .string()
-      .min(1, "Mật khẩu không được bỏ trống")
-      .min(6, "Mật khẩu tối thiểu 6 ký tự")
-      .max(32, "Mật khẩu tối đa 32 ký tự")
+      .min(1, "Password is required")
+      .min(6, "Password must be at least 6 characters")
+      .max(32, "Password must not exceed 32 characters")
       .regex(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/,
-        "Mật khẩu phải có chữ hoa, chữ thường và số"
+        "Password must contain uppercase, lowercase letters, and numbers"
       ),
 
-    confirmPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
 
     terms: z.boolean().refine((val) => val === true, {
-      message: "Bạn cần đồng ý với điều khoản sử dụng",
+      message: "You must agree to the Terms of Use",
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Mật khẩu xác nhận không khớp",
+    message: "Passwords do not match",
     path: ["confirmPassword"],
   });
 
@@ -79,6 +79,7 @@ export function useRegister() {
     register,
     handleSubmit,
     setError,
+    control,
     formState: { errors },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -94,7 +95,7 @@ export function useRegister() {
       return response.data;
     },
     onSuccess: (data, variables) => {
-      toastSuccess("Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.");
+      toastSuccess("Registration successful. Please check your email to verify your account.");
       const tokenQuery = data?.token ? `&token=${encodeURIComponent(data.token)}` : "";
       router.push(`/verify-otp?email=${encodeURIComponent(variables.email)}${tokenQuery}`);
     },
@@ -111,15 +112,15 @@ export function useRegister() {
         if (errorCode === "USERNAME_ALREADY_EXISTS" || lowerMsg.includes("username")) {
           setError("user_name", {
             type: "server",
-            message: messageStr || "Tên tài khoản đã được sử dụng",
+            message: messageStr || "Username is already taken",
           });
         } else if (errorCode === "EMAIL_ALREADY_EXISTS" || lowerMsg.includes("email")) {
           setError("email", {
             type: "server",
-            message: messageStr || "Email đã được sử dụng",
+            message: messageStr || "Email is already in use",
           });
         } else {
-          toastError(messageStr || "Email hoặc tên tài khoản đã tồn tại");
+          toastError(messageStr || "Email or username already exists");
         }
         return;
       }
@@ -141,14 +142,14 @@ export function useRegister() {
         if (!hasFieldError) {
           const firstErr = message[0];
           const errorMsg =
-            typeof firstErr === "string" ? firstErr : firstErr?.error || "Đăng ký thất bại, vui lòng thử lại";
+            typeof firstErr === "string" ? firstErr : firstErr?.error || "Registration failed, please try again";
           toastError(errorMsg);
         }
         return;
       }
 
       // Trường hợp lỗi chung
-      const errorMsg = typeof message === "string" ? message : "Đăng ký thất bại, vui lòng thử lại";
+      const errorMsg = typeof message === "string" ? message : "Registration failed, please try again";
       toastError(errorMsg);
     },
   });
@@ -163,6 +164,7 @@ export function useRegister() {
 
   return {
     register,
+    control,
     handleSubmit: handleSubmit(onSubmit),
     errors,
     isSubmitting: registerMutation.isPending,

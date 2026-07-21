@@ -37,8 +37,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             </motion.div>
             <div className="flex flex-col text-left">
               <span className="text-[8px] text-[#F7EFDD]/50 font-black uppercase tracking-widest leading-none mb-1">
-                SẢNH GAME POKER
-              </span>
+                POKER LOBBY
+                                            </span>
               <span className="text-[10px] font-black tracking-widest text-[#F7EFDD] uppercase leading-none">
                 POKER <span className="text-[#F4B942]">VIP CLUB</span>
               </span>
@@ -52,10 +52,10 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             Texas Hold&apos;em Arena
           </h1>
           <p className="text-[#F7EFDD]/70 text-xs md:text-sm max-w-xl mt-3 leading-relaxed">
-            Ngồi vào bàn, so tài trí tuệ và để bản lĩnh dẫn lối.
-            <br />
-            Trải nghiệm đẳng cấp sòng bài thượng lưu với đối thủ thực tế và cơ hội chinh phục jackpot khổng lồ.
-          </p>
+            Take a seat, test your wits, and let your skills lead the way.
+                                  <br />
+            Experience a high-end casino atmosphere with real opponents and the chance to win massive jackpots.
+                                </p>
         </div>
 
         {/* Right Side: Premium Balance Widget */}
@@ -78,8 +78,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             </div>
             <div className="flex flex-col text-left">
               <span className="text-[9px] text-[#F7EFDD]/40 font-black uppercase tracking-widest leading-none mb-1.5">
-                SỐ DƯ CỦA BẠN
-              </span>
+                YOUR BALANCE
+                                            </span>
               <span className="text-3xl font-black text-[#F4B942] tracking-tight leading-none drop-shadow-[0_2px_10px_rgba(244,185,66,0.2)]">
                 {parseInt(chipsBalance).toLocaleString()}
               </span>
@@ -94,14 +94,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#F4B942] via-[#E0942A] to-[#B07316] text-[#060e0a] font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#F4B942]/20 whitespace-nowrap cursor-pointer relative overflow-hidden group/btn"
             >
               <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover/btn:animate-[shimmer_1.5s_infinite]" />
-              🔥 Nhận Chips Free
-            </motion.button>
+              🔥 Get Free Chips
+                                      </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onCreateTableClick}
               className="w-11 h-11 rounded-xl bg-[#08121a]/90 hover:bg-[#0c1a26] text-[#F7EFDD] border border-[#F4B942]/30 flex items-center justify-center font-bold text-sm transition-all hover:border-[#F4B942]/60 cursor-pointer shadow-md"
-              title="Tạo bàn chơi"
+              title="Create Table"
             >
               <Plus size={18} className="text-[#F4B942]" />
             </motion.button>
@@ -121,11 +121,11 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
           </div>
           <div className="flex flex-col text-left">
             <span className="text-[9px] text-[#F7EFDD]/40 block uppercase font-bold tracking-widest leading-none mb-1.5">
-              Trực tuyến
-            </span>
+              Online
+                                      </span>
             <span className="text-sm font-bold text-[#F7EFDD] tracking-wide leading-none">
-              {lobbyStats.online_players.toLocaleString()} cao thủ
-            </span>
+              {lobbyStats.online_players.toLocaleString()} pro players
+                                      </span>
           </div>
         </div>
 
@@ -136,11 +136,11 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
           </div>
           <div className="flex flex-col text-left">
             <span className="text-[9px] text-[#F7EFDD]/40 block uppercase font-bold tracking-widest leading-none mb-1.5">
-              Bàn đang mở
-            </span>
+              Active Tables
+                                      </span>
             <span className="text-sm font-bold text-[#F7EFDD] tracking-wide leading-none">
-              {lobbyStats.active_tables} bàn
-            </span>
+              {lobbyStats.active_tables} tables
+                                      </span>
           </div>
         </div>
 
@@ -151,8 +151,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
           </div>
           <div className="flex flex-col text-left">
             <span className="text-[9px] text-[#F7EFDD]/40 block uppercase font-bold tracking-widest leading-none mb-1.5">
-              Hũ pot hôm nay
-            </span>
+              Today&apos;s Pot
+                                      </span>
             <span className="text-sm font-black text-[#F4B942] tracking-wide leading-none drop-shadow-[0_1px_5px_rgba(244,185,66,0.1)]">
               {formatChips(lobbyStats.total_jackpot_pot.toString())} Chips
             </span>

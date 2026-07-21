@@ -16,7 +16,7 @@ export function useTimer(
     const interval = setInterval(() => {
       setTimerVal((t) => {
         if (t <= 1) {
-          showToast(`Hết thời gian! Tự động Check.`, "info");
+          showToast(`Time's up! Auto Checked.`, "info");
           simulateNextTurn();
           return maxTimerVal;
         }
