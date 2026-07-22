@@ -459,6 +459,93 @@ export class AuthService {
     };
   }
 
+  async facebookLogin(profile: any, ipAddress?: string, deviceInfo?: string) {
+    if (!profile || !profile.email) {
+      throw new BadRequestException('Không thể lấy thông tin email từ Facebook.');
+    }
+
+    const email = profile.email;
+    let user = await this.userRepository.findOne({
+      where: { email },
+      select: ['id', 'email', 'user_name', 'password', 'status'],
+    });
+
+    if (!user) {
+      // Create new user with 50M chips
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+      const baseUserName =
+        profile.firstName && profile.lastName
+          ? `${profile.firstName}${profile.lastName}`.replace(/\s+/g, '')
+          : `fb_user${Date.now()}`;
+
+      let user_name = baseUserName;
+      let counter = 1;
+      while (await this.userRepository.findOne({ where: { user_name } })) {
+        user_name = `${baseUserName}${counter}`;
+        counter++;
+      }
+
+      user = await withTransaction(this.dataSource, async (qr) => {
+        const newUser = qr.manager.create(User, {
+          email,
+          user_name,
+          password: hashedPassword,
+          status: UserStatus.ACTIVE,
+          avatar_url: profile.picture,
+          is_active_status: true,
+        });
+        await qr.manager.save(newUser);
+
+        const wallet = qr.manager.create(Wallet, {
+          user_id: newUser.id,
+          chips_balance: '50000000',
+        });
+        await qr.manager.save(wallet);
+
+        return newUser;
+      });
+    } else {
+      // User exists. Update status to ACTIVE if it was INACTIVE.
+      if (user.status === UserStatus.INACTIVE) {
+        user.status = UserStatus.ACTIVE;
+        await this.userRepository.save(user);
+      } else if (user.status !== UserStatus.ACTIVE) {
+        throw new UnauthorizedException(
+          'Tài khoản đã bị khóa hoặc không hợp lệ.',
+        );
+      }
+    }
+
+    // Generate tokens
+    const payload = { sub: user.id, username: user.user_name };
+    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+
+    const plainRefreshToken = crypto.randomBytes(64).toString('hex');
+    const tokenHash = await bcrypt.hash(plainRefreshToken, 10);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
+
+    const refreshTokenEntity = this.refreshTokenRepository.create({
+      user_id: user.id,
+      token_hash: tokenHash,
+      expires_at: expiresAt,
+      ip_address: ipAddress,
+      device_info: deviceInfo,
+    });
+    await this.refreshTokenRepository.save(refreshTokenEntity);
+
+    return {
+      access_token: accessToken,
+      refresh_token: `${refreshTokenEntity.id}.${plainRefreshToken}`,
+      user: {
+        id: user.id,
+        email: user.email,
+        user_name: user.user_name,
+      },
+    };
+  }
+
   async refreshToken(
     refreshTokenDto: RefreshTokenDto,
     ipAddress?: string,

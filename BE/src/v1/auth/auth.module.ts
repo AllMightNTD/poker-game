@@ -9,16 +9,17 @@ import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth/auth.service';
 import { PokerLobbyModule } from '../modules/poker-lobby.module';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { FacebookStrategy } from './strategies/facebook.strategy';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
     TypeOrmModule.forFeature([User, RefreshToken]),
-    PassportModule.register({ defaultStrategy: 'facebook' }),
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     MailModule,
     PokerLobbyModule,
   ],
-  providers: [AuthService, GoogleStrategy],
+  providers: [AuthService, GoogleStrategy, FacebookStrategy],
   controllers: [AuthController],
   exports: [AuthService],
 })

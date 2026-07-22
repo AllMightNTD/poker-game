@@ -32,12 +32,12 @@ export function LoginForm() {
   } = useLogin(t);
 
   const handleFacebookLogin = () => {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
     window.location.href = `${backendUrl}/api/v1/auth/facebook`;
   };
 
   const handleGoogleLogin = () => {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
     window.location.href = `${backendUrl}/api/v1/auth/google`;
   };
 

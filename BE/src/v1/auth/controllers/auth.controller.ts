@@ -31,6 +31,7 @@ import {
 import { RequestPasswordResetDto } from '../dto/request-reset-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { GoogleAuthGuard } from '../guards/google-auth.guard';
+import { FacebookAuthGuard } from '../guards/facebook-auth.guard';
 import { AuthService } from '../services/auth/auth.service';
 
 @ApiTags('🔐 Authentication')
@@ -358,6 +359,56 @@ export class AuthController {
     });
 
     console.log('login done');
+
+    const baseUrl = (process.env.WEB_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    const redirectUrl = `${baseUrl}/poker-game?accessToken=${encodeURIComponent(result.access_token)}&refreshToken=${encodeURIComponent(result.refresh_token)}`;
+    return res.redirect(redirectUrl);
+  }
+
+  @Get('facebook')
+  @UseGuards(FacebookAuthGuard)
+  @ApiOperation({
+    summary: 'Đăng nhập bằng Facebook',
+    description: 'Chuyển hướng người dùng đến trang xác thực của Facebook.',
+  })
+  async facebookAuth(@Req() _req: any) {
+    // Initiates the Facebook OAuth flow
+  }
+
+  @Get('facebook/callback')
+  @UseGuards(FacebookAuthGuard)
+  @ApiOperation({
+    summary: 'Callback từ Facebook',
+    description: 'Xử lý xác thực sau khi Facebook trả về kết quả.',
+  })
+  async facebookAuthRedirect(@Req() req: any, @Res() res: Response) {
+    const rawUserAgent = req.headers['user-agent'];
+    const parsedDevice = parseUserAgent(rawUserAgent);
+    const ipAddress =
+      req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress;
+
+    const result = await this.authService.facebookLogin(
+      req.user,
+      ipAddress,
+      parsedDevice,
+    );
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    res.cookie('accessToken', result.access_token, {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/',
+      maxAge: 15 * 60 * 1000, // 15m
+    });
+
+    res.cookie('refreshToken', result.refresh_token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30d
+    });
 
     const baseUrl = (process.env.WEB_URL || 'http://localhost:3000').replace(/\/+$/, '');
     const redirectUrl = `${baseUrl}/poker-game?accessToken=${encodeURIComponent(result.access_token)}&refreshToken=${encodeURIComponent(result.refresh_token)}`;
