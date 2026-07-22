@@ -98,6 +98,11 @@ httpClient.interceptors.response.use(
           const newAccessToken = refreshResponse.data.access_token || refreshResponse.data.accessToken;
 
           if (newAccessToken) {
+            Cookies.set("accessToken", newAccessToken, { path: "/" });
+            const newRefreshToken = refreshResponse.data.refresh_token || refreshResponse.data.refreshToken;
+            if (newRefreshToken) {
+              Cookies.set("refreshToken", newRefreshToken, { path: "/" });
+            }
             originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           }
 
