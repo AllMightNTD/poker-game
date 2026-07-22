@@ -4,6 +4,7 @@ import { PokerLobbyGateway } from '../gateways/poker-lobby.gateway';
 import { PokerGameService } from '../services/poker-game.service';
 import { PokerLobbyService } from '../services/poker-lobby.service';
 import { PokerStateService } from '../services/poker-state.service';
+import { BotService } from '../bots/services/bot.service';
 
 import { ThrottlerGuard } from '@nestjs/throttler';
 
@@ -88,6 +89,10 @@ describe('Concurrency / Race Condition Test (PokerLobbyGateway)', () => {
         { provide: PokerStateService, useClass: MockPokerStateService },
         { provide: PokerGameService, useClass: MockPokerGameService },
         { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
+        {
+          provide: BotService,
+          useValue: { handleBotActionsIfNeeded: jest.fn() },
+        },
       ],
     })
       .overrideGuard(ThrottlerGuard)

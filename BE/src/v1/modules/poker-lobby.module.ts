@@ -1,30 +1,32 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
-import { PokerTable } from '../entities/poker_table.entity';
-import { TableSession } from '../entities/table_session.entity';
-import { Wallet } from '../entities/wallet.entity';
-import { SystemRevenue } from '../entities/system_revenue.entity';
-import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
+import { Module, forwardRef } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { BotModule } from '../bots/bot.module';
 import { LobbyController } from '../controllers/lobby.controller';
-import { WalletController } from '../controllers/wallet.controller';
+import { ProvablyFairController } from '../controllers/provably-fair.controller';
 import { RoomsController } from '../controllers/rooms.controller';
 import { UserController } from '../controllers/user.controller';
-import { ProvablyFairController } from '../controllers/provably-fair.controller';
-import { PokerLobbyService } from '../services/poker-lobby.service';
-import { PokerLobbyGateway } from '../gateways/poker-lobby.gateway';
-import { PokerStateService } from '../services/poker-state.service';
-import { PokerGameService } from '../services/poker-game.service';
-import { WalletService } from '../services/wallet.service';
-import { AuditService } from '../services/audit.service';
-import { TournamentService } from '../services/tournament.service';
-import { ProvablyFairService } from '../services/provably-fair.service';
-import { AntiCollusionService } from '../services/anti-collusion.service';
-import { ConfigModule } from '@nestjs/config';
+import { WalletController } from '../controllers/wallet.controller';
 import { PokerGameHistoryProcessor } from '../engines/poker-game-history.processor';
+import { PokerTable } from '../entities/poker_table.entity';
+import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
+import { SystemRevenue } from '../entities/system_revenue.entity';
+import { TableSession } from '../entities/table_session.entity';
+import { Wallet } from '../entities/wallet.entity';
+import { PokerLobbyGateway } from '../gateways/poker-lobby.gateway';
+import { AntiCollusionService } from '../services/anti-collusion.service';
+import { AuditService } from '../services/audit.service';
+import { PokerGameService } from '../services/poker-game.service';
+import { PokerLobbyService } from '../services/poker-lobby.service';
+import { PokerStateService } from '../services/poker-state.service';
+import { ProvablyFairService } from '../services/provably-fair.service';
+import { TournamentService } from '../services/tournament.service';
+import { WalletService } from '../services/wallet.service';
 
 @Module({
   imports: [
+    forwardRef(() => BotModule),
     ConfigModule,
     TypeOrmModule.forFeature([
       PokerTable,

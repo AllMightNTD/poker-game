@@ -281,7 +281,7 @@ const Seat: React.FC<SeatProps> = ({
       <SeatPanel
         isActive={player.isActive}
         isFolded={player.isFolded}
-        isSittingOut={player.lastAction === 'Sit Out' || player.lastAction === 'Disconnected'}
+        isSittingOut={player.isSittingOut || player.lastAction === 'Sit Out' || player.lastAction === 'Disconnected'}
       >
 
         {/* Avatar + Timer Ring */}

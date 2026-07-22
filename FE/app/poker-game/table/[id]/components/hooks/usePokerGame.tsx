@@ -500,9 +500,9 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               isSmallBlind: s.seatIndex === data.small_blind_seat,
               isBigBlind: s.seatIndex === data.big_blind_seat,
               isActive: s.seatIndex === data.current_turn_seat,
-              lastAction: s.status === "folded" ? "Fold" : s.status === "sitting_out" ? "Sit Out" : s.status === "disconnected" ? "Disconnected" : "",
+              lastAction: (s.chips === "0" || s.chips === 0) && s.status === "active" ? "All-In" : s.status === "folded" ? "Fold" : s.status === "sitting_out" ? "Sit Out" : s.status === "disconnected" ? "Disconnected" : "",
               isFolded: s.status === "folded",
-              hasAllIn: s.chips === "0" && s.status === "active",
+              hasAllIn: (s.chips === "0" || s.chips === 0) && s.status === "active",
               isHero,
               isBot: s.isBot,
               cards: defaultCards,
@@ -809,19 +809,51 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     socket.on("table:player-sat-out", (data: Record<string, unknown>) => {
       if (data.user_id === currentUserRef.current?.id) {
-        showToast(`You have been automatically set to Away due to timeout!`, "warning");
+        showToast(`You have been set to Away (Sit Out).`, "warning");
       } else {
         const actor = playersRef.current.find(p => p.seatIndex === data.seat_number);
-        showToast(`Người chơi ${actor ? actor.name : `ở ghế ${data.seat_number}`} đã chuyển sang trạng thái đi vắng.`, "info");
+        showToast(`${actor ? actor.name : `Seat ${data.seat_number}`} is now sitting out.`, "info");
       }
       setPlayers((prev) =>
         prev.map((p) =>
           p.seatIndex === data.seat_number
-            ? { ...p, lastAction: "Sit Out" }
+            ? { ...p, lastAction: "Sit Out", isSittingOut: true }
             : p
         )
       );
     });
+
+    socket.on("table:player-sat-back", (data: Record<string, unknown>) => {
+      const status = data.status as string;
+      const isWaiting = status === "waiting_for_next_hand";
+
+      if (data.user_id === currentUserRef.current?.id) {
+        showToast(
+          isWaiting
+            ? "You are back! You will join the next hand."
+            : "You are back and active!",
+          "success"
+        );
+      } else {
+        const actor = playersRef.current.find(p => p.seatIndex === data.seat_number);
+        showToast(
+          `${actor ? actor.name : `Seat ${data.seat_number}`} is back${isWaiting ? " (next hand)" : ""}!`,
+          "info"
+        );
+      }
+      setPlayers((prev) =>
+        prev.map((p) =>
+          p.seatIndex === data.seat_number
+            ? {
+                ...p,
+                isSittingOut: false,
+                lastAction: isWaiting ? "Waiting" : "",
+              }
+            : p
+        )
+      );
+    });
+
 
     socket.emit("table:get-sit-requests", { room_id: tableId });
 

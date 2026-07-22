@@ -11,7 +11,7 @@ export class Chacha20RNG {
 
   constructor(seed: Buffer) {
     this.key = seed; // 32-bytes key
-    this.iv = Buffer.alloc(12, 0); // 12-bytes IV of zeroes
+    this.iv = Buffer.alloc(16, 0); // 16-bytes IV of zeroes
     this.cipher = crypto.createCipheriv('chacha20', this.key, this.iv);
     // Pre-generate a pool of 1024 pseudo-random bytes
     const plaintext = Buffer.alloc(1024, 0);

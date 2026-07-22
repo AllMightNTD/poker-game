@@ -481,6 +481,7 @@ export class PokerActionProcessor {
 
       if (
         !seat ||
+        parseInt(seat.stack || '0') === 0 ||
         (seat.status !== 'active' &&
           seat.status !== 'disconnected' &&
           seat.status !== 'sitting_out')

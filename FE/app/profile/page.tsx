@@ -3,8 +3,9 @@
 import { useCurrentUser } from "@/core/providers/user-provider";
 import { AuthService } from "@/features/auth/services/auth.service";
 import { Achievement, gamificationApi, PlayerStats } from "@/features/gamification/api/gamification-api";
+import { userApi } from "@/features/user/api/user-api";
 import { motion } from "framer-motion";
-import { Clock, Coins, Globe, Laptop, Star, Swords, Trash2, Trophy, Zap } from "lucide-react";
+import { Camera, Clock, Coins, Globe, Laptop, Star, Swords, Trash2, Trophy, Zap } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { LevelBadge } from "../poker-game/table/[id]/components/ui/LevelBadge";
 
@@ -109,9 +110,28 @@ function ProfileContent() {
           animate={{ y: 0, opacity: 1 }}
           className="bg-slate-900/80 backdrop-blur-md rounded-3xl p-8 border border-slate-800 shadow-2xl flex flex-col md:flex-row items-center gap-8"
         >
-          {/* Avatar & Badge */}
-          <div className="relative">
-            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-800 shadow-xl">
+          {/* Avatar & Badge with Upload feature */}
+          <div className="relative group cursor-pointer">
+            <input
+              type="file"
+              id="avatarInput"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                  await userApi.uploadAvatar(file);
+                  window.location.reload();
+                } catch (err: any) {
+                  alert(err.response?.data?.message || "Failed to upload avatar");
+                }
+              }}
+            />
+            <div
+              onClick={() => document.getElementById("avatarInput")?.click()}
+              className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-800 shadow-xl relative"
+            >
               {currentUser.avatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={currentUser.avatar} alt="Avatar" className="w-full h-full object-cover" />
@@ -120,6 +140,10 @@ function ProfileContent() {
                   👤
                 </div>
               )}
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-xs font-bold gap-1">
+                <Camera className="w-6 h-6" />
+                <span>Upload</span>
+              </div>
             </div>
             <div className="absolute -bottom-4 -right-4">
               <LevelBadge level={stats?.level || 'bronze'} xp={stats?.current_xp || 0} showProgress={false} size="sm" />

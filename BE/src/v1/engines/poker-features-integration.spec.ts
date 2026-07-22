@@ -9,6 +9,7 @@ import { PokerGameService } from '../services/poker-game.service';
 import { PokerLobbyService } from '../services/poker-lobby.service';
 import { PokerStateService } from '../services/poker-state.service';
 import { ProvablyFairService } from '../services/provably-fair.service';
+import { BotService } from '../bots/services/bot.service';
 import { PokerGameHistoryProcessor } from './poker-game-history.processor';
 import { PokerGameEngine } from './poker-game.engine';
 import { PokerShowdownManager } from './poker-showdown.manager';
@@ -280,6 +281,10 @@ describe('Poker Integrated Advanced Features', () => {
         { provide: PokerStateService, useClass: MockPokerStateService },
         { provide: PokerLobbyService, useValue: { leaveRoom: jest.fn() } },
         { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
+        {
+          provide: BotService,
+          useValue: { handleBotActionsIfNeeded: jest.fn() },
+        },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
         {
           provide: DataSource,

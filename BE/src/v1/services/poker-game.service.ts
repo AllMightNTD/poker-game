@@ -222,6 +222,11 @@ export class PokerGameService implements OnModuleDestroy {
       expiresAt,
       currentSeat: seatNumber,
     });
+
+    this.eventEmitter.emit('poker.turn_changed', {
+      roomId,
+      turnSeatNumber: seatNumber,
+    });
   }
 
   clearActionTimer(roomId: string) {
@@ -741,7 +746,11 @@ export class PokerGameService implements OnModuleDestroy {
           await kickPlayer(seat.user_id, seat.seat_number);
           continue;
         }
-        if (seat.status === 'waiting_for_next_hand') {
+        if (
+          seat.status === 'waiting_for_next_hand' ||
+          seat.status === 'ready' ||
+          seat.status === 'sitting'
+        ) {
           await this.stateService.setSeat(roomId, seat.seat_number, {
             status: 'active',
             current_bet: '0',

@@ -12,6 +12,7 @@ export interface Player {
   isHero: boolean;
   isActive: boolean;
   isFolded: boolean;
+  isSittingOut?: boolean;
   lastAction?: string;
   cards?: Card[];
   isDealer?: boolean;

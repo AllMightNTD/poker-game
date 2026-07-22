@@ -24,6 +24,7 @@ import { useResponsive } from "../hooks/useResponsive";
 import { StatsModal } from "../settings/StatsModal";
 import { ProvablyFairModal } from "../ui/ProvablyFairModal";
 import { HostSettingsModal } from "../settings/HostSettingsModal";
+import { BotControlPanel } from "../hud/BotControlPanel";
 
 export const TableHeader = () => {
   const { isMobile } = useResponsive();
@@ -153,6 +154,7 @@ export const TableHeader = () => {
         {/* Host settings (Only room owner) */}
         {isHost && (
           <>
+            <BotControlPanel roomId={tableName} isRoomOwner={isHost} activeSeats={players} />
             <button
               onClick={() => togglePause(roomStatus !== 'paused')}
               className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-colors cursor-pointer ${

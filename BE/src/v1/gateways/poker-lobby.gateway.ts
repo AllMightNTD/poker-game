@@ -1,4 +1,11 @@
-import { Logger, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import {
+  Logger,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { OnEvent } from '@nestjs/event-emitter';
 import {
@@ -19,6 +26,7 @@ import { Wallet } from '../entities/wallet.entity';
 import { PokerLobbyService } from '../services/poker-lobby.service';
 import { PokerStateService } from '../services/poker-state.service';
 import { PokerGameService } from '../services/poker-game.service';
+import { BotService } from '../bots/services/bot.service';
 import { corsOriginFn } from '../../config/cors.config';
 import { Throttle } from '@nestjs/throttler';
 import { CustomThrottlerGuard } from '../../common/guards/custom-throttler.guard';
@@ -54,6 +62,8 @@ export class PokerLobbyGateway
     private readonly stateService: PokerStateService,
     private readonly jwtService: JwtService,
     private readonly gameService: PokerGameService,
+    @Inject(forwardRef(() => BotService))
+    private readonly botService: BotService,
   ) {}
 
   afterInit(server: Server) {
@@ -91,6 +101,41 @@ export class PokerLobbyGateway
     } catch (err) {
       this.logger.error(`Error in handleUserSessionRevoked: ${err.message}`);
     }
+  }
+
+  @OnEvent('poker.seat.sit_out')
+  handleSeatSitOut(payload: {
+    roomId: string;
+    userId: string;
+    seatNumber: number;
+  }) {
+    if (!this.server) return;
+    this.server.to(`table_${payload.roomId}`).emit('table:player-sat-out', {
+      seat_number: payload.seatNumber,
+      user_id: payload.userId,
+      status: 'sitting_out',
+    });
+    this.logger.log(
+      `[SIT-OUT] User ${payload.userId} at seat ${payload.seatNumber} on table ${payload.roomId}`,
+    );
+  }
+
+  @OnEvent('poker.seat.sit_back')
+  handleSeatSitBack(payload: {
+    roomId: string;
+    userId: string;
+    seatNumber: number;
+    status: string;
+  }) {
+    if (!this.server) return;
+    this.server.to(`table_${payload.roomId}`).emit('table:player-sat-back', {
+      seat_number: payload.seatNumber,
+      user_id: payload.userId,
+      status: payload.status,
+    });
+    this.logger.log(
+      `[SIT-BACK] User ${payload.userId} at seat ${payload.seatNumber} → status: ${payload.status} on table ${payload.roomId}`,
+    );
   }
 
   async handleConnection(client: Socket) {
@@ -649,7 +694,10 @@ export class PokerLobbyGateway
       const seats = await this.stateService.getAllSeats(roomId);
       const readyPlayers = seats.filter(
         (s) =>
-          (s.status === 'active' || s.status === 'waiting_for_next_hand') &&
+          (s.status === 'active' ||
+            s.status === 'waiting_for_next_hand' ||
+            s.status === 'ready' ||
+            s.status === 'sitting') &&
           parseInt(s.stack) > 0,
       );
 
@@ -966,6 +1014,51 @@ export class PokerLobbyGateway
         .to(`table_${roomId}`)
         .emit('table:throwable-item-received', payload);
     } catch (err) {
+      client.emit('error', { message: err.message });
+    }
+  }
+
+  @SubscribeMessage('add_bot')
+  async handleAddBot(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    data: {
+      roomId: string;
+      count?: number;
+      difficulty?: any;
+      displayName?: string;
+      avatar?: string;
+      country?: string;
+      chips?: number;
+    },
+  ) {
+    try {
+      const bots = await this.botService.addBotsToRoom(data.roomId, {
+        count: data.count || 1,
+        difficulty: data.difficulty,
+        displayName: data.displayName,
+        avatar: data.avatar,
+        country: data.country,
+        chips: data.chips,
+      });
+
+      await this.gameService.broadcastTableState(data.roomId);
+      client.emit('bot_added_success', { count: bots.length, bots });
+    } catch (err: any) {
+      client.emit('error', { message: err.message });
+    }
+  }
+
+  @SubscribeMessage('remove_bot')
+  async handleRemoveBot(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { roomId: string; botUserId: string },
+  ) {
+    try {
+      await this.botService.removeBotFromRoom(data.roomId, data.botUserId);
+      await this.gameService.broadcastTableState(data.roomId);
+      client.emit('bot_removed_success', { botUserId: data.botUserId });
+    } catch (err: any) {
       client.emit('error', { message: err.message });
     }
   }

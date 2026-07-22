@@ -30,8 +30,8 @@ import {
 } from '../dto/auth.dto';
 import { RequestPasswordResetDto } from '../dto/request-reset-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
-import { GoogleAuthGuard } from '../guards/google-auth.guard';
 import { FacebookAuthGuard } from '../guards/facebook-auth.guard';
+import { GoogleAuthGuard } from '../guards/google-auth.guard';
 import { AuthService } from '../services/auth/auth.service';
 
 @ApiTags('🔐 Authentication')
@@ -360,7 +360,10 @@ export class AuthController {
 
     console.log('login done');
 
-    const baseUrl = (process.env.WEB_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    const baseUrl = (process.env.WEB_URL || 'http://localhost:3000').replace(
+      /\/+$/,
+      '',
+    );
     const redirectUrl = `${baseUrl}/poker-game?accessToken=${encodeURIComponent(result.access_token)}&refreshToken=${encodeURIComponent(result.refresh_token)}`;
     return res.redirect(redirectUrl);
   }
@@ -373,6 +376,7 @@ export class AuthController {
   })
   async facebookAuth(@Req() _req: any) {
     // Initiates the Facebook OAuth flow
+    console.log('facebookAuth', _req);
   }
 
   @Get('facebook/callback')
@@ -410,7 +414,10 @@ export class AuthController {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30d
     });
 
-    const baseUrl = (process.env.WEB_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    const baseUrl = (process.env.WEB_URL || 'http://localhost:3000').replace(
+      /\/+$/,
+      '',
+    );
     const redirectUrl = `${baseUrl}/poker-game?accessToken=${encodeURIComponent(result.access_token)}&refreshToken=${encodeURIComponent(result.refresh_token)}`;
     return res.redirect(redirectUrl);
   }

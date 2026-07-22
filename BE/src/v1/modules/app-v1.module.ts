@@ -11,6 +11,7 @@ import { JwtRefreshStrategy } from '../strategy/jwt-refresh.strategy';
 import { UserModule } from '../user/user.module';
 import { AdminModule } from './admin.module';
 import { PokerLobbyModule } from './poker-lobby.module';
+import { BotModule } from '../bots/bot.module';
 
 @Global()
 @Module({
@@ -28,6 +29,7 @@ import { PokerLobbyModule } from './poker-lobby.module';
     AuthModule,
     UserModule,
     PokerLobbyModule,
+    BotModule,
     BlogsModule,
     BlogsCrawlerModule,
     ClubsModule,

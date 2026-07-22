@@ -1,9 +1,11 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as crypto from 'crypto';
@@ -23,9 +25,11 @@ import { Wallet } from '../entities/wallet.entity';
 import { PlayerStats } from '../gamification/entities/player-stats.entity';
 import { PokerStateService } from './poker-state.service';
 import { AntiCollusionService } from './anti-collusion.service';
+import { PokerGameService } from './poker-game.service';
 
 @Injectable()
 export class PokerLobbyService {
+  private logger = new Logger(PokerLobbyService.name);
   private idempotencyKeys = new Map<string, number>();
 
   // client_id -> user_id (or client_id if guest)
@@ -38,6 +42,8 @@ export class PokerLobbyService {
     private readonly dataSource: DataSource,
     private readonly eventEmitter: EventEmitter2,
     private readonly antiCollusionService: AntiCollusionService,
+    @Inject(forwardRef(() => PokerGameService))
+    private readonly gameService?: PokerGameService,
   ) {}
 
   // Tracks active socket connections at lobby level
@@ -675,22 +681,10 @@ export class PokerLobbyService {
       where: {
         table_id: body.room_id,
         user_id: userId,
-        member_status: body.action === 'sit_out' ? 'active' : 'sitting_out',
       },
     });
 
-    let targetSession = session;
-    if (!targetSession) {
-      targetSession = await TableSession.findOne({
-        where: {
-          table_id: body.room_id,
-          user_id: userId,
-          member_status: body.action === 'sit_out' ? 'sitting_out' : 'active',
-        },
-      });
-    }
-
-    if (!targetSession) {
+    if (!session || session.member_status === 'left') {
       throw new NotFoundException(
         'Không tìm thấy phiên chơi của bạn tại bàn này.',
       );
@@ -704,15 +698,82 @@ export class PokerLobbyService {
       );
     }
 
-    const newStatus = body.action === 'sit_out' ? 'sitting_out' : 'active';
-    targetSession.member_status = newStatus;
-    await targetSession.save();
+    const tableState = await this.stateService.getTableState(body.room_id);
 
-    await this.stateService.setSeat(body.room_id, heroSeat.seat_number, {
-      status: newStatus,
-    });
+    if (body.action === 'sit_out') {
+      const newStatus = 'sitting_out';
+      session.member_status = newStatus;
+      await session.save();
 
-    return { success: true, status: newStatus };
+      await this.stateService.setSeat(body.room_id, heroSeat.seat_number, {
+        status: newStatus,
+      });
+
+      // Mid-hand fold if player sits out during their turn in active hand
+      if (
+        tableState &&
+        tableState.game_stage !== 'waiting' &&
+        tableState.game_stage !== 'ended'
+      ) {
+        if (
+          tableState.current_turn_seat === heroSeat.seat_number.toString() &&
+          this.gameService
+        ) {
+          try {
+            await this.gameService.processPlayerAction(
+              body.room_id,
+              heroSeat.seat_number,
+              'fold',
+              0,
+            );
+          } catch (err) {
+            this.logger.error(
+              `Error auto-folding sitting out player: ${err.message}`,
+            );
+          }
+        }
+      }
+
+      this.eventEmitter.emit('poker.seat.sit_out', {
+        roomId: body.room_id,
+        userId,
+        seatNumber: heroSeat.seat_number,
+      });
+
+      return { success: true, status: newStatus };
+    } else {
+      // Sit back: if game is currently in progress, wait for next hand
+      let newStatus = 'active';
+      if (
+        tableState &&
+        tableState.game_stage !== 'waiting' &&
+        tableState.game_stage !== 'ended'
+      ) {
+        newStatus = 'waiting_for_next_hand';
+      }
+
+      session.member_status = 'active';
+      await session.save();
+
+      await this.stateService.setSeat(body.room_id, heroSeat.seat_number, {
+        status: newStatus,
+      });
+
+      // Reset away hands and timeouts counter on Redis
+      const redis = this.stateService.getRedisClient();
+      const statsKey = `table:${body.room_id}:player:${userId}:stats`;
+      await redis.hset(statsKey, 'consecutive_away_hands', '0');
+      await redis.hset(statsKey, 'consecutive_timeouts', '0');
+
+      this.eventEmitter.emit('poker.seat.sit_back', {
+        roomId: body.room_id,
+        userId,
+        seatNumber: heroSeat.seat_number,
+        status: newStatus,
+      });
+
+      return { success: true, status: newStatus };
+    }
   }
 
   /**
@@ -1141,6 +1202,31 @@ export class PokerLobbyService {
       await this.stateService.setSeat(roomId, targetSeat.seat_number, {
         status: 'sitting_out',
       });
+
+      const tableState = await this.stateService.getTableState(roomId);
+      if (
+        tableState &&
+        tableState.game_stage !== 'waiting' &&
+        tableState.game_stage !== 'ended'
+      ) {
+        if (
+          tableState.current_turn_seat === targetSeat.seat_number.toString() &&
+          this.gameService
+        ) {
+          try {
+            await this.gameService.processPlayerAction(
+              roomId,
+              targetSeat.seat_number,
+              'fold',
+              0,
+            );
+          } catch (err) {
+            this.logger.error(
+              `Error auto-folding forced sitting out player: ${err.message}`,
+            );
+          }
+        }
+      }
     }
 
     const log = new RoomAdminLog();
