@@ -5,7 +5,7 @@ import { AuthGuard } from '@nestjs/passport';
 export class FacebookAuthGuard extends AuthGuard('facebook') {
   getAuthenticateOptions() {
     return {
-      scope: 'email',
+      scope: ['email', 'public_profile'],
     };
   }
 }

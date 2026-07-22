@@ -460,11 +460,12 @@ export class AuthService {
   }
 
   async facebookLogin(profile: any, ipAddress?: string, deviceInfo?: string) {
-    if (!profile || !profile.email) {
-      throw new BadRequestException('Không thể lấy thông tin email từ Facebook.');
+    if (!profile) {
+      throw new BadRequestException('Không thể lấy thông tin từ Facebook.');
     }
 
-    const email = profile.email;
+    const email =
+      profile.email || `${profile.facebookId || profile.id}@facebook.com`;
     let user = await this.userRepository.findOne({
       where: { email },
       select: ['id', 'email', 'user_name', 'password', 'status'],
