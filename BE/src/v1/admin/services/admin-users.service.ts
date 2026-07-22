@@ -14,7 +14,7 @@ export class AdminUsersService {
   constructor(
     private readonly lobbyService: PokerLobbyService,
     private readonly gameService: PokerGameService,
-  ) { }
+  ) {}
 
   async getUsers(cursor: string | undefined, limit: number, search: string) {
     const query = User.createQueryBuilder('user').select([

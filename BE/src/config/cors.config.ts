@@ -17,7 +17,8 @@ export const corsOriginFn = (
 
   const isAllowedExplicitly = allowedOrigins.includes(origin);
   const isVercelDomain =
-    origin.endsWith('.vercel.app') || origin === 'https://poker-game-lake.vercel.app';
+    origin.endsWith('.vercel.app') ||
+    origin === 'https://poker-game-lake.vercel.app';
   const isDevMode = process.env.NODE_ENV !== 'production';
 
   if (isAllowedExplicitly || isVercelDomain || isDevMode) {

@@ -387,10 +387,11 @@ export class AuthService {
       // Create new user with 50M chips
       const randomPassword = crypto.randomBytes(16).toString('hex');
       const hashedPassword = await bcrypt.hash(randomPassword, 10);
-      const baseUserName = profile.firstName && profile.lastName 
-        ? `${profile.firstName}${profile.lastName}`.replace(/\\s+/g, '') 
-        : `user${Date.now()}`;
-      
+      const baseUserName =
+        profile.firstName && profile.lastName
+          ? `${profile.firstName}${profile.lastName}`.replace(/\\s+/g, '')
+          : `user${Date.now()}`;
+
       let user_name = baseUserName;
       let counter = 1;
       while (await this.userRepository.findOne({ where: { user_name } })) {
@@ -423,7 +424,9 @@ export class AuthService {
         user.status = UserStatus.ACTIVE;
         await this.userRepository.save(user);
       } else if (user.status !== UserStatus.ACTIVE) {
-        throw new UnauthorizedException('Tài khoản đã bị khóa hoặc không hợp lệ.');
+        throw new UnauthorizedException(
+          'Tài khoản đã bị khóa hoặc không hợp lệ.',
+        );
       }
     }
 

@@ -36,7 +36,7 @@ import { AuthService } from '../services/auth/auth.service';
 @ApiTags('🔐 Authentication')
 @Controller()
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -319,6 +319,7 @@ export class AuthController {
   })
   async googleAuth(@Req() req: any) {
     // Initiates the Google OAuth flow
+    console.log('googleAuth', req);
   }
 
   @Get('google/callback')
@@ -333,7 +334,11 @@ export class AuthController {
     const ipAddress =
       req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress;
 
-    const result = await this.authService.googleLogin(req.user, ipAddress, parsedDevice);
+    const result = await this.authService.googleLogin(
+      req.user,
+      ipAddress,
+      parsedDevice,
+    );
     const isProduction = process.env.NODE_ENV === 'production';
 
     res.cookie('accessToken', result.access_token, {
@@ -353,7 +358,6 @@ export class AuthController {
     });
 
     console.log('login done');
-
 
     const webUrl = process.env.WEB_URL || 'http://localhost:3000';
     const redirectUrl = `${webUrl}?accessToken=${encodeURIComponent(result.access_token)}&refreshToken=${encodeURIComponent(result.refresh_token)}`;

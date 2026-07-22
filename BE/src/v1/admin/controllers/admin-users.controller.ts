@@ -28,7 +28,7 @@ import { AdminUsersService } from '../services/admin-users.service';
 @UseInterceptors(AdminAuditLogInterceptor)
 @Controller('admin/users')
 export class AdminUsersController {
-  constructor(private readonly adminUsersService: AdminUsersService) { }
+  constructor(private readonly adminUsersService: AdminUsersService) {}
 
   @Get()
   @ApiOperation({

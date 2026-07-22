@@ -26,7 +26,7 @@ import {
 @UseGuards(AuthGuard)
 @ApiBearerAuth()
 export class ClubsController {
-  constructor(private readonly clubsService: ClubsService) { }
+  constructor(private readonly clubsService: ClubsService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new club (A-BE-04)' })
