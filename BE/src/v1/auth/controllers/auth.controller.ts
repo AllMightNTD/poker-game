@@ -359,8 +359,8 @@ export class AuthController {
 
     console.log('login done');
 
-    const webUrl = process.env.WEB_URL || 'http://localhost:3000';
-    const redirectUrl = `${webUrl}?accessToken=${encodeURIComponent(result.access_token)}&refreshToken=${encodeURIComponent(result.refresh_token)}`;
+    const baseUrl = (process.env.WEB_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    const redirectUrl = `${baseUrl}/poker-game?accessToken=${encodeURIComponent(result.access_token)}&refreshToken=${encodeURIComponent(result.refresh_token)}`;
     return res.redirect(redirectUrl);
   }
 }

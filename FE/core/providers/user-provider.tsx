@@ -23,6 +23,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const res = await api.get("/api/v1/user/me");
       const user = res.data?.metadata || res.data;
       setCurrentUser(user);
+
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+      if (currentPath === '/login' || currentPath === '/register' || currentPath === '/') {
+        router.push("/poker-game");
+      }
     } catch {
       setCurrentUser(null);
       const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
