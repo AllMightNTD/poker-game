@@ -36,6 +36,11 @@ export function LoginForm() {
     window.location.href = `${backendUrl}/api/v1/auth/facebook`;
   };
 
+  const handleGoogleLogin = () => {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
+    window.location.href = `${backendUrl}/api/v1/auth/google`;
+  };
+
   const emailError = errors.email?.message || fieldErrors.email;
   const passwordError = errors.password?.message || fieldErrors.password;
 
@@ -129,6 +134,7 @@ export function LoginForm() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
+                onClick={handleGoogleLogin}
                 className="flex items-center justify-center gap-2 h-11 rounded-xl bg-[#0B1B33] border border-[#1E3A5F] hover:border-yellow-400/60 transition-colors text-sm font-medium text-white"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">

@@ -1,14 +1,15 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -16,24 +17,26 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
-import { AuthGuard } from '../../guards/auth.guard';
 import { parseUserAgent } from '../../../common/utils/device-parser';
+import { AuthGuard } from '../../guards/auth.guard';
 import {
   LoginDto,
   RefreshTokenDto,
   RegisterDto,
-  VerifyOtpDto,
   ResendOtpDto,
+  VerifyOtpDto,
 } from '../dto/auth.dto';
 import { RequestPasswordResetDto } from '../dto/request-reset-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { GoogleAuthGuard } from '../guards/google-auth.guard';
 import { AuthService } from '../services/auth/auth.service';
 
 @ApiTags('🔐 Authentication')
 @Controller()
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -241,8 +244,17 @@ export class AuthController {
     const ipAddress =
       req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress;
 
+    const token =
+      refreshTokenDto?.refreshToken ||
+      req.cookies?.['refreshToken'] ||
+      req.cookies?.refreshToken;
+
+    if (!token) {
+      throw new UnauthorizedException('Refresh token is required');
+    }
+
     const result = await this.authService.refreshToken(
-      refreshTokenDto,
+      { refreshToken: token },
       ipAddress,
       parsedDevice,
     );
@@ -297,5 +309,54 @@ export class AuthController {
     });
 
     return result;
+  }
+
+  @Get('google')
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({
+    summary: 'Đăng nhập bằng Google',
+    description: 'Chuyển hướng người dùng đến trang xác thực của Google.',
+  })
+  async googleAuth(@Req() req: any) {
+    // Initiates the Google OAuth flow
+  }
+
+  @Get('google/callback')
+  @UseGuards(GoogleAuthGuard)
+  @ApiOperation({
+    summary: 'Callback từ Google',
+    description: 'Xử lý xác thực sau khi Google trả về kết quả.',
+  })
+  async googleAuthRedirect(@Req() req: any, @Res() res: Response) {
+    const rawUserAgent = req.headers['user-agent'];
+    const parsedDevice = parseUserAgent(rawUserAgent);
+    const ipAddress =
+      req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress;
+
+    const result = await this.authService.googleLogin(req.user, ipAddress, parsedDevice);
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    res.cookie('accessToken', result.access_token, {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 15 * 60 * 1000, // 15m
+    });
+
+    res.cookie('refreshToken', result.refresh_token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30d
+    });
+
+    console.log('login done');
+
+
+    const webUrl = process.env.WEB_URL || 'http://localhost:3000';
+    const redirectUrl = `${webUrl}?accessToken=${encodeURIComponent(result.access_token)}&refreshToken=${encodeURIComponent(result.refresh_token)}`;
+    return res.redirect(redirectUrl);
   }
 }

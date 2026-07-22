@@ -1,4 +1,5 @@
 "use client";
+import Cookies from "js-cookie";
 import api from "@/lib/axios";
 import { useRouter } from "next/navigation";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
@@ -37,6 +38,21 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const accessToken = urlParams.get("accessToken");
+      const refreshToken = urlParams.get("refreshToken");
+
+      if (accessToken) {
+        Cookies.set("accessToken", accessToken, { path: "/" });
+        if (refreshToken) {
+          Cookies.set("refreshToken", refreshToken, { path: "/" });
+        }
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+
     Promise.resolve().then(() => {
       fetchMe();
     });

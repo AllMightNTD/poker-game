@@ -8,6 +8,7 @@ import { User } from '../entities/user.entity';
 import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth/auth.service';
 import { PokerLobbyModule } from '../modules/poker-lobby.module';
+import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { PokerLobbyModule } from '../modules/poker-lobby.module';
     MailModule,
     PokerLobbyModule,
   ],
-  providers: [AuthService],
+  providers: [AuthService, GoogleStrategy],
   controllers: [AuthController],
   exports: [AuthService],
 })

@@ -64,13 +64,13 @@ export class LoginDto {
 }
 
 export class RefreshTokenDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'uuid4.plaintext-refresh-token',
     description: 'Refresh token received at login (format: <id>.<token>)',
   })
   @IsString()
-  @IsNotEmpty()
-  refreshToken: string;
+  @IsOptional()
+  refreshToken?: string;
 }
 
 export class VerifyOtpDto {

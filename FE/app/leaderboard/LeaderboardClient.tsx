@@ -96,8 +96,8 @@ export default function LeaderboardContent() {
                     </td>
                     <td className="py-4 px-6 font-bold text-white flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-800 flex-shrink-0 relative">
-                        {entry.user?.avatar ? (
-                          <Image src={entry.user.avatar} alt="Avatar" fill className="object-cover" sizes="32px" />
+                        {entry.user && (entry.user.avatar || entry.user.avatar_url) ? (
+                          <Image src={entry.user.avatar || entry.user.avatar_url!} alt="Avatar" fill className="object-cover" sizes="32px" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-xs">👤</div>
                         )}

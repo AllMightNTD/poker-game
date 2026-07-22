@@ -27,7 +27,8 @@ export interface LeaderboardEntry {
     id: string;
     username: string;
     name: string;
-    avatar: string;
+    avatar?: string;
+    avatar_url?: string;
   };
   rank: number;
   chips_won: string;

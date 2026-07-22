@@ -14,10 +14,12 @@ import { flattenValidationErrors } from './global-enum';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { config } from './v1/swagger/config';
 import { corsOriginFn } from './config/cors.config';
+import cookieParser from 'cookie-parser';
 import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.use(cookieParser());
   const prefix = process.env.APP_ROUTE_PREFIX || 'api';
   const port = +process.env.APP_PORT || +process.env.PORT || 3001;
   const host = process.env.APP_HOST || 'localhost';

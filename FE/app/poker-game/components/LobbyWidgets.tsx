@@ -186,8 +186,8 @@ export const LobbyWidgets: React.FC<LobbyWidgetsProps> = ({ onJoinTable }) => {
                         {/* User info */}
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full border border-white/5 overflow-hidden bg-black/30 flex items-center justify-center shrink-0">
-                            {user.avatar ? (
-                              <Image src={user.avatar} alt={user.username} className="w-full h-full object-cover" width={28} height={28} />
+                            {user.avatar || user.avatar_url ? (
+                              <Image src={user.avatar || user.avatar_url} alt={user.username} className="w-full h-full object-cover" width={28} height={28} />
                             ) : (
                               <span className="text-[9px] font-black text-[#F4B942]">{user.username[0].toUpperCase()}</span>
                             )}
