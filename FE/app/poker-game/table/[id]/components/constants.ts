@@ -1,66 +1,35 @@
 export const getSeatPositions = (maxPlayers: number, heroSeatNumber?: number, isVertical?: boolean) => {
-  // Hand-tuned coordinates for 6-max table (symmetric hexagon)
-  const horizontalLayout6 = [
-    { top: 86, left: 50 },   // Hero (Bottom-Center)
-    { top: 76, left: 16 },   // Bottom-Left
-    { top: 38, left: 12 },   // Top-Left
-    { top: 12, left: 50 },   // Top-Center
-    { top: 38, left: 88 },   // Top-Right
-    { top: 76, left: 84 },   // Bottom-Right
-  ];
+  // Đảm bảo số lượng ghế tối thiểu là 2, mặc định là 6
+  const numSeats = Math.max(2, maxPlayers || 6);
 
-  const verticalLayout6 = [
-    { top: 88, left: 50 },   // Hero
-    { top: 72, left: 14 },
-    { top: 30, left: 14 },
-    { top: 10, left: 50 },
-    { top: 30, left: 86 },
-    { top: 72, left: 86 },
-  ];
+  // Dynamic radius (Rx, Ry) for the ellipse based on screen orientation
+  const rx = isVertical ? 38 : 42; 
+  const ry = isVertical ? 42 : 36;
 
-  // Hand-tuned coordinates for 9-max table (symmetric nonagon)
-  const horizontalLayout9 = [
-    { top: 86, left: 50 },   // Hero (Bottom-Center)
-    { top: 76, left: 24 },   // Bottom-Left
-    { top: 52, left: 10 },   // Left-Lower
-    { top: 26, left: 18 },   // Left-Upper
-    { top: 12, left: 36 },   // Top-Left
-    { top: 12, left: 64 },   // Top-Right
-    { top: 26, left: 82 },   // Right-Upper
-    { top: 52, left: 90 },   // Right-Lower
-    { top: 76, left: 76 },   // Bottom-Right
-  ];
+  const positions = [];
+  for (let i = 0; i < numSeats; i++) {
+    // Offset by Pi/2 (90 degrees) so seat 0 is at Bottom-Center
+    // Web coordinate system: +y goes down, so sin(90) = 1 (bottom)
+    const angle = (Math.PI / 2) + (i * 2 * Math.PI) / numSeats;
+    
+    const left = 50 + rx * Math.cos(angle);
+    const top = 50 + ry * Math.sin(angle);
+    
+    positions.push({ top, left });
+  }
 
-  const verticalLayout9 = [
-    { top: 90, left: 50 },   // Hero
-    { top: 76, left: 16 },
-    { top: 54, left: 10 },
-    { top: 32, left: 16 },
-    { top: 12, left: 32 },
-    { top: 12, left: 68 },
-    { top: 32, left: 84 },
-    { top: 54, left: 90 },
-    { top: 76, left: 84 },
-  ];
-
-  const use9Max = maxPlayers > 6;
-  const customLayout = use9Max 
-    ? (isVertical ? verticalLayout9 : horizontalLayout9)
-    : (isVertical ? verticalLayout6 : horizontalLayout6);
-
-  const numSeats = use9Max ? 9 : 6;
-
+  // Nếu có Hero Seat, xoay mảng sao cho vị trí của Hero luôn nằm ở Bottom-Center (vị trí 0)
   if (heroSeatNumber && heroSeatNumber > 0) {
     const heroIndex = heroSeatNumber - 1;
     const result = [];
     for (let i = 0; i < numSeats; i++) {
       const dist = (i - heroIndex + numSeats) % numSeats;
-      result.push(customLayout[dist]);
+      result.push(positions[dist]);
     }
     return result;
   } else {
-    // Spectator default layout: return coordinates sequentially
-    return customLayout;
+    // Dành cho Spectator
+    return positions;
   }
 };
 

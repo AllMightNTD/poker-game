@@ -20,6 +20,7 @@ import { AuditService } from '../services/audit.service';
 import { PokerGameService } from '../services/poker-game.service';
 import { PokerLobbyService } from '../services/poker-lobby.service';
 import { PokerStateService } from '../services/poker-state.service';
+import { PokerStreamService } from '../services/poker-stream.service';
 import { ProvablyFairService } from '../services/provably-fair.service';
 import { TournamentService } from '../services/tournament.service';
 import { WalletService } from '../services/wallet.service';
@@ -50,6 +51,7 @@ import { WalletService } from '../services/wallet.service';
     PokerLobbyService,
     PokerLobbyGateway,
     PokerStateService,
+    PokerStreamService,
     PokerGameService,
     WalletService,
     AuditService,
@@ -62,6 +64,7 @@ import { WalletService } from '../services/wallet.service';
     PokerLobbyService,
     PokerLobbyGateway,
     PokerStateService,
+    PokerStreamService,
     PokerGameService,
     WalletService,
     AuditService,

@@ -1,23 +1,24 @@
 import { useCurrentUser } from '@/core/providers/user-provider';
 import api from '@/lib/axios';
-import { Coins, User, X, UserPlus } from 'lucide-react';
+import { Coins, User, UserPlus, X } from 'lucide-react';
 import { useParams } from 'next/navigation';
-import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { useAnimationRegistry } from '../effects/AnimationRegistryContext';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getSeatPositions } from '../constants';
+import { useAnimationRegistry } from '../effects/AnimationRegistryContext';
 import { usePokerGame } from '../hooks/usePokerGame';
 import { useResponsive } from '../hooks/useResponsive';
+import { PlayerHudPopup } from '../hud/PlayerHudPopup';
 import { Player } from '../types';
+import { LevelBadge } from '../ui/LevelBadge';
 import ActionBubble from './ActionBubble';
 import BetChipStack from './BetChipStack';
 import DealerButton from './DealerButton';
 import SeatAvatar from './SeatAvatar';
-import { LevelBadge } from '../ui/LevelBadge';
 import SeatCards from './SeatCards';
-import SeatInfo from './SeatInfo';
+import SeatName from './SeatName';
 import SeatPanel from './SeatPanel';
+import SeatStack from './SeatStack';
 import SeatTimerRing from './SeatTimerRing';
-import { PlayerHudPopup } from '../hud/PlayerHudPopup';
 
 // --- BuyInModal Logic ---
 interface BuyInModalProps {
@@ -32,7 +33,10 @@ interface BuyInModalProps {
 const BuyInModal: React.FC<BuyInModalProps> = ({ seatNumber, smallBlind, defaultName, isOwner, onClose, onSubmit }) => {
   const params = useParams();
   const tableId = params?.id as string;
-  const { showToast, minBuyin, maxBuyin } = usePokerGame();
+  const { showToast, minBuyin, maxBuyin, setPlayers, pendingOptimisticSeatsRef } = usePokerGame();
+  const { currentUser } = useCurrentUser();
+  console.log('maxBuyin', maxBuyin);
+
 
   const minBuyIn = minBuyin || (smallBlind * 40);
   const maxBuyIn = maxBuyin || (smallBlind * 200);
@@ -67,6 +71,29 @@ const BuyInModal: React.FC<BuyInModalProps> = ({ seatNumber, smallBlind, default
     }
 
     setIsLoading(true);
+
+    const optimisticPlayer = {
+      seatIndex: seatNumber,
+      id: currentUser?.id || `temp_${Date.now()}`,
+      name: customName,
+      chips: amount.toString(),
+      avatar: currentUser?.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${customName}`,
+      isHero: true,
+      isActive: false,
+      isFolded: false,
+      status: "waiting_for_next_hand",
+      isOptimistic: true,
+    };
+
+    // Optimistically sit player
+    setPlayers((prev) => {
+      const filtered = prev.filter(p => p.seatIndex !== seatNumber && p.id !== optimisticPlayer.id);
+      return [...filtered, optimisticPlayer];
+    });
+
+    pendingOptimisticSeatsRef.current.add(seatNumber);
+    onSubmit();
+
     try {
       const response = await api.post(`/api/v1/rooms/${tableId}/seats/join`, {
         seat_number: seatNumber,
@@ -79,13 +106,17 @@ const BuyInModal: React.FC<BuyInModalProps> = ({ seatNumber, smallBlind, default
         showToast("Successfully joined the table!", "success");
       } else {
         showToast("Your request to join is pending host approval.", "success");
+        // Rollback since it's not approved yet
+        setPlayers((prev) => prev.filter(p => p.seatIndex !== seatNumber));
       }
-      onSubmit();
     } catch (err: unknown) {
+      // Rollback
+      setPlayers((prev) => prev.filter(p => p.seatIndex !== seatNumber));
       const error = err as { response?: { data?: { message?: string } } };
       const errorMsg = error?.response?.data?.message || "Unable to process join request.";
       showToast(errorMsg, "error");
     } finally {
+      pendingOptimisticSeatsRef.current.delete(seatNumber);
       setIsLoading(false);
     }
   };
@@ -129,7 +160,7 @@ const BuyInModal: React.FC<BuyInModalProps> = ({ seatNumber, smallBlind, default
         <div className="p-4 bg-slate-950/40 border-t border-slate-800/60 flex gap-2">
           <button onClick={onClose} disabled={isLoading} className="flex-1 bg-slate-800/60 hover:bg-slate-800 text-slate-400 hover:text-white py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-colors disabled:opacity-50">
             Cancel
-                                </button>
+          </button>
           <button onClick={handleJoin} disabled={isLoading} className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
             {isLoading ? <span className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" /> : isOwner ? "TAKE SEAT" : "SEND REQUEST"}
           </button>
@@ -237,11 +268,10 @@ const Seat: React.FC<SeatProps> = ({
                 if (isPendingOrSeated) return;
                 setIsBuyInOpen(true);
               }}
-              className={`w-11 h-11 md:w-14 md:h-14 mx-auto rounded-full border border-[#E7C678]/20 bg-gradient-to-b from-[#1b1712]/45 to-[#0b0806]/60 flex flex-col items-center justify-center transition-all duration-300 shadow-[inset_0_2px_6px_rgba(0,0,0,0.8),_0_2px_8px_rgba(0,0,0,0.5)] backdrop-blur-[2px] ${
-                isPendingOrSeated 
-                  ? 'opacity-40 cursor-not-allowed' 
-                  : 'cursor-pointer hover:border-[#E7C678]/80 hover:from-[#2e261e]/60 hover:to-[#17120e]/80 hover:shadow-[0_0_15px_rgba(231,198,120,0.35),_inset_0_1px_2px_rgba(255,255,255,0.15)] hover:scale-105 group'
-              }`}
+              className={`w-11 h-11 md:w-14 md:h-14 mx-auto rounded-full border border-[#E7C678]/20 bg-gradient-to-b from-[#1b1712]/45 to-[#0b0806]/60 flex flex-col items-center justify-center transition-all duration-300 shadow-[inset_0_2px_6px_rgba(0,0,0,0.8),_0_2px_8px_rgba(0,0,0,0.5)] backdrop-blur-[2px] ${isPendingOrSeated
+                ? 'opacity-40 cursor-not-allowed'
+                : 'cursor-pointer hover:border-[#E7C678]/80 hover:from-[#2e261e]/60 hover:to-[#17120e]/80 hover:shadow-[0_0_15px_rgba(231,198,120,0.35),_inset_0_1px_2px_rgba(255,255,255,0.15)] hover:scale-105 group'
+                }`}
             >
               <UserPlus className="w-4 h-4 md:w-5 md:h-5 text-[#E7C678]/45 group-hover:text-[#E7C678]/80 transition-colors duration-300 mb-0.5" />
               <span className="text-[7px] md:text-[8px] font-bold text-[#E7C678]/40 group-hover:text-[#E7C678]/80 transition-colors duration-300 uppercase tracking-[0.15em] leading-none">SIT</span>
@@ -284,52 +314,59 @@ const Seat: React.FC<SeatProps> = ({
         isSittingOut={player.isSittingOut || player.lastAction === 'Sit Out' || player.lastAction === 'Disconnected'}
       >
 
-        {/* Avatar + Timer Ring */}
-        <div
-          onClick={() => setIsHudOpen(true)}
-          className="relative z-30 shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-200"
-        >
-          {player.isActive && <SeatTimerRing endTime={actionEndTime} size={ringSize} maxTime={30000} />}
-          <SeatAvatar
-            avatarUrl={player.avatar || ''}
-            isFolded={player.isFolded}
-            isActive={player.isActive}
-            isHero={player.isHero}
-            sizeClass={avatarSizeClass}
-          />
-          {/* Dealer Button */}
-          {player.isDealer && <DealerButton />}
-          
-          {/* Gamification Level Badge */}
-          {(!player.isActive) && (
-            <div className="absolute -bottom-1 -right-2 scale-[0.5] origin-bottom-right z-30 pointer-events-none">
-              <LevelBadge 
-                level={player.gamification_level || 'bronze'} 
-                xp={player.gamification_xp || 0} 
-                showProgress={false} 
-                size="sm" 
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Info Box */}
-        <SeatInfo
+        <SeatName
           name={displayName}
-          chips={parseInt(player.chips || '0')}
           isHero={player.isHero}
           isMobile={isMobile}
-          status={player.lastAction || ''}
           isBot={!!player.isBot}
-          isActive={player.isActive}
+          status={player.lastAction || ''}
         />
 
-        {/* Hole Cards */}
-        <SeatCards
-          cards={player.cards || []}
-          isFolded={player.isFolded}
-          isHero={player.isHero}
+        {/* Avatar + Cards Row */}
+        <div className="flex items-center justify-center relative">
+          {/* Avatar + Timer Ring */}
+          <div
+            onClick={() => setIsHudOpen(true)}
+            className="relative z-30 shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-200"
+          >
+            {player.isActive && <SeatTimerRing endTime={actionEndTime} size={ringSize} maxTime={30000} />}
+            <SeatAvatar
+              avatarUrl={player.avatar || ''}
+              isFolded={player.isFolded}
+              isActive={player.isActive}
+              isHero={player.isHero}
+              sizeClass={avatarSizeClass}
+            />
+            {/* Dealer Button */}
+            {player.isDealer && <DealerButton />}
+
+            {/* Gamification Level Badge */}
+            {(!player.isActive) && (
+              <div className="absolute -bottom-1 -right-2 scale-[0.5] origin-bottom-right z-30 pointer-events-none">
+                <LevelBadge
+                  level={player.gamification_level || 'bronze'}
+                  xp={player.gamification_xp || 0}
+                  showProgress={false}
+                  size="sm"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Hole Cards */}
+          <SeatCards
+            cards={player.cards || []}
+            isFolded={player.isFolded}
+            isHero={player.isHero}
+            isMobile={isMobile}
+          />
+        </div>
+
+        {/* Stack Box */}
+        <SeatStack
+          chips={parseInt(player.chips || '0')}
           isMobile={isMobile}
+          isActive={player.isActive}
         />
 
       </SeatPanel>
@@ -367,7 +404,8 @@ const areSeatsEqual = (prevProps: SeatProps, nextProps: SeatProps) => {
     p1.isFolded !== p2.isFolded ||
     p1.hasAllIn !== p2.hasAllIn ||
     p1.isHero !== p2.isHero ||
-    p1.isBot !== p2.isBot
+    p1.isBot !== p2.isBot ||
+    p1.isOptimistic !== p2.isOptimistic
   ) {
     return false;
   }

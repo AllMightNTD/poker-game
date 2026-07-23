@@ -110,17 +110,100 @@ export class PokerStateService implements OnModuleInit {
     tableId: string,
     maxPlayers = 9,
   ): Promise<PokerSeatState[]> {
-    const seats: PokerSeatState[] = [];
+    // Pipeline: fetch all seat hashes in a single round-trip instead of N sequential HGETALL calls
+    const pipeline = this.redis.pipeline();
     for (let i = 1; i <= maxPlayers; i++) {
-      const data = await this.getSeat(tableId, i);
-      if (data) {
-        seats.push({
-          ...data,
-          seat_number: i,
-        } as PokerSeatState);
-      }
+      pipeline.hgetall(`table:${tableId}:seat:${i}`);
+    }
+    const results = await pipeline.exec();
+
+    const seats: PokerSeatState[] = [];
+    if (!results) return seats;
+
+    for (let i = 0; i < maxPlayers; i++) {
+      const [err, data] = results[i] as [Error | null, Record<string, string>];
+      if (err || !data || Object.keys(data).length === 0) continue;
+      seats.push({
+        ...data,
+        seat_number: i + 1,
+      } as PokerSeatState);
     }
     return seats;
+  }
+
+  /**
+   * Pipeline: Cập nhật nhiều ghế ngồi trong 1 round-trip Redis
+   * Input: Map từ seatNumber → fields
+   */
+  async setSeatsBulk(
+    tableId: string,
+    updates: Map<number, Record<string, string | number>>,
+  ): Promise<void> {
+    if (updates.size === 0) return;
+    const pipeline = this.redis.pipeline();
+    for (const [seatNumber, fields] of updates.entries()) {
+      pipeline.hset(`table:${tableId}:seat:${seatNumber}`, fields);
+    }
+    await pipeline.exec();
+  }
+
+  /**
+   * Pipeline: Cập nhật nhiều ghế + table state đồng thời trong 1 round-trip Redis.
+   * Đây là phương thức nòng cốt cho hot path của action processor.
+   * stackChanges (optional): khi có giá trị, sẽ XADD event vào Redis Stream trong cùng pipeline.
+   */
+  async setMultipleSeatsAndTableState(
+    tableId: string,
+    seatUpdates: Map<number, Record<string, string | number>>,
+    tableStateFields?: Record<string, string | number>,
+    actionLogEntry?: { handId: string; logJson: string },
+    stackChanges?: Array<{ userId: string; newStack: string; reason: string }>,
+  ): Promise<void> {
+    const pipeline = this.redis.pipeline();
+    const now = Date.now().toString();
+
+    // Write all seat updates
+    for (const [seatNumber, fields] of seatUpdates.entries()) {
+      pipeline.hset(`table:${tableId}:seat:${seatNumber}`, fields);
+    }
+
+    // Write table state atomically alongside seat updates
+    if (tableStateFields && Object.keys(tableStateFields).length > 0) {
+      pipeline.hset(`table:${tableId}:state`, {
+        ...tableStateFields,
+        last_activity: now,
+      });
+    }
+
+    // Append action log if provided
+    if (actionLogEntry) {
+      pipeline.rpush(
+        `hand:${actionLogEntry.handId}:actions`,
+        actionLogEntry.logJson,
+      );
+    }
+
+    // Publish stack-change events to Redis Stream (inline, zero extra round-trip)
+    if (stackChanges?.length) {
+      for (const change of stackChanges) {
+        pipeline.xadd(
+          'stream:stack-changes',
+          '*', // auto-generate stream ID
+          'table_id',
+          tableId,
+          'user_id',
+          change.userId,
+          'new_stack',
+          change.newStack,
+          'reason',
+          change.reason,
+          'ts',
+          now,
+        );
+      }
+    }
+
+    await pipeline.exec();
   }
 
   /**
@@ -148,6 +231,48 @@ export class PokerStateService implements OnModuleInit {
   async deletePlayerCards(tableId: string, userId: string): Promise<void> {
     const key = `table:${tableId}:player:${userId}:cards`;
     await this.redis.del(key);
+  }
+
+  /**
+   * Pipeline: Xóa bài ẩn của nhiều người chơi trong 1 round-trip
+   */
+  async deletePlayerCardsBulk(
+    tableId: string,
+    userIds: string[],
+  ): Promise<void> {
+    if (!userIds.length) return;
+    const pipeline = this.redis.pipeline();
+    for (const userId of userIds) {
+      pipeline.del(`table:${tableId}:player:${userId}:cards`);
+    }
+    await pipeline.exec();
+  }
+
+  /**
+   * Pipeline: Ghi bài ẩn của nhiều người chơi + còn lại của bộ bài trong 1 round-trip
+   */
+  async setPlayerCardsBulk(
+    tableId: string,
+    cardsMap: Map<string, string[]>,
+    remainingDeck?: string[],
+  ): Promise<void> {
+    const pipeline = this.redis.pipeline();
+    for (const [userId, cards] of cardsMap.entries()) {
+      const key = `table:${tableId}:player:${userId}:cards`;
+      if (cards.length === 0) {
+        pipeline.del(key);
+      } else {
+        pipeline.set(key, cards.join(','));
+      }
+    }
+    if (remainingDeck !== undefined) {
+      const deckKey = `table:${tableId}:deck`;
+      pipeline.del(deckKey);
+      if (remainingDeck.length > 0) {
+        pipeline.rpush(deckKey, ...remainingDeck);
+      }
+    }
+    await pipeline.exec();
   }
 
   /**

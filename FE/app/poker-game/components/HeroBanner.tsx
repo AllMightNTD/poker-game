@@ -2,6 +2,7 @@ import React from "react";
 import { Plus, Users, Activity, Trophy } from "lucide-react";
 import { formatChips } from "./utils";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 interface HeroBannerProps {
   chipsBalance: string;
@@ -31,9 +32,9 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             <motion.div 
               whileHover={{ rotate: 360 }}
               transition={{ duration: 1, ease: "easeInOut" }}
-              className="w-9 h-9 rounded-full bg-gradient-to-br from-[#F4B942] via-[#E0942A] to-[#B07316] flex items-center justify-center text-[#060e0a] text-xs font-black shadow-lg shadow-[#F4B942]/20 border border-[#F4B942]/40"
+              className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg shadow-[#F4B942]/20 border-2 border-[#F4B942]/40 overflow-hidden bg-black relative"
             >
-              CG
+              <Image src="/logo.png" alt="Logo" width={40} height={40} className="object-cover" />
             </motion.div>
             <div className="flex flex-col text-left">
               <span className="text-[8px] text-[#F7EFDD]/50 font-black uppercase tracking-widest leading-none mb-1">

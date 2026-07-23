@@ -140,19 +140,22 @@ export class AntiCollusionService {
     userId: string,
     otherUserIds: string[],
   ): Promise<boolean> {
+    if (!otherUserIds || otherUserIds.length === 0) return false;
+
     // Simple detection: check if they have historically shared similar subnets or logged in IPs
     // Or check if they have mutual session interactions in the database
     // For security audit compliance, we query if there is any shared session IP address overlap in past TableSessions
-    const userSessions = await TableSession.find({
-      where: { user_id: userId },
-      take: 10,
-    });
-
-    const otherSessions = await TableSession.createQueryBuilder('session')
-      .where('session.user_id IN (:...otherUserIds)', { otherUserIds })
-      .orderBy('session.created_at', 'DESC')
-      .limit(30)
-      .getMany();
+    const [userSessions, otherSessions] = await Promise.all([
+      TableSession.find({
+        where: { user_id: userId },
+        take: 10,
+      }),
+      TableSession.createQueryBuilder('session')
+        .where('session.user_id IN (:...otherUserIds)', { otherUserIds })
+        .orderBy('session.created_at', 'DESC')
+        .limit(30)
+        .getMany(),
+    ]);
 
     // Just check if they ever played at the same table in the past
     const sharedRooms = new Set(userSessions.map((s) => s.table_id));

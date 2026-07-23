@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -19,9 +20,11 @@ export class TableSession extends BaseEntity {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: string;
 
+  @Index()
   @Column({ type: 'bigint' })
   table_id: string;
 
+  @Index()
   @Column({ type: 'varchar' })
   user_id: string;
 

@@ -33,6 +33,7 @@ export const ActionBar: React.FC = () => {
     communityCards,
     rabbitCards,
     triggerRabbitHunt,
+    isStartingHand,
   } = usePokerGame();
 
   const allPlayers = players as PokerPlayer[];
@@ -68,7 +69,7 @@ export const ActionBar: React.FC = () => {
 
   const isHost = currentUser?.id === ownerId;
   if (isHost && gameStage === "waiting") {
-    return <StartGamePanel canStart={allPlayers.length >= 2} onStart={startGame} />;
+    return <StartGamePanel canStart={allPlayers.length >= 2 && !isStartingHand} onStart={startGame} />;
   }
 
   if (!hero) return null;

@@ -85,6 +85,10 @@ export function useRegister() {
     resolver: zodResolver(registerSchema),
     mode: "onTouched",
     defaultValues: {
+      user_name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
       terms: false,
     },
   });

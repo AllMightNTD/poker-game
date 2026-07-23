@@ -87,6 +87,10 @@ export class BotService {
 
     // Auto-ready bots so they are included in next hand start
     await this.seatManager.autoReadyBots(roomId);
+
+    // Sync realtime cho toàn bộ client trong phòng biết có bot mới
+    await this.gameService.broadcastTableState(roomId);
+
     return addedBots;
   }
 

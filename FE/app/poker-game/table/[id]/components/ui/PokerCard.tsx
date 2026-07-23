@@ -72,7 +72,7 @@ interface PokerCardProps {
   suit: "H" | "D" | "S" | "C" | "back" | "?" | string;
   rank: string;
   isFaceUp: boolean;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   className?: string;
   deckStyle?: "classic" | "modern" | "cyberpunk";
 }
@@ -80,6 +80,7 @@ interface PokerCardProps {
 export const PokerCard = ({ suit, rank, isFaceUp, size = "md", className = "", deckStyle = "classic" }: PokerCardProps) => {
   // THAY ĐỔI TẠI ĐÂY: Nâng cấp bán kính bo góc (border-radius) sâu và bầu bĩnh hơn theo chuẩn ảnh mẫu của bạn
   const sizeClasses = {
+    xs: "w-[32px] h-[46px] rounded-[6px]",
     sm: "w-[40px] h-[58px] rounded-[8px]",
     md: "w-[64px] h-[92px] rounded-[14px]",
     lg: "w-[88px] h-[126px] rounded-[22px]",
@@ -113,7 +114,7 @@ export const PokerCard = ({ suit, rank, isFaceUp, size = "md", className = "", d
         {/* --- MẶT TRƯỚC LÁ BÀI (FRONT FACE) --- */}
         <div
           className="absolute inset-0 bg-gradient-to-b from-stone-50 via-white to-neutral-200 border border-neutral-300/80 shadow-[0_8px_20px_rgba(0,0,0,0.4),_inset_0_2px_2px_rgba(255,255,255,0.8),_inset_0_-2px_4px_rgba(0,0,0,0.08)] flex flex-col justify-between overflow-hidden rounded-[inherit]"
-          style={{ backfaceVisibility: "hidden", padding: size === "sm" ? "4px" : size === "md" ? "8px" : "12px" }}
+          style={{ backfaceVisibility: "hidden", padding: size === "xs" ? "2px" : size === "sm" ? "4px" : size === "md" ? "8px" : "12px" }}
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/60 pointer-events-none mix-blend-overlay z-20" />
 
@@ -122,11 +123,11 @@ export const PokerCard = ({ suit, rank, isFaceUp, size = "md", className = "", d
 
           {/* Góc trên bên trái */}
           <div className="flex flex-col items-center leading-none text-left self-start relative z-10">
-            <span className={`font-serif font-black tracking-tight ${size === "sm" ? "text-xs" : size === "md" ? "text-lg" : "text-2xl"} ${textColors}`}>
+            <span className={`font-serif font-black tracking-tight ${size === "xs" ? "text-[10px]" : size === "sm" ? "text-xs" : size === "md" ? "text-lg" : "text-2xl"} ${textColors}`}>
               {rank}
             </span>
             {suit && suit !== "back" && suit !== "?" && (
-              <SuitIcon suit={suit as any} className={`mt-0.5 ${size === "sm" ? "w-3 h-3" : size === "md" ? "w-4 h-4" : "w-5 h-5"}`} />
+              <SuitIcon suit={suit as any} className={`mt-0.5 ${size === "xs" ? "w-2.5 h-2.5" : size === "sm" ? "w-3 h-3" : size === "md" ? "w-4 h-4" : "w-5 h-5"}`} />
             )}
           </div>
 
@@ -139,11 +140,11 @@ export const PokerCard = ({ suit, rank, isFaceUp, size = "md", className = "", d
 
           {/* Góc dưới bên phải (Xoay ngược 180 độ) */}
           <div className="flex flex-col items-center leading-none text-left self-end rotate-180 z-10 relative">
-            <span className={`font-serif font-black tracking-tight ${size === "sm" ? "text-xs" : size === "md" ? "text-lg" : "text-2xl"} ${textColors}`}>
+            <span className={`font-serif font-black tracking-tight ${size === "xs" ? "text-[10px]" : size === "sm" ? "text-xs" : size === "md" ? "text-lg" : "text-2xl"} ${textColors}`}>
               {rank}
             </span>
             {suit && suit !== "back" && suit !== "?" && (
-              <SuitIcon suit={suit as any} className={`mt-0.5 ${size === "sm" ? "w-3 h-3" : size === "md" ? "w-4 h-4" : "w-5 h-5"}`} />
+              <SuitIcon suit={suit as any} className={`mt-0.5 ${size === "xs" ? "w-2.5 h-2.5" : size === "sm" ? "w-3 h-3" : size === "md" ? "w-4 h-4" : "w-5 h-5"}`} />
             )}
           </div>
         </div>

@@ -33,14 +33,14 @@ const SeatCards: React.FC<SeatCardsProps> = React.memo(({ cards, isFolded, isHer
 
   if (!cards || cards.length === 0) return null;
 
-  const cardSize = isHero ? (isMobile ? "md" : "lg") : (isMobile ? "sm" : "md");
+  const cardSize = isHero ? (isMobile ? "sm" : "md") : (isMobile ? "xs" : "sm");
 
   return (
     <motion.div 
       initial={false}
       animate={isFolded ? { y: -60, scale: 0.3, opacity: 0 } : { y: 0, scale: 1, opacity: 1 }}
       transition={{ duration: 0.5, ease: "anticipate" }}
-      className={`absolute -top-[22px] md:-top-[40px] left-1/2 -translate-x-1/2 flex -space-x-2.5 md:-space-x-6 z-20 pointer-events-none`}
+      className={`relative ml-1 md:ml-2 flex -space-x-3 md:-space-x-4 z-20 pointer-events-none`}
     >
       <AnimatePresence>
         {!isFolded && cards.map((card, cIdx) => (

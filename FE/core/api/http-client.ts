@@ -111,11 +111,16 @@ httpClient.interceptors.response.use(
           Cookies.remove("accessToken", { path: "/" });
           if (typeof window !== "undefined") {
             const currentPath = window.location.pathname;
-            if (!currentPath.startsWith("/login") && 
-                !currentPath.startsWith("/register") && 
-                !currentPath.startsWith("/forgot-password") && 
-                !currentPath.startsWith("/backstage")) {
-              window.location.href = "/login";
+            const isPublicPath = 
+              currentPath === '/' || 
+              currentPath.startsWith('/login') || 
+              currentPath.startsWith('/register') || 
+              currentPath.startsWith('/forgot-password') ||
+              currentPath.startsWith('/verify-otp') ||
+              currentPath.startsWith('/backstage');
+
+            if (!isPublicPath) {
+              window.location.href = "/";
             }
           }
           return Promise.reject(refreshError);

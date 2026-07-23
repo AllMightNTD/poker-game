@@ -22,6 +22,7 @@ export interface Player {
   current_bet?: string;
   has_used_extra_time?: boolean;
   isBot?: boolean;
+  isOptimistic?: boolean;
   gamification_level?: string;
   gamification_xp?: number;
 }

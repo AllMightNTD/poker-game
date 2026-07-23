@@ -5,6 +5,8 @@ import { pokerApi } from "@/features/poker/api/poker-api";
 import { Bot, Plus, Sparkles, UserMinus, X } from "lucide-react";
 import React, { useState } from "react";
 
+import { usePokerGame } from "../hooks/usePokerGame";
+
 interface BotControlPanelProps {
   roomId: string;
   isRoomOwner: boolean;
@@ -24,6 +26,7 @@ export function BotControlPanel({
   const [chips, setChips] = useState(100000);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { maxPlayers, setPlayers, pendingOptimisticSeatsRef } = usePokerGame();
 
   if (!isRoomOwner) return null;
 
@@ -32,6 +35,34 @@ export function BotControlPanel({
   const handleAddBots = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+
+    const emptySeats: number[] = [];
+    const occupiedSeats = new Set(activeSeats.map((p) => p.seatIndex));
+    for (let s = 1; s <= maxPlayers; s++) {
+      if (!occupiedSeats.has(s)) {
+        emptySeats.push(s);
+      }
+    }
+    const seatsToAssign = emptySeats.slice(0, count);
+    const optimisticBots = seatsToAssign.map((seatNum, idx) => ({
+      seatIndex: seatNum,
+      id: `temp_bot_${Date.now()}_${idx}`,
+      name: `AI Bot ${difficulty}`,
+      chips: chips.toString(),
+      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=bot_${seatNum}_${Date.now()}`,
+      isHero: false,
+      isActive: false,
+      isFolded: false,
+      isBot: true,
+      status: "waiting_for_next_hand",
+      isOptimistic: true,
+    }));
+
+    // Optimistically add bots to seats
+    setPlayers((prev) => [...prev, ...optimisticBots]);
+    seatsToAssign.forEach((s) => pendingOptimisticSeatsRef.current.add(s));
+    setIsOpen(false);
+
     try {
       await pokerApi.addBots(roomId, {
         count,
@@ -40,21 +71,33 @@ export function BotControlPanel({
       });
       toast("success", `Đã thêm ${count} Bot (${difficulty}) vào bàn`);
       if (onBotUpdated) onBotUpdated();
-      setIsOpen(false);
     } catch (err: any) {
+      // Rollback
+      setPlayers((prev) => prev.filter((p) => !seatsToAssign.includes(p.seatIndex)));
       toast("error", err.response?.data?.message || "Không thể thêm Bot");
     } finally {
+      seatsToAssign.forEach((s) => pendingOptimisticSeatsRef.current.delete(s));
       setIsSubmitting(false);
     }
   };
 
   const handleRemoveBot = async (botUserId: string, botName: string) => {
+    const botSeat = activeSeats.find((p) => p.id === botUserId);
+    const seatIndex = botSeat?.seatIndex;
+
+    // Optimistically remove
+    setPlayers((prev) => prev.filter((p) => p.id !== botUserId));
+    if (seatIndex) pendingOptimisticSeatsRef.current.add(seatIndex);
+
     try {
       await pokerApi.removeBot(roomId, botUserId);
       toast("info", `Đã đuổi Bot ${botName} khỏi bàn`);
       if (onBotUpdated) onBotUpdated();
     } catch (err: any) {
+      if (onBotUpdated) onBotUpdated();
       toast("error", err.response?.data?.message || "Không thể xóa Bot");
+    } finally {
+      if (seatIndex) pendingOptimisticSeatsRef.current.delete(seatIndex);
     }
   };
 
@@ -154,8 +197,6 @@ export function BotControlPanel({
                   type="number"
                   value={chips}
                   onChange={(e) => setChips(Number(e.target.value))}
-                  min={1000}
-                  step={10000}
                   className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-purple-500 transition"
                 />
               </div>

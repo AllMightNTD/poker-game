@@ -4,7 +4,7 @@ import { getSeatPositions } from "../constants";
 import { usePokerGame } from "../hooks/usePokerGame";
 import { WinnerData } from "../types";
 import { useAnimationTimeline } from "./useAnimationTimeline";
-import WinnerBanner from "./winner-banner/WinnerBanner";
+
 import { useGameAnimation } from "./useGameAnimation";
 
 interface AnimationManagerProps {
@@ -167,13 +167,16 @@ export const AnimationManager: React.FC<AnimationManagerProps> = ({ socket }) =>
       });
     };
 
-    const handleHandEnded = (data: { winners: any[]; total_pot: number }) => {
+    const handleHandEnded = (data: { winners: any[]; total_pot: number; player_results?: any[] }) => {
       const formattedWinners: WinnerData[] = [];
       data.winners.forEach((w) => {
         const userId = w.user_id || w.username || w.seat_number.toString();
         const handName = w.hand_name || "Winner";
         const playerName = w.display_name || w.username || `Player ${w.seat_number}`;
         const isBigWin = (w.win_amount || 0) > 1000000;
+        
+        const playerResult = data.player_results?.find((pr) => pr.user_id === w.user_id);
+        const netGainLoss = playerResult ? playerResult.net_result : 0;
 
         if (w.pots && w.pots.length > 0) {
           w.pots.forEach((p: any) => {
@@ -182,7 +185,7 @@ export const AnimationManager: React.FC<AnimationManagerProps> = ({ socket }) =>
               playerName,
               seatNumber: w.seat_number,
               amountWon: p.amount,
-              netGainLoss: w.net_gain_loss,
+              netGainLoss: netGainLoss,
               handName,
               potLabel: p.label,
               isBigWin,
@@ -194,7 +197,7 @@ export const AnimationManager: React.FC<AnimationManagerProps> = ({ socket }) =>
             playerName,
             seatNumber: w.seat_number,
             amountWon: w.win_amount || 0,
-            netGainLoss: w.net_gain_loss,
+            netGainLoss: netGainLoss,
             handName,
             isBigWin,
           });
@@ -232,7 +235,6 @@ export const AnimationManager: React.FC<AnimationManagerProps> = ({ socket }) =>
 
         {currentStep === "SHOW_BANNER" && (
           <>
-            <WinnerBanner handName={activePayload.handName} winners={activePayload.winners} />
             {hasBigWin && <Confetti />}
           </>
         )}

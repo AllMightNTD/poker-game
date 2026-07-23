@@ -27,9 +27,8 @@ export function proxy(request: NextRequest) {
   if (isRootPath) {
     if (token) {
       return NextResponse.redirect(new URL('/poker-game', request.url));
-    } else {
-      return NextResponse.redirect(new URL('/login', request.url));
     }
+    return NextResponse.next();
   }
 
   // Prevent re-visiting player auth pages when already logged in

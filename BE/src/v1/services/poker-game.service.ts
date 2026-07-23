@@ -10,6 +10,7 @@ import { PokerTable } from '../entities/poker_table.entity';
 import { TableSession } from '../entities/table_session.entity';
 import { PokerLobbyService } from './poker-lobby.service';
 import { PokerStateService } from './poker-state.service';
+import { PokerStreamService } from './poker-stream.service';
 import { ProvablyFairService } from './provably-fair.service';
 import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
 import { PokerBotManager } from '../engines/poker-bot.manager';
@@ -41,6 +42,7 @@ export class PokerGameService implements OnModuleDestroy {
   readonly autoStartTimers = new Map<string, NodeJS.Timeout>();
 
   private idleCleanupInterval: NodeJS.Timeout;
+  // Stack-change audit trail is now handled by PokerStreamService (Redis Streams)
 
   private readonly botManager = new PokerBotManager(this);
   private readonly showdownManager = new PokerShowdownManager(this);
@@ -49,12 +51,14 @@ export class PokerGameService implements OnModuleDestroy {
   constructor(
     readonly lobbyService: PokerLobbyService,
     readonly stateService: PokerStateService,
+    readonly streamService: PokerStreamService,
     readonly eventEmitter: EventEmitter2,
     readonly provablyFairService: ProvablyFairService,
     readonly dataSource: DataSource,
     @InjectQueue('poker-game-history') readonly historyQueue: Queue,
   ) {
     this.startIdleCleanupInterval();
+    // PokerStreamService starts its own consumer via OnModuleInit lifecycle hook
   }
 
   setServer(server: Server) {
@@ -390,6 +394,7 @@ export class PokerGameService implements OnModuleDestroy {
     if (this.idleCleanupInterval) {
       clearInterval(this.idleCleanupInterval);
     }
+    // PokerStreamService consumer is stopped via its own OnModuleDestroy lifecycle hook
   }
 
   /**
@@ -682,11 +687,18 @@ export class PokerGameService implements OnModuleDestroy {
       const seats = await this.stateService.getAllSeats(roomId);
       let activeSeatsList = [...seats];
 
+      // Pipeline: xóa bài cũ + reset community_cards trong 1 round-trip
+      const pipelineClear = this.stateService.getRedisClient().pipeline();
       for (const seat of seats) {
-        await this.stateService.deletePlayerCards(roomId, seat.user_id);
+        pipelineClear.del(`table:${roomId}:player:${seat.user_id}:cards`);
       }
-      await this.stateService.setTableState(roomId, { community_cards: '' });
+      pipelineClear.hset(`table:${roomId}:state`, {
+        community_cards: '',
+        last_activity: Date.now().toString(),
+      });
+      await pipelineClear.exec();
 
+      const kickedSeatNumbers: number[] = [];
       const kickPlayer = async (userId: string, seatNumber: number) => {
         try {
           await this.lobbyService.leaveRoom(userId, roomId);
@@ -695,9 +707,7 @@ export class PokerGameService implements OnModuleDestroy {
             seat_number: seatNumber,
             user_id: userId,
           });
-          activeSeatsList = activeSeatsList.filter(
-            (s) => s.seat_number !== seatNumber,
-          );
+          kickedSeatNumbers.push(seatNumber);
         } catch (err) {
           this.logger.error(
             `Error auto-kicking player ${userId}: ${err.message}`,
@@ -707,51 +717,76 @@ export class PokerGameService implements OnModuleDestroy {
 
       const redis = this.stateService.getRedisClient();
       const currentSeats = [...seats];
-      for (const seat of currentSeats) {
-        if (seat.pending_leave === '1') {
-          this.logger.log(
-            `User ${seat.user_id} has pending leave. Kicking from seat.`,
-          );
-          await kickPlayer(seat.user_id, seat.seat_number);
-          continue;
-        }
-
-        const statsKey = `table:${roomId}:player:${seat.user_id}:stats`;
-        if (
-          seat.status === 'sitting_out' ||
-          (seat.disconnected_at && seat.disconnected_at !== '0')
-        ) {
-          const awayCount = await redis.hincrby(
-            statsKey,
-            'consecutive_away_hands',
-            1,
-          );
-          if (awayCount >= 5) {
+      await Promise.all(
+        currentSeats.map(async (seat) => {
+          if (seat.pending_leave === '1') {
             this.logger.log(
-              `User ${seat.user_id} has been sitting out or disconnected for 5 hands. Auto-kicking.`,
+              `User ${seat.user_id} has pending leave. Kicking from seat.`,
+            );
+            await kickPlayer(seat.user_id, seat.seat_number);
+            return;
+          }
+
+          const statsKey = `table:${roomId}:player:${seat.user_id}:stats`;
+          if (
+            seat.status === 'sitting_out' ||
+            (seat.disconnected_at && seat.disconnected_at !== '0')
+          ) {
+            const awayCount = await redis.hincrby(
+              statsKey,
+              'consecutive_away_hands',
+              1,
+            );
+            if (awayCount >= 5) {
+              this.logger.log(
+                `User ${seat.user_id} has been sitting out or disconnected for 5 hands. Auto-kicking.`,
+              );
+              await kickPlayer(seat.user_id, seat.seat_number);
+            }
+          } else {
+            await redis.hset(statsKey, 'consecutive_away_hands', '0');
+          }
+        }),
+      );
+
+      if (kickedSeatNumbers.length > 0) {
+        activeSeatsList = activeSeatsList.filter(
+          (s) => !kickedSeatNumbers.includes(s.seat_number),
+        );
+        kickedSeatNumbers.length = 0;
+      }
+
+      await Promise.all(
+        activeSeatsList.map(async (seat) => {
+          const currentStack = parseInt(seat.stack);
+          if (currentStack === 0) {
+            this.logger.log(
+              `User ${seat.user_id} has 0 chips. Auto-kicking from seat.`,
             );
             await kickPlayer(seat.user_id, seat.seat_number);
           }
-        } else {
-          await redis.hset(statsKey, 'consecutive_away_hands', '0');
-        }
+        }),
+      );
+
+      if (kickedSeatNumbers.length > 0) {
+        activeSeatsList = activeSeatsList.filter(
+          (s) => !kickedSeatNumbers.includes(s.seat_number),
+        );
       }
 
+      // === PIPELINE: Activate all remaining seats in 1 round-trip ===
+      const seatActivationUpdates = new Map<
+        number,
+        Record<string, string | number>
+      >();
       for (const seat of activeSeatsList) {
-        const currentStack = parseInt(seat.stack);
-        if (currentStack === 0) {
-          this.logger.log(
-            `User ${seat.user_id} has 0 chips. Auto-kicking from seat.`,
-          );
-          await kickPlayer(seat.user_id, seat.seat_number);
-          continue;
-        }
+        if (parseInt(seat.stack) === 0) continue; // already kicked
         if (
           seat.status === 'waiting_for_next_hand' ||
           seat.status === 'ready' ||
           seat.status === 'sitting'
         ) {
-          await this.stateService.setSeat(roomId, seat.seat_number, {
+          seatActivationUpdates.set(seat.seat_number, {
             status: 'active',
             current_bet: '0',
             has_acted: '0',
@@ -759,7 +794,7 @@ export class PokerGameService implements OnModuleDestroy {
           });
           seat.status = 'active';
         } else if (seat.status === 'active' || seat.status === 'folded') {
-          await this.stateService.setSeat(roomId, seat.seat_number, {
+          seatActivationUpdates.set(seat.seat_number, {
             status: 'active',
             current_bet: '0',
             has_used_extra_time: '0',
@@ -768,6 +803,9 @@ export class PokerGameService implements OnModuleDestroy {
           });
           seat.status = 'active';
         }
+      }
+      if (seatActivationUpdates.size > 0) {
+        await this.stateService.setSeatsBulk(roomId, seatActivationUpdates);
       }
 
       const activePlayers = activeSeatsList.filter(
@@ -792,11 +830,17 @@ export class PokerGameService implements OnModuleDestroy {
       }
 
       // Record starting stack for all active players for reconciliation audit trail
+      // Pipeline: ghi start_stack cho tất cả players trong 1 round-trip
+      const startStackUpdates = new Map<
+        number,
+        Record<string, string | number>
+      >();
       for (const player of activePlayers) {
-        await this.stateService.setSeat(roomId, player.seat_number, {
+        startStackUpdates.set(player.seat_number, {
           start_stack: player.stack,
         });
       }
+      await this.stateService.setSeatsBulk(roomId, startStackUpdates);
 
       let dealerSeat = parseInt(tableStateBefore?.dealer_seat || '0');
       if (dealerSeat === 0) {
@@ -846,48 +890,144 @@ export class PokerGameService implements OnModuleDestroy {
 
       if (isBombPot) {
         const bombPotAnte = bbAmount * 5;
+        const actualAntesMap = new Map<number, number>();
         for (const player of activePlayers) {
           const playerStack = parseInt(player.stack);
           const actualAnte = Math.min(playerStack, bombPotAnte);
-          const newStack = playerStack - actualAnte;
           anteCollected += actualAnte;
-          player.stack = newStack.toString();
+          actualAntesMap.set(player.seat_number, actualAnte);
+          player.stack = (playerStack - actualAnte).toString();
+        }
+
+        // Pipeline: ghi ante cho tất cả players + publish stream events trong 1 round-trip
+        const bombAnteUpdates = new Map<
+          number,
+          Record<string, string | number>
+        >();
+        const bombAnteStreamEvents: Array<{
+          userId: string;
+          newStack: string;
+          reason: string;
+        }> = [];
+        for (const player of activePlayers) {
+          const actualAnte = actualAntesMap.get(player.seat_number) || 0;
           const currentContributed = parseInt(player.total_contributed || '0');
-          await this.stateService.setSeat(roomId, player.seat_number, {
-            stack: newStack.toString(),
+          bombAnteUpdates.set(player.seat_number, {
+            stack: player.stack,
             total_contributed: (currentContributed + actualAnte).toString(),
           });
-          await this.syncSeatStackToDb(
-            roomId,
-            player.user_id,
-            newStack.toString(),
-          );
+          if (actualAnte > 0) {
+            bombAnteStreamEvents.push({
+              userId: player.user_id,
+              newStack: player.stack,
+              reason: 'ante',
+            });
+          }
+        }
+        if (bombAnteUpdates.size > 0) {
+          // Inline XADD into the same setSeatsBulk pipeline via direct Redis pipeline
+          const redis = this.stateService.getRedisClient();
+          const antePipeline = redis.pipeline();
+          const ts = Date.now().toString();
+          for (const [seatNum, fields] of bombAnteUpdates.entries()) {
+            antePipeline.hset(`table:${roomId}:seat:${seatNum}`, fields);
+          }
+          for (const ev of bombAnteStreamEvents) {
+            antePipeline.xadd(
+              'stream:stack-changes',
+              '*',
+              'table_id',
+              roomId,
+              'user_id',
+              ev.userId,
+              'new_stack',
+              ev.newStack,
+              'reason',
+              ev.reason,
+              'ts',
+              ts,
+            );
+          }
+          await antePipeline.exec();
         }
       } else {
         if (anteAmount > 0) {
+          const actualAntesMap = new Map<number, number>();
           for (const player of activePlayers) {
             const playerStack = parseInt(player.stack);
             const actualAnte = Math.min(playerStack, anteAmount);
-            const newStack = playerStack - actualAnte;
             anteCollected += actualAnte;
-            player.stack = newStack.toString();
+            actualAntesMap.set(player.seat_number, actualAnte);
+            player.stack = (playerStack - actualAnte).toString();
+          }
+
+          // Pipeline: ghi ante cho tất cả players + publish stream events trong 1 round-trip
+          const anteUpdates = new Map<
+            number,
+            Record<string, string | number>
+          >();
+          const anteStreamEvents: Array<{
+            userId: string;
+            newStack: string;
+            reason: string;
+          }> = [];
+          for (const player of activePlayers) {
+            const actualAnte = actualAntesMap.get(player.seat_number) || 0;
             const currentContributed = parseInt(
               player.total_contributed || '0',
             );
-            await this.stateService.setSeat(roomId, player.seat_number, {
-              stack: newStack.toString(),
+            anteUpdates.set(player.seat_number, {
+              stack: player.stack,
               total_contributed: (currentContributed + actualAnte).toString(),
             });
-            await this.syncSeatStackToDb(
-              roomId,
-              player.user_id,
-              newStack.toString(),
-            );
+            if (actualAnte > 0) {
+              anteStreamEvents.push({
+                userId: player.user_id,
+                newStack: player.stack,
+                reason: 'ante',
+              });
+            }
+          }
+          if (anteUpdates.size > 0) {
+            const redis = this.stateService.getRedisClient();
+            const antePipeline = redis.pipeline();
+            const ts = Date.now().toString();
+            for (const [seatNum, fields] of anteUpdates.entries()) {
+              antePipeline.hset(`table:${roomId}:seat:${seatNum}`, fields);
+            }
+            for (const ev of anteStreamEvents) {
+              antePipeline.xadd(
+                'stream:stack-changes',
+                '*',
+                'table_id',
+                roomId,
+                'user_id',
+                ev.userId,
+                'new_stack',
+                ev.newStack,
+                'reason',
+                ev.reason,
+                'ts',
+                ts,
+              );
+            }
+            await antePipeline.exec();
           }
         }
 
         const sbPlayer = activePlayers.find((s) => s.seat_number === sbSeat);
         const bbPlayer = activePlayers.find((s) => s.seat_number === bbSeat);
+
+        // Pipeline: ghi blind cho SB/BB + publish stream events trong 1 round-trip
+        const blindBulkUpdates = new Map<
+          number,
+          Record<string, string | number>
+        >();
+        const blindStreamEvents: Array<{
+          userId: string;
+          newStack: string;
+          reason: string;
+        }> = [];
 
         if (sbPlayer) {
           const currentStack = parseInt(sbPlayer.stack);
@@ -895,16 +1035,17 @@ export class PokerGameService implements OnModuleDestroy {
           const sbStack = currentStack - sbBet;
           const sbContributed =
             parseInt(sbPlayer.total_contributed || '0') + sbBet;
-          await this.stateService.setSeat(roomId, sbSeat, {
+          blindBulkUpdates.set(sbSeat, {
             stack: sbStack.toString(),
             current_bet: sbBet.toString(),
             total_contributed: sbContributed.toString(),
           });
-          await this.syncSeatStackToDb(
-            roomId,
-            sbPlayer.user_id,
-            sbStack.toString(),
-          );
+          if (sbBet > 0)
+            blindStreamEvents.push({
+              userId: sbPlayer.user_id,
+              newStack: sbStack.toString(),
+              reason: 'blind',
+            });
         }
 
         if (bbPlayer) {
@@ -913,16 +1054,43 @@ export class PokerGameService implements OnModuleDestroy {
           const bbStack = currentStack - bbBet;
           const bbContributed =
             parseInt(bbPlayer.total_contributed || '0') + bbBet;
-          await this.stateService.setSeat(roomId, bbSeat, {
+          blindBulkUpdates.set(bbSeat, {
             stack: bbStack.toString(),
             current_bet: bbBet.toString(),
             total_contributed: bbContributed.toString(),
           });
-          await this.syncSeatStackToDb(
-            roomId,
-            bbPlayer.user_id,
-            bbStack.toString(),
-          );
+          if (bbBet > 0)
+            blindStreamEvents.push({
+              userId: bbPlayer.user_id,
+              newStack: bbStack.toString(),
+              reason: 'blind',
+            });
+        }
+
+        if (blindBulkUpdates.size > 0) {
+          const redis = this.stateService.getRedisClient();
+          const blindPipeline = redis.pipeline();
+          const ts = Date.now().toString();
+          for (const [seatNum, fields] of blindBulkUpdates.entries()) {
+            blindPipeline.hset(`table:${roomId}:seat:${seatNum}`, fields);
+          }
+          for (const ev of blindStreamEvents) {
+            blindPipeline.xadd(
+              'stream:stack-changes',
+              '*',
+              'table_id',
+              roomId,
+              'user_id',
+              ev.userId,
+              'new_stack',
+              ev.newStack,
+              'reason',
+              ev.reason,
+              'ts',
+              ts,
+            );
+          }
+          await blindPipeline.exec();
         }
       }
 
@@ -1009,11 +1177,7 @@ export class PokerGameService implements OnModuleDestroy {
         pocketCardsMap.get(player.user_id).push(shuffledDeck[cardIdx++]);
       }
 
-      for (const player of sortedActivePlayers) {
-        const cards = pocketCardsMap.get(player.user_id);
-        await this.stateService.setPlayerCards(roomId, player.user_id, cards);
-      }
-
+      // Pipeline: ghi bài ẩn của tất cả người chơi + bộ bài còn lại trong 1 round-trip
       let remainingDeck = shuffledDeck.slice(cardIdx);
       let communityCards = '';
       if (isBombPot) {
@@ -1021,7 +1185,11 @@ export class PokerGameService implements OnModuleDestroy {
         remainingDeck = remainingDeck.slice(3);
         communityCards = flopCards.join(',');
       }
-      await this.stateService.setDeck(roomId, remainingDeck);
+      await this.stateService.setPlayerCardsBulk(
+        roomId,
+        pocketCardsMap,
+        remainingDeck,
+      );
 
       const integrity = await this.verifyCardIntegrity(roomId);
       if (!integrity) {
@@ -1091,15 +1259,17 @@ export class PokerGameService implements OnModuleDestroy {
         community_cards: communityCards ? communityCards.split(',') : [],
       });
 
-      for (const player of activePlayers) {
-        const pocket = await this.stateService.getPlayerCards(
-          roomId,
-          player.user_id,
-        );
-        this.server
-          .to(`user_${player.user_id}`)
-          .emit('table:private-cards', { pocket_cards: pocket });
-      }
+      await Promise.all(
+        activePlayers.map(async (player) => {
+          const pocket = await this.stateService.getPlayerCards(
+            roomId,
+            player.user_id,
+          );
+          this.server
+            .to(`user_${player.user_id}`)
+            .emit('table:private-cards', { pocket_cards: pocket });
+        }),
+      );
 
       this.startActionTimer(roomId, firstTurn, 30);
       await this.broadcastTableState(roomId);
@@ -1146,52 +1316,5 @@ export class PokerGameService implements OnModuleDestroy {
 
     this.server.to(`table_${roomId}`).emit('table:hand-aborted', { reason });
     await this.broadcastTableState(roomId);
-  }
-
-  async finalizeRitVoting(roomId: string) {
-    const lockAcquired = await this.stateService.acquireLock(roomId);
-    if (!lockAcquired) {
-      setTimeout(async () => {
-        await this.finalizeRitVoting(roomId);
-      }, 100);
-      return;
-    }
-
-    try {
-      const tableState = await this.stateService.getTableState(roomId);
-      if (
-        !tableState ||
-        !tableState.rit_voters ||
-        tableState.rit_voters === 'completed'
-      )
-        return;
-
-      const voters = tableState.rit_voters.split(',');
-      const yesVotes = tableState.rit_votes_yes
-        ? tableState.rit_votes_yes.split(',')
-        : [];
-
-      const allYes = voters.every((v) => yesVotes.includes(v));
-      const isRitActive = allYes ? '1' : '0';
-
-      await this.stateService.setTableState(roomId, {
-        is_rit_active: isRitActive,
-        rit_voters: 'completed',
-      });
-
-      this.server.to(`table_${roomId}`).emit('table:rit-vote-finalized', {
-        is_rit_active: allYes,
-        yes_votes: yesVotes,
-      });
-
-      await this.actionProcessor.advanceStreet(roomId);
-    } catch (err) {
-      this.logger.error(
-        `Error in finalizeRitVoting: ${err.message}`,
-        err.stack,
-      );
-    } finally {
-      await this.stateService.releaseLock(roomId);
-    }
   }
 }

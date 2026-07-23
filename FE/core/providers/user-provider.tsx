@@ -31,11 +31,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     } catch {
       setCurrentUser(null);
       const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-      if (!currentPath.startsWith('/login') && 
-          !currentPath.startsWith('/register') && 
-          !currentPath.startsWith('/forgot-password') && 
-          !currentPath.startsWith('/backstage')) {
-        router.push("/login");
+      const isPublicPath = 
+        currentPath === '/' || 
+        currentPath.startsWith('/login') || 
+        currentPath.startsWith('/register') || 
+        currentPath.startsWith('/forgot-password') ||
+        currentPath.startsWith('/verify-otp') ||
+        currentPath.startsWith('/backstage');
+
+      if (!isPublicPath) {
+        router.push("/");
       }
     } finally {
       setIsLoadingUser(false);

@@ -130,6 +130,8 @@ interface PokerGameContextProps {
   startGame: () => void;
   updateClientSeed: (clientSeed: string) => void;
   leaveTable: () => Promise<void>;
+  pendingOptimisticSeatsRef: React.MutableRefObject<Set<number>>;
+  isStartingHand: boolean;
 }
 
 const PokerGameContext = createContext<PokerGameContextProps | undefined>(undefined);
@@ -140,6 +142,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const { socket, isConnected } = useSocket();
   const tableId = params?.id as string;
   const router = useRouter();
+  const [isStartingHand, setIsStartingHand] = useState(false);
 
   // Sound and HUD settings
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -151,6 +154,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Responsive Table Scaling State and Ref
   const tableRef = useRef<HTMLDivElement>(null);
+  const pendingOptimisticSeatsRef = useRef<Set<number>>(new Set());
   const [tableScale, setTableScale] = useState(1);
 
   // Customization States
@@ -467,21 +471,20 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (data.seats) {
         const heroId = currentUserRef.current?.id;
         setPlayers((prev) => {
-          return data.seats.map((s) => {
-            // FIX: so sánh trực tiếp bằng seat id, không phụ thuộc ref timing
+          const serverSeatsMap = new Map(data.seats.map((s) => [s.seatIndex, s]));
+          const pendingOptimisticPlayers = prev.filter(
+            (p) => p.isOptimistic && pendingOptimisticSeatsRef.current.has(p.seatIndex)
+          );
+
+          const newPlayersList: Player[] = data.seats.map((s) => {
             const isHero = !!heroId && String(s.id) === String(heroId);
             const existingPlayer = prev.find((p) => p.seatIndex === s.seatIndex);
 
-            // FIX: Hero luôn giữ lại bài hiện tại nếu có (không reset khi state sync lại)
-            // Opponent nhận 2 bài úp mặt khi đang trong ván
             let defaultCards: NonNullable<typeof prev[0]>['cards'] = undefined;
             if (data.game_stage !== "waiting" && data.game_stage !== "ended" && s.status !== "folded") {
               if (isHero) {
-                // Hero: giữ nguyên bài đang có, nếu chưa có thì [] (chờ table:private-cards)
                 defaultCards = existingPlayer?.cards?.length ? existingPlayer.cards : [];
               } else {
-                // FIX: dùng sentinel "back" thay vì A♠ A♠ làm placeholder
-                // để không bị flip face-up khi showdown
                 defaultCards = existingPlayer?.cards?.length
                   ? existingPlayer.cards
                   : [{ suit: "back", rank: "back" }, { suit: "back", rank: "back" }];
@@ -510,6 +513,15 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               gamification_xp: s.gamification_xp,
             };
           });
+
+          // Add any pending optimistic players for seats that are currently empty on server
+          pendingOptimisticPlayers.forEach((op) => {
+            if (!serverSeatsMap.has(op.seatIndex)) {
+              newPlayersList.push(op);
+            }
+          });
+
+          return newPlayersList;
         });
 
         // Dynamic minRaise/maxRaise limits for Hero
@@ -638,6 +650,7 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
 
     socket.on("table:hand-started", (data: SocketTypes.HandStartedPayload) => {
+      setIsStartingHand(false);
       setCommunityCards([]);
       setIsBombPot(!!data.is_bomb_pot);
       setRitBoard2Cards([]);
@@ -1057,9 +1070,21 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const startGame = () => {
     if (!socket || !isConnected) return;
+    setIsStartingHand(true);
+    setWaitingMessage({
+      text: "Dealing cards...",
+      starting: true
+    });
+    setGameStage("preflop");
+
     socket.emit("table:start-game", {
       room_id: tableId,
     });
+
+    // Fallback if server fails
+    setTimeout(() => {
+      setIsStartingHand(false);
+    }, 4000);
   };
 
   const updateClientSeed = (clientSeed: string) => {
@@ -1277,6 +1302,8 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         loadMoreChats,
         hasMoreChats,
         isLoadingHistory,
+        pendingOptimisticSeatsRef,
+        isStartingHand,
       }}
     >
       {children}

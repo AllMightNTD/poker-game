@@ -11,6 +11,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import {
   Award,
   CheckCircle2,
@@ -463,7 +464,7 @@ function PokerGameLobby() {
 
   if (isLoadingUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#030806]">
+      <div className="min-h-screen flex items-center justify-center bg-[#05090e]">
         <div className="flex flex-col items-center gap-5">
           <div className="relative w-16 h-16">
             <div className="absolute inset-0 rounded-full border-4 border-[#F4B942]/10" />
@@ -484,9 +485,13 @@ function PokerGameLobby() {
     <div
       className="min-h-screen text-[#F7EFDD] pb-24 md:pb-12 px-4 md:px-8 relative overflow-hidden font-sans"
       style={{
-        background: "radial-gradient(circle at 50% 0%, #0d281a 0%, #05100b 60%, #020504 100%)",
+        background: "radial-gradient(circle at 50% 0%, #0c1a16 0%, #060d13 50%, #03060a 100%)",
       }}
     >
+      {/* Ambient glows */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none z-0" />
+      <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-[#F4B942]/5 rounded-full blur-[150px] pointer-events-none z-0" />
+
       {/* Background card suits watermarks with micro-interactions */}
       <div className="pointer-events-none fixed inset-0 opacity-[0.03] select-none overflow-hidden z-0">
         {["♠", "♥", "♦", "♣", "♠", "♦"].map((s, i) => (
@@ -511,9 +516,9 @@ function PokerGameLobby() {
         <div className="flex items-center gap-3">
           <motion.div
             whileHover={{ scale: 1.05, rotate: 5 }}
-            className="w-10 h-10 rounded-2xl bg-gradient-to-r from-[#F4B942] to-[#E0942A] flex items-center justify-center text-[#142019] text-xs font-black shadow-lg shadow-[#F4B942]/20 border border-[#F4B942]/40"
+            className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-[#F4B942]/20 border border-[#F4B942]/40 overflow-hidden bg-black relative"
           >
-            CG
+            <Image src="/logo.png" alt="Poker Game Logo" width={48} height={48} className="object-cover" />
           </motion.div>
           <div className="text-left">
             <span className="text-xs font-black tracking-widest text-[#F7EFDD] uppercase block">
@@ -556,7 +561,7 @@ function PokerGameLobby() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute right-0 mt-3 w-56 bg-[#060c09]/95 border border-[#F4B942]/30 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-40 p-2.5 text-left backdrop-blur-xl"
+                    className="absolute right-0 mt-3 w-56 bg-[#0a1219]/98 border border-[#F4B942]/20 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-40 p-2.5 text-left backdrop-blur-xl"
                   >
                     <div className="px-3.5 py-3 border-b border-white/[0.06] mb-2">
                       <span className="text-xs font-black text-[#F7EFDD] block truncate">
@@ -610,7 +615,7 @@ function PokerGameLobby() {
               initial={{ opacity: 0, y: 50, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.9 }}
-              className={`fixed bottom-6 right-6 z-50 flex items-center gap-3.5 px-6 py-4.5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border text-sm font-semibold backdrop-blur-xl text-white ${toast.type === "success" ? "bg-[#0b1612]/95 border-[#F4B942]/40 text-[#F4B942]" : "bg-[#E23744]/95 border-[#E23744]"
+              className={`fixed bottom-6 right-6 z-50 flex items-center gap-3.5 px-6 py-4.5 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border text-sm font-semibold backdrop-blur-xl text-white ${toast.type === "success" ? "bg-[#0a1219]/95 border-[#F4B942]/30 text-[#F4B942]" : "bg-[#E23744]/95 border-[#E23744]"
                 }`}
             >
               {toast.type === "success" ? (
@@ -644,7 +649,7 @@ function PokerGameLobby() {
             <JackpotOdometer initialValue={lobbyStats.total_jackpot_pot} />
 
             {/* Quick Play Widget */}
-            <div className="bg-gradient-to-br from-[#0b1612]/90 via-[#050f0b]/80 to-[#020504]/95 border border-[#F4B942]/20 rounded-3xl p-5 backdrop-blur-xl shadow-2xl flex flex-col justify-between flex-1 min-h-[220px]">
+            <div className="bg-gradient-to-br from-[#0a1219]/95 via-[#050a0f]/90 to-[#03060a]/98 border border-[#F4B942]/20 rounded-3xl p-5 backdrop-blur-xl shadow-2xl flex flex-col justify-between flex-1 min-h-[220px]">
               <div className="space-y-4">
                 <div className="flex items-center gap-2 border-b border-white/[0.06] pb-2.5">
                   <Zap size={16} className="text-[#F4B942] animate-pulse" />
@@ -985,10 +990,10 @@ function PokerGameLobby() {
         </button>
       </nav>
 
-      {/* Brand accent 'N' logo bottom left */}
-      <div className="fixed bottom-6 left-6 pointer-events-none select-none z-0 opacity-10 hidden md:block">
-        <div className="w-12 h-12 rounded-full border border-[#F4B942]/20 flex items-center justify-center font-black text-xl text-[#F4B942]/40 tracking-wider backdrop-blur-sm shadow-inner">
-          N
+      {/* Brand accent logo bottom left */}
+      <div className="fixed bottom-6 left-6 pointer-events-none select-none z-0 opacity-20 hidden md:block">
+        <div className="w-16 h-16 rounded-full border-2 border-[#F4B942]/30 flex items-center justify-center overflow-hidden backdrop-blur-sm shadow-[0_0_20px_rgba(244,185,66,0.15)] relative">
+          <Image src="/logo.png" alt="" width={64} height={64} className="object-cover grayscale brightness-75" />
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ import { HandStage } from '../entities/game_hand.entity';
 import { PokerTable } from '../entities/poker_table.entity';
 import { TableSession } from '../entities/table_session.entity';
 import { PokerGameService } from '../services/poker-game.service';
+import { PokerGameEngine } from './poker-game.engine';
 
 export class PokerActionProcessor {
   constructor(private readonly gameService: PokerGameService) {}
@@ -141,38 +142,39 @@ export class PokerActionProcessor {
     }
 
     const prevContributed = parseInt(activeSeat.total_contributed || '0');
-    await this.gameService.stateService.setSeat(roomId, seatNumber, {
+
+    // === PIPELINE: Gom tất cả Redis writes thành 1 round-trip ===
+    const seatUpdates = new Map<number, Record<string, string | number>>();
+
+    // Hero seat update
+    const heroFields: Record<string, string | number> = {
       stack: stack.toString(),
       current_bet: currentBet.toString(),
       status: nextStatus,
       has_acted: '1',
       total_contributed: (prevContributed + actionCost).toString(),
-    });
+    };
+    seatUpdates.set(seatNumber, heroFields);
 
+    // isFullRaise: reset has_acted cho tất cả active seats khác
     if (isFullRaise) {
       const otherActiveSeats = seats.filter(
         (s) => s.seat_number !== seatNumber && s.status === 'active',
       );
       for (const os of otherActiveSeats) {
-        await this.gameService.stateService.setSeat(roomId, os.seat_number, {
-          has_acted: '0',
-        });
+        seatUpdates.set(os.seat_number, { has_acted: '0' });
       }
     }
-    await this.gameService.syncSeatStackToDb(
-      roomId,
-      activeSeat.user_id,
-      stack.toString(),
-    );
 
-    // 3. Cập nhật Pot & Highest Bet
+    // Table state update
     const currentPot = parseInt(tableState.total_pot || '0') + actionCost;
-    await this.gameService.stateService.setTableState(roomId, {
+    const tableStateFields = {
       total_pot: currentPot.toString(),
       current_highest_bet: highestBet.toString(),
       last_full_raise_size: lastFullRaiseSize.toString(),
-    });
+    };
 
+    // Action log
     const actionLog = {
       seat_number: seatNumber,
       user_id: activeSeat.user_id,
@@ -181,10 +183,32 @@ export class PokerActionProcessor {
       stage: tableState.game_stage || 'preflop',
       timestamp: Date.now(),
     };
-    await this.gameService.stateService.pushActionLog(
-      tableState.current_hand_id || '0',
-      JSON.stringify(actionLog),
+    const actionLogEntry = {
+      handId: tableState.current_hand_id || '0',
+      logJson: JSON.stringify(actionLog),
+    };
+
+    // Stack-change events for Redis Stream audit trail (only when chips actually move)
+    const stackChanges =
+      actionCost > 0
+        ? [
+            {
+              userId: activeSeat.user_id,
+              newStack: stack.toString(),
+              reason: 'action' as const,
+            },
+          ]
+        : [];
+
+    // Single pipeline round-trip: seat updates + table state + action log + stream event
+    await this.gameService.stateService.setMultipleSeatsAndTableState(
+      roomId,
+      seatUpdates,
+      tableStateFields,
+      actionLogEntry,
+      stackChanges,
     );
+    // Stack is Redis-authoritative during gameplay; settled to MySQL at hand-end (showdown) or leaveRoom
 
     this.gameService.server
       .to(`table_${roomId}`)
@@ -282,8 +306,50 @@ export class PokerActionProcessor {
 
     this.gameService.clearActionTimer(roomId);
 
-    const currentStage = tableState.game_stage as HandStage;
     const seats = await this.gameService.stateService.getAllSeats(roomId);
+
+    // Process uncalled bet refund immediately
+    const playerBetStates = seats.map((s) => ({
+      seat: s.seat_number,
+      bet: parseInt(s.total_contributed || '0'),
+      folded: s.status === 'folded',
+      allIn:
+        parseInt(s.stack || '0') === 0 &&
+        parseInt(s.total_contributed || '0') > 0,
+    }));
+
+    const pots = PokerGameEngine.splitPot(playerBetStates);
+    for (const pot of pots) {
+      if (pot.isUncalled) {
+        const seatNum = pot.eligibleSeats[0];
+        const player = seats.find((s) => s.seat_number === seatNum);
+        if (player) {
+          const newStack = parseInt(player.stack || '0') + pot.amount;
+          const newContributed =
+            parseInt(player.total_contributed || '0') - pot.amount;
+          player.stack = newStack.toString();
+          player.total_contributed = newContributed.toString();
+          // Stack is Redis-authoritative during gameplay; DB settled at showdown / leaveRoom
+          await this.gameService.stateService.setSeat(
+            roomId,
+            player.seat_number,
+            {
+              stack: player.stack,
+              total_contributed: player.total_contributed,
+            },
+          );
+          tableState.total_pot = Math.max(
+            0,
+            parseInt(tableState.total_pot || '0') - pot.amount,
+          ).toString();
+          this.gameService.logger.log(
+            `[ACTION PROCESSOR] Refunded ${pot.amount} uncalled bet to player ${player.user_id}`,
+          );
+        }
+      }
+    }
+
+    const currentStage = tableState.game_stage as HandStage;
     const activePlayers = seats.filter((s) => s.status === 'active');
     const activeNonAllIn = activePlayers.filter(
       (s) => parseInt(s.stack || '0') > 0,
@@ -300,36 +366,6 @@ export class PokerActionProcessor {
     else if (currentStage === 'flop') nextStage = 'turn';
     else if (currentStage === 'turn') nextStage = 'river';
 
-    if (
-      isAutoRunBoard &&
-      dbTable?.custom_settings?.allow_rit !== false &&
-      nextStage !== 'showdown'
-    ) {
-      if (!tableState.rit_voters) {
-        const ritVoters = activePlayers.map((p) => p.user_id);
-        await this.gameService.stateService.setTableState(roomId, {
-          rit_voters: ritVoters.join(','),
-          rit_votes_yes: '',
-          rit_votes_no: '',
-        });
-
-        this.gameService.server
-          .to(`table_${roomId}`)
-          .emit('table:rit-vote-request', {
-            voters: ritVoters,
-            time_limit: 5,
-          });
-
-        setTimeout(async () => {
-          await this.gameService.finalizeRitVoting(roomId);
-        }, 5000);
-
-        return;
-      } else if (tableState.rit_voters !== 'completed') {
-        return;
-      }
-    }
-
     // let _streetPotGained = 0;
     // for (const s of seats) {
     //   _streetPotGained += parseInt(String(s.current_bet || '0'));
@@ -337,18 +373,12 @@ export class PokerActionProcessor {
     const newTotalPot = parseInt(tableState.total_pot || '0'); // Already accumulated in processPlayerAction
 
     let updatedCommunityCards = tableState.community_cards || '';
-    let updatedRitCards = tableState.rit_board2_cards || '';
     const deck = await this.gameService.stateService.getDeck(roomId);
-    const isRitActive = tableState.is_rit_active === '1';
 
     if (nextStage === 'flop') {
       if (deck.length >= 3) {
         const flopCards = [deck.shift(), deck.shift(), deck.shift()];
         updatedCommunityCards = flopCards.join(',');
-      }
-      if (isRitActive && deck.length >= 3) {
-        const flopCards2 = [deck.shift(), deck.shift(), deck.shift()];
-        updatedRitCards = flopCards2.join(',');
       }
     } else if (nextStage === 'turn' || nextStage === 'river') {
       if (deck.length >= 1) {
@@ -356,12 +386,6 @@ export class PokerActionProcessor {
         updatedCommunityCards = updatedCommunityCards
           ? `${updatedCommunityCards},${nextCard}`
           : nextCard;
-      }
-      if (isRitActive && deck.length >= 1) {
-        const nextCard2 = deck.shift();
-        updatedRitCards = updatedRitCards
-          ? `${updatedRitCards},${nextCard2}`
-          : nextCard2;
       }
     }
 
@@ -380,7 +404,7 @@ export class PokerActionProcessor {
       current_highest_bet: '0',
       last_full_raise_size: '0',
       community_cards: updatedCommunityCards,
-      rit_board2_cards: updatedRitCards,
+
       current_turn_seat: '0',
     });
 
@@ -391,7 +415,7 @@ export class PokerActionProcessor {
         community_cards: updatedCommunityCards
           ? updatedCommunityCards.split(',')
           : [],
-        rit_board2_cards: updatedRitCards ? updatedRitCards.split(',') : [],
+
         total_pot: newTotalPot,
       });
 

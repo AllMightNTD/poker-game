@@ -87,11 +87,32 @@ const darkPokerTheme = createTheme({
               borderColor: "#F4B942",
               boxShadow: "0 0 0 2px rgba(244, 185, 66, 0.15)",
             },
+            "&.Mui-error fieldset": {
+              borderColor: "#E23744",
+            },
+            "&.Mui-error:hover fieldset": {
+              borderColor: "#E23744",
+            },
+            "&.Mui-error.Mui-focused fieldset": {
+              borderColor: "#E23744",
+              boxShadow: "0 0 0 2px rgba(226, 55, 68, 0.15)",
+            },
           },
           "& .MuiInputLabel-root": {
             color: "#64748B", // slate-500
             "&.Mui-focused": {
               color: "#F4B942",
+            },
+            "&.Mui-error": {
+              color: "#E23744",
+            },
+            "&.Mui-error.Mui-focused": {
+              color: "#E23744",
+            },
+          },
+          "& .MuiFormHelperText-root": {
+            "&.Mui-error": {
+              color: "#E23744",
             },
           },
         },

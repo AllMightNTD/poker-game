@@ -22,7 +22,7 @@ export function useLogout() {
       Cookies.remove("refreshToken", { path: "/" });
       localStorage.removeItem("token");
       localStorage.removeItem(REMEMBER_EMAIL_KEY);
-      router.push("/login");
+      router.push("/");
       setIsLoggingOut(false);
     }
   }, [router]);
