@@ -85,6 +85,7 @@ export class AdminTablesService {
     }
 
     await table.save();
+    this.gameService.clearTableMetaCache(id);
 
     // Notify clients that room config has updated
     await this.gameService.syncRoomState(id);
@@ -99,6 +100,7 @@ export class AdminTablesService {
 
     table.status = 'closed';
     await table.save();
+    this.gameService.clearTableMetaCache(id);
 
     await this.gameService.broadcastLobbyRoomStatus(id);
     this.lobbyGateway.server
@@ -114,6 +116,7 @@ export class AdminTablesService {
 
     table.status = 'paused';
     await table.save();
+    this.gameService.clearTableMetaCache(id);
 
     await this.gameService.broadcastLobbyRoomStatus(id);
     this.lobbyGateway.server
@@ -129,6 +132,7 @@ export class AdminTablesService {
 
     table.status = 'waiting';
     await table.save();
+    this.gameService.clearTableMetaCache(id);
 
     await this.gameService.broadcastLobbyRoomStatus(id);
     this.lobbyGateway.server

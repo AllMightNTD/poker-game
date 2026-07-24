@@ -72,7 +72,7 @@ interface PokerCardProps {
   suit: "H" | "D" | "S" | "C" | "back" | "?" | string;
   rank: string;
   isFaceUp: boolean;
-  size?: "xs" | "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg" | "responsive";
   className?: string;
   deckStyle?: "classic" | "modern" | "cyberpunk";
 }
@@ -84,6 +84,7 @@ export const PokerCard = ({ suit, rank, isFaceUp, size = "md", className = "", d
     sm: "w-[40px] h-[58px] rounded-[8px]",
     md: "w-[64px] h-[92px] rounded-[14px]",
     lg: "w-[88px] h-[126px] rounded-[22px]",
+    responsive: "w-[48px] h-[68px] rounded-[10px] sm:w-[56px] sm:h-[80px] sm:rounded-[12px] md:w-[72px] md:h-[102px] md:rounded-[16px]",
   };
 
   const backGradient =
@@ -113,8 +114,18 @@ export const PokerCard = ({ suit, rank, isFaceUp, size = "md", className = "", d
       >
         {/* --- MẶT TRƯỚC LÁ BÀI (FRONT FACE) --- */}
         <div
-          className="absolute inset-0 bg-gradient-to-b from-stone-50 via-white to-neutral-200 border border-neutral-300/80 shadow-[0_8px_20px_rgba(0,0,0,0.4),_inset_0_2px_2px_rgba(255,255,255,0.8),_inset_0_-2px_4px_rgba(0,0,0,0.08)] flex flex-col justify-between overflow-hidden rounded-[inherit]"
-          style={{ backfaceVisibility: "hidden", padding: size === "xs" ? "2px" : size === "sm" ? "4px" : size === "md" ? "8px" : "12px" }}
+          className={`absolute inset-0 bg-gradient-to-b from-stone-50 via-white to-neutral-200 border border-neutral-300/80 shadow-[0_8px_20px_rgba(0,0,0,0.4),_inset_0_2px_2px_rgba(255,255,255,0.8),_inset_0_-2px_4px_rgba(0,0,0,0.08)] flex flex-col justify-between overflow-hidden rounded-[inherit] ${
+            size === "responsive"
+              ? "p-1 sm:p-1.5 md:p-2.5"
+              : size === "xs"
+                ? "p-[2px]"
+                : size === "sm"
+                  ? "p-[4px]"
+                  : size === "md"
+                    ? "p-[8px]"
+                    : "p-[12px]"
+          }`}
+          style={{ backfaceVisibility: "hidden" }}
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-white/60 pointer-events-none mix-blend-overlay z-20" />
 
@@ -123,28 +134,80 @@ export const PokerCard = ({ suit, rank, isFaceUp, size = "md", className = "", d
 
           {/* Góc trên bên trái */}
           <div className="flex flex-col items-center leading-none text-left self-start relative z-10">
-            <span className={`font-serif font-black tracking-tight ${size === "xs" ? "text-[10px]" : size === "sm" ? "text-xs" : size === "md" ? "text-lg" : "text-2xl"} ${textColors}`}>
+            <span className={`font-serif font-black tracking-tight ${
+              size === "responsive"
+                ? "text-[11px] sm:text-[13px] md:text-[18px]"
+                : size === "xs"
+                  ? "text-[10px]"
+                  : size === "sm"
+                    ? "text-xs"
+                    : size === "md"
+                      ? "text-lg"
+                      : "text-2xl"
+            } ${textColors}`}>
               {rank}
             </span>
             {suit && suit !== "back" && suit !== "?" && (
-              <SuitIcon suit={suit as any} className={`mt-0.5 ${size === "xs" ? "w-2.5 h-2.5" : size === "sm" ? "w-3 h-3" : size === "md" ? "w-4 h-4" : "w-5 h-5"}`} />
+              <SuitIcon suit={suit as any} className={`mt-0.5 ${
+                size === "responsive"
+                  ? "w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4"
+                  : size === "xs"
+                    ? "w-2.5 h-2.5"
+                    : size === "sm"
+                      ? "w-3 h-3"
+                      : size === "md"
+                        ? "w-4 h-4"
+                        : "w-5 h-5"
+              }`} />
             )}
           </div>
 
           {/* Biểu tượng CG lớn ở trung tâm lá bài */}
-          {size !== "sm" && suit && suit !== "back" && suit !== "?" && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.9] z-0 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)]">
-              <SuitIcon suit={suit as any} className={size === "md" ? "w-9 h-9" : "w-14 h-14"} />
+          {suit && suit !== "back" && suit !== "?" && (
+            <div className={`absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.9] z-0 filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)] ${
+              size === "responsive"
+                ? "hidden md:flex"
+                : size === "sm" || size === "xs"
+                  ? "hidden"
+                  : "flex"
+            }`}>
+              <SuitIcon suit={suit as any} className={
+                size === "responsive"
+                  ? "w-9 h-9"
+                  : size === "md"
+                    ? "w-9 h-9"
+                    : "w-14 h-14"
+              } />
             </div>
           )}
 
           {/* Góc dưới bên phải (Xoay ngược 180 độ) */}
           <div className="flex flex-col items-center leading-none text-left self-end rotate-180 z-10 relative">
-            <span className={`font-serif font-black tracking-tight ${size === "xs" ? "text-[10px]" : size === "sm" ? "text-xs" : size === "md" ? "text-lg" : "text-2xl"} ${textColors}`}>
+            <span className={`font-serif font-black tracking-tight ${
+              size === "responsive"
+                ? "text-[11px] sm:text-[13px] md:text-[18px]"
+                : size === "xs"
+                  ? "text-[10px]"
+                  : size === "sm"
+                    ? "text-xs"
+                    : size === "md"
+                      ? "text-lg"
+                      : "text-2xl"
+            } ${textColors}`}>
               {rank}
             </span>
             {suit && suit !== "back" && suit !== "?" && (
-              <SuitIcon suit={suit as any} className={`mt-0.5 ${size === "xs" ? "w-2.5 h-2.5" : size === "sm" ? "w-3 h-3" : size === "md" ? "w-4 h-4" : "w-5 h-5"}`} />
+              <SuitIcon suit={suit as any} className={`mt-0.5 ${
+                size === "responsive"
+                  ? "w-2.5 h-2.5 sm:w-3 sm:h-3 md:w-4 md:h-4"
+                  : size === "xs"
+                    ? "w-2.5 h-2.5"
+                    : size === "sm"
+                      ? "w-3 h-3"
+                      : size === "md"
+                        ? "w-4 h-4"
+                        : "w-5 h-5"
+              }`} />
             )}
           </div>
         </div>

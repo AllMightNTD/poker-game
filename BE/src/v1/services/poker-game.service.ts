@@ -1,31 +1,42 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Queue } from 'bullmq';
-import { InjectQueue } from '@nestjs/bullmq';
 import { randomBytes, randomUUID } from 'crypto';
 import { Server } from 'socket.io';
+import { withTransaction } from 'src/common/helpers/transaction.helper';
 import { DataSource } from 'typeorm';
-import { GameHand } from '../entities/game_hand.entity';
-import { PokerTable } from '../entities/poker_table.entity';
-import { TableSession } from '../entities/table_session.entity';
-import { PokerLobbyService } from './poker-lobby.service';
-import { PokerStateService } from './poker-state.service';
-import { PokerStreamService } from './poker-stream.service';
-import { ProvablyFairService } from './provably-fair.service';
-import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
+import { PokerActionProcessor } from '../engines/poker-action.processor';
 import { PokerBotManager } from '../engines/poker-bot.manager';
 import { PokerShowdownManager } from '../engines/poker-showdown.manager';
-import { PokerActionProcessor } from '../engines/poker-action.processor';
+import { GameHand } from '../entities/game_hand.entity';
+import { PokerTable } from '../entities/poker_table.entity';
+import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
+import { RoomAdminLog } from '../entities/room_admin_log.entity';
+import { TableSession } from '../entities/table_session.entity';
 import {
   PokerSeatState,
   PokerTableState,
   WinnerLog,
 } from '../types/poker.types';
+import { PokerLobbyService } from './poker-lobby.service';
+import { PokerStateService } from './poker-state.service';
+import { PokerStreamService } from './poker-stream.service';
+import { ProvablyFairService } from './provably-fair.service';
 
 @Injectable()
 export class PokerGameService implements OnModuleDestroy {
   readonly logger = new Logger(PokerGameService.name);
   server: Server;
+
+  // In-memory cache cho PokerTable metadata
+  private readonly tableMetaCache = new Map<
+    string,
+    {
+      data: PokerTable;
+      expiresAt: number;
+    }
+  >();
 
   // Quản lý Timers hành động (Key: roomId)
   readonly actionTimers = new Map<
@@ -63,6 +74,28 @@ export class PokerGameService implements OnModuleDestroy {
 
   setServer(server: Server) {
     this.server = server;
+  }
+
+  clearTableMetaCache(tableId: string): void {
+    this.tableMetaCache.delete(tableId);
+  }
+
+  async getCachedTableMeta(tableId: string): Promise<PokerTable | null> {
+    const cached = this.tableMetaCache.get(tableId);
+    if (cached && Date.now() < cached.expiresAt) {
+      return cached.data;
+    }
+    const fresh = await PokerTable.findOne({
+      where: { id: tableId },
+      relations: ['club'],
+    });
+    if (fresh) {
+      this.tableMetaCache.set(tableId, {
+        data: fresh,
+        expiresAt: Date.now() + 60_000,
+      });
+    }
+    return fresh;
   }
 
   cancelDisconnectTimeout(roomId: string, userId: string) {
@@ -330,6 +363,7 @@ export class PokerGameService implements OnModuleDestroy {
         table.is_active = false;
         table.status = 'closed';
         await table.save();
+        this.clearTableMetaCache(roomId);
         this.logger.log(
           `Table ${roomId} marked as inactive/closed in database.`,
         );
@@ -348,7 +382,7 @@ export class PokerGameService implements OnModuleDestroy {
   async broadcastLobbyRoomStatus(roomId: string) {
     if (!this.server) return;
     try {
-      const table = await PokerTable.findOne({ where: { id: roomId } });
+      const table = await this.getCachedTableMeta(roomId);
       if (!table) return;
       const playersCount = await TableSession.count({
         where: { table_id: roomId, member_status: 'active' },
@@ -427,28 +461,54 @@ export class PokerGameService implements OnModuleDestroy {
   }
 
   async broadcastTableState(roomId: string) {
-    let tableState = await this.stateService.getTableState(roomId);
-    const dbTable = await PokerTable.findOne({ where: { id: roomId } });
+    // 1. Fetch table metadata using in-memory cache
+    const dbTable = await this.getCachedTableMeta(roomId);
+    if (!dbTable) return; // If the room doesn't exist in DB, nothing to broadcast
 
-    if (!tableState) {
-      if (!dbTable) return;
-      const initialFields = {
-        room_name: dbTable.name || 'Bàn Poker',
-        game_stage: 'waiting',
-        total_pot: '0',
-        current_highest_bet: '0',
-        dealer_seat: '1',
-        small_blind_seat: '0',
-        big_blind_seat: '0',
-        current_turn_seat: '0',
-        community_cards: '',
-      };
-      await this.stateService.setTableState(roomId, initialFields);
-      tableState = await this.stateService.getTableState(roomId);
-      if (!tableState) return;
+    const maxPlayers = dbTable.max_players || 9;
+
+    // 2. Try to read from snapshot
+    let snapshot = await this.stateService.getTableSnapshot(roomId, maxPlayers);
+
+    // 3. Fallback/rebuild snapshot if empty
+    if (!snapshot.tableState) {
+      let tableState = await this.stateService.getTableState(roomId);
+      if (!tableState) {
+        const initialFields = {
+          game_stage: 'waiting',
+          total_pot: '0',
+          current_highest_bet: '0',
+          dealer_seat: '1',
+          small_blind_seat: '0',
+          big_blind_seat: '0',
+          current_turn_seat: '0',
+          community_cards: '',
+          last_full_raise_size: '0',
+        };
+        await this.stateService.setTableState(roomId, initialFields);
+        tableState = await this.stateService.getTableState(roomId);
+        if (!tableState) return;
+      }
+
+      const seats = await this.stateService.getAllSeats(roomId, maxPlayers);
+
+      // Save it to snapshot atomically
+      const pipeline = this.stateService.getRedisClient().pipeline();
+      this.stateService.buildSnapshotFromSeatsAndState(
+        pipeline,
+        roomId,
+        seats,
+        tableState,
+      );
+      await pipeline.exec();
+
+      // Populate snapshot object
+      snapshot = { tableState, seats };
     }
 
-    const seats = await this.stateService.getAllSeats(roomId);
+    const { tableState, seats } = snapshot;
+    if (!tableState) return;
+
     const sanitizedSeats = seats.map((s) => ({
       seatIndex: s.seat_number,
       id: s.user_id,
@@ -468,13 +528,13 @@ export class PokerGameService implements OnModuleDestroy {
 
     const payload = {
       room_id: roomId,
-      room_name: dbTable?.name || tableState.room_name,
-      status: dbTable?.status || 'waiting',
-      owner_id: dbTable?.owner_id || '',
-      min_buyin: dbTable?.min_buyin ? Number(dbTable.min_buyin) : 0,
-      max_buyin: dbTable?.max_buyin ? Number(dbTable.max_buyin) : 0,
-      small_blind: dbTable?.small_blind ? Number(dbTable.small_blind) : 50,
-      big_blind: dbTable?.big_blind ? Number(dbTable.big_blind) : 100,
+      room_name: dbTable.name || tableState.room_name || 'Bàn Poker',
+      status: dbTable.status || 'waiting',
+      owner_id: dbTable.owner_id || '',
+      min_buyin: dbTable.min_buyin ? Number(dbTable.min_buyin) : 0,
+      max_buyin: dbTable.max_buyin ? Number(dbTable.max_buyin) : 0,
+      small_blind: dbTable.small_blind ? Number(dbTable.small_blind) : 50,
+      big_blind: dbTable.big_blind ? Number(dbTable.big_blind) : 100,
       game_stage: tableState.game_stage || 'ended',
       community_cards: tableState.community_cards
         ? tableState.community_cards.split(',')
@@ -496,28 +556,34 @@ export class PokerGameService implements OnModuleDestroy {
     const sockets = await this.server.in(`table_${roomId}`).fetchSockets();
     const seatedUserIds = seats.map((s) => String(s.user_id));
 
+    // Pre-compute spectator payload once
+    const spectatorMaskedSeats = sanitizedSeats.map((s) => {
+      if (!s.isBot) {
+        return {
+          ...s,
+          name: `Player ${s.seatIndex}`,
+          avatar: `https://api.dicebear.com/7.x/adventurer/svg?seed=Player${s.seatIndex}`,
+        };
+      }
+      return s;
+    });
+
+    const spectatorPayload = {
+      ...payload,
+      seats: spectatorMaskedSeats,
+    };
+
+    const playerPayload = {
+      ...payload,
+      seats: sanitizedSeats,
+    };
+
     for (const socket of sockets) {
       const socketUserId = socket.data?.user?.id;
       const isSeated =
         socketUserId && seatedUserIds.includes(String(socketUserId));
 
-      const maskedSeats = sanitizedSeats.map((s) => {
-        const isBot = s.isBot;
-        const isHero = socketUserId && String(s.id) === String(socketUserId);
-        if (!isSeated && !isBot && !isHero) {
-          return {
-            ...s,
-            name: `Player ${s.seatIndex}`,
-            avatar: `https://api.dicebear.com/7.x/adventurer/svg?seed=Player${s.seatIndex}`,
-          };
-        }
-        return s;
-      });
-
-      socket.emit('table:state', {
-        ...payload,
-        seats: maskedSeats,
-      });
+      socket.emit('table:state', isSeated ? playerPayload : spectatorPayload);
     }
   }
 
@@ -605,6 +671,7 @@ export class PokerGameService implements OnModuleDestroy {
         } else if (dbTable.status !== 'waiting') {
           dbTable.status = 'waiting';
           await dbTable.save();
+          this.clearTableMetaCache(roomId);
           // Emit lobby status when changed
           await this.broadcastLobbyRoomStatus(roomId);
         }
@@ -684,7 +751,175 @@ export class PokerGameService implements OnModuleDestroy {
         return;
       }
 
+      // Check if pending seat shuffle is requested
+      const tableState = await this.stateService.getTableState(roomId);
+      if (tableState && tableState.pending_shuffle_seats === '1') {
+        this.logger.log(`Applying pending seat shuffle for table ${roomId}...`);
+        const seatsToShuffle = await this.stateService.getAllSeats(roomId);
+        const occupiedSeats = seatsToShuffle.filter((s) => s && s.user_id);
+        if (occupiedSeats.length >= 2) {
+          const seatNumbers = occupiedSeats.map((s) => s.seat_number);
+
+          // Fisher-Yates shuffle
+          const shuffledSeats = [...occupiedSeats];
+          for (let i = shuffledSeats.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledSeats[i], shuffledSeats[j]] = [
+              shuffledSeats[j],
+              shuffledSeats[i],
+            ];
+          }
+
+          // Clear old Redis seat states
+          const redis = this.stateService.getRedisClient();
+          const pipeline = redis.pipeline();
+          for (const seatNum of seatNumbers) {
+            pipeline.del(`table:${roomId}:seat:${seatNum}`);
+            this.stateService.clearSeatFromSnapshot(pipeline, roomId, seatNum);
+          }
+          await pipeline.exec();
+
+          // Update DB TableSession & Redis
+          await withTransaction(this.dataSource, async (qr) => {
+            for (let k = 0; k < shuffledSeats.length; k++) {
+              const playerSeat = shuffledSeats[k];
+              const newSeatNum = seatNumbers[k];
+
+              // Update DB
+              const session = await qr.manager.findOne(TableSession, {
+                where: [
+                  {
+                    table_id: roomId,
+                    user_id: playerSeat.user_id,
+                    member_status: 'active',
+                  },
+                  {
+                    table_id: roomId,
+                    user_id: playerSeat.user_id,
+                    member_status: 'sitting_out',
+                  },
+                ],
+                lock: { mode: 'pessimistic_write' },
+              });
+              if (session) {
+                session.seat_number = newSeatNum;
+                await qr.manager.save(session);
+              }
+
+              // Set Redis seat
+              const { seat_number, ...seatData } = playerSeat;
+              console.log('seat_number', seat_number);
+              await this.stateService.setSeat(roomId, newSeatNum, {
+                ...seatData,
+              });
+            }
+
+            // Ghi Audit Log
+            const log = qr.manager.create(RoomAdminLog, {
+              room_id: roomId,
+              actor_id: 'SYSTEM',
+              log_type: 'config_change',
+              description: `Hệ thống thực hiện tráo ghế tự động khi ván bài kết thúc.`,
+            });
+            await qr.manager.save(log);
+          });
+
+          // Reset pending flag
+          await this.stateService.setTableState(roomId, {
+            pending_shuffle_seats: '0',
+          });
+
+          // Notify the room
+          this.server.to(`table_${roomId}`).emit('table:notification', {
+            message:
+              'Vị trí ghế ngồi đã được tráo đổi ngẫu nhiên trước ván mới.',
+          });
+        } else {
+          // Clear flag if not enough players
+          await this.stateService.setTableState(roomId, {
+            pending_shuffle_seats: '0',
+          });
+        }
+      }
+
       const seats = await this.stateService.getAllSeats(roomId);
+
+      // Apply pending stack adjustments before starting the hand
+      for (const seat of seats) {
+        const pendingAdd = parseInt(String(seat.pending_add_amount || '0'), 10);
+        const pendingRemove = parseInt(
+          String(seat.pending_remove_amount || '0'),
+          10,
+        );
+        if (pendingAdd > 0 || pendingRemove > 0) {
+          const currentStack = parseInt(seat.stack || '0', 10);
+          let finalStack = currentStack + pendingAdd - pendingRemove;
+          if (finalStack < 0) finalStack = 0;
+
+          // Update DB TableSession
+          await withTransaction(this.dataSource, async (qr) => {
+            const session = await qr.manager.findOne(TableSession, {
+              where: [
+                {
+                  table_id: roomId,
+                  user_id: seat.user_id,
+                  member_status: 'active',
+                },
+                {
+                  table_id: roomId,
+                  user_id: seat.user_id,
+                  member_status: 'sitting_out',
+                },
+              ],
+              lock: { mode: 'pessimistic_write' },
+            });
+            if (session) {
+              session.chips_at_table = finalStack.toString();
+              await qr.manager.save(session);
+            }
+
+            const logDesc = `Hệ thống áp dụng điều chỉnh phỉnh tự động trước ván mới cho user ${seat.user_id}: Cộng ${pendingAdd}, Trừ ${pendingRemove}. Trước: ${currentStack}, Sau: ${finalStack}`;
+            const log = qr.manager.create(RoomAdminLog, {
+              room_id: roomId,
+              actor_id: 'SYSTEM',
+              target_id: seat.user_id,
+              log_type: 'config_change',
+              description: logDesc,
+            });
+            await qr.manager.save(log);
+          });
+
+          // Update Redis seat state
+          await this.stateService.setSeat(roomId, seat.seat_number, {
+            stack: finalStack.toString(),
+            pending_add_amount: '0',
+            pending_remove_amount: '0',
+          });
+
+          // Send notification via socket to target player
+          const diff = pendingAdd - pendingRemove;
+          let notifMsg = '';
+          if (diff > 0) {
+            notifMsg = `Chủ phòng đã thêm ${diff} phỉnh vào stack của bạn.`;
+          } else if (diff < 0) {
+            notifMsg = `Chủ phòng đã rút ${Math.abs(diff)} phỉnh khỏi stack của bạn.`;
+          }
+          if (notifMsg) {
+            this.server
+              .to(`user_${seat.user_id}`)
+              .emit('table:stack-adjustment-applied', {
+                message: notifMsg,
+                new_stack: finalStack,
+              });
+          }
+
+          // Update local copy in memory
+          seat.stack = finalStack.toString();
+          seat.pending_add_amount = '0';
+          seat.pending_remove_amount = '0';
+        }
+      }
+
       let activeSeatsList = [...seats];
 
       // Pipeline: xóa bài cũ + reset community_cards trong 1 round-trip
@@ -719,6 +954,17 @@ export class PokerGameService implements OnModuleDestroy {
       const currentSeats = [...seats];
       await Promise.all(
         currentSeats.map(async (seat) => {
+          if (seat.pending_sit_out === '1') {
+            this.logger.log(
+              `User ${seat.user_id} at seat ${seat.seat_number} transitions from pending sit out to sitting_out.`,
+            );
+            await this.stateService.setSeat(roomId, seat.seat_number, {
+              status: 'sitting_out',
+              pending_sit_out: '0',
+            });
+            seat.status = 'sitting_out';
+          }
+
           if (seat.pending_leave === '1') {
             this.logger.log(
               `User ${seat.user_id} has pending leave. Kicking from seat.`,
@@ -853,7 +1099,7 @@ export class PokerGameService implements OnModuleDestroy {
         }
       }
 
-      const dbTable = await PokerTable.findOne({ where: { id: roomId } });
+      const dbTable = await this.getCachedTableMeta(roomId);
       const maxPlayers = dbTable ? dbTable.max_players : 9;
 
       const findNextActiveSeat = (start: number): number => {
@@ -1239,6 +1485,7 @@ export class PokerGameService implements OnModuleDestroy {
         try {
           dbTable.status = 'running';
           await dbTable.save();
+          this.clearTableMetaCache(roomId);
           await this.broadcastLobbyRoomStatus(roomId);
         } catch (e) {
           this.logger.error(

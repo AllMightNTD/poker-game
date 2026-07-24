@@ -13,6 +13,8 @@ export interface Player {
   isActive: boolean;
   isFolded: boolean;
   isSittingOut?: boolean;
+  pending_add_amount?: number;
+  pending_remove_amount?: number;
   lastAction?: string;
   cards?: Card[];
   isDealer?: boolean;
@@ -58,6 +60,9 @@ export interface PokerPlayer {
    * every consumer of `usePokerGame` populates it, but when present it is
    * used to correctly cap call/raise amounts to a real all-in. */
   stack?: string | number;
+  isSittingOut?: boolean;
+  pending_add_amount?: number;
+  pending_remove_amount?: number;
   gamification_level?: string;
   gamification_xp?: number;
 }

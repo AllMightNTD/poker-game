@@ -319,7 +319,7 @@ const Seat: React.FC<SeatProps> = ({
           isHero={player.isHero}
           isMobile={isMobile}
           isBot={!!player.isBot}
-          status={player.lastAction || ''}
+          status={player.isSittingOut ? 'Sit Out' : player.lastAction === 'Waiting' ? 'Waiting' : player.lastAction || ''}
         />
 
         {/* Avatar + Cards Row */}
@@ -336,6 +336,7 @@ const Seat: React.FC<SeatProps> = ({
               isActive={player.isActive}
               isHero={player.isHero}
               sizeClass={avatarSizeClass}
+              isSittingOut={player.isSittingOut || player.lastAction === 'Sit Out' || player.lastAction === 'Disconnected'}
             />
             {/* Dealer Button */}
             {player.isDealer && <DealerButton />}

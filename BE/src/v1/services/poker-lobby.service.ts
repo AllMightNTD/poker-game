@@ -23,9 +23,9 @@ import { TableSession } from '../entities/table_session.entity';
 import { User } from '../entities/user.entity';
 import { Wallet } from '../entities/wallet.entity';
 import { PlayerStats } from '../gamification/entities/player-stats.entity';
-import { PokerStateService } from './poker-state.service';
 import { AntiCollusionService } from './anti-collusion.service';
 import { PokerGameService } from './poker-game.service';
+import { PokerStateService } from './poker-state.service';
 
 @Injectable()
 export class PokerLobbyService {
@@ -705,16 +705,23 @@ export class PokerLobbyService {
       session.member_status = newStatus;
       await session.save();
 
-      await this.stateService.setSeat(body.room_id, heroSeat.seat_number, {
-        status: newStatus,
-      });
-
-      // Mid-hand fold if player sits out during their turn in active hand
-      if (
+      const isHandInProgress =
         tableState &&
         tableState.game_stage !== 'waiting' &&
-        tableState.game_stage !== 'ended'
-      ) {
+        tableState.game_stage !== 'ended';
+
+      if (isHandInProgress) {
+        await this.stateService.setSeat(body.room_id, heroSeat.seat_number, {
+          pending_sit_out: '1',
+        });
+      } else {
+        await this.stateService.setSeat(body.room_id, heroSeat.seat_number, {
+          status: newStatus,
+        });
+      }
+
+      // Mid-hand fold if player sits out during their turn in active hand
+      if (isHandInProgress) {
         if (
           tableState.current_turn_seat === heroSeat.seat_number.toString() &&
           this.gameService
@@ -757,6 +764,7 @@ export class PokerLobbyService {
 
       await this.stateService.setSeat(body.room_id, heroSeat.seat_number, {
         status: newStatus,
+        pending_sit_out: '0',
       });
 
       // Reset away hands and timeouts counter on Redis
@@ -826,7 +834,43 @@ export class PokerLobbyService {
 
     let finalStackStr = session.chips_at_table;
     if (heroSeat) {
-      finalStackStr = heroSeat.stack;
+      const pendingAdd = parseInt(
+        String(heroSeat.pending_add_amount || '0'),
+        10,
+      );
+      const pendingRemove = parseInt(
+        String(heroSeat.pending_remove_amount || '0'),
+        10,
+      );
+      if (pendingAdd > 0 || pendingRemove > 0) {
+        let fsNum = parseInt(heroSeat.stack, 10) + pendingAdd - pendingRemove;
+        if (fsNum < 0) fsNum = 0;
+        finalStackStr = fsNum.toString();
+
+        const queryRunnerLog =
+          PokerTable.getRepository().manager.connection.createQueryRunner();
+        await queryRunnerLog.connect();
+        await queryRunnerLog.startTransaction();
+        try {
+          const logDesc = `Hệ thống áp dụng điều chỉnh phỉnh tồn đọng khi user rời bàn ${userId}: Cộng ${pendingAdd}, Trừ ${pendingRemove}. Trước: ${heroSeat.stack}, Sau: ${finalStackStr}`;
+          const log = queryRunnerLog.manager.create(RoomAdminLog, {
+            room_id: roomId,
+            actor_id: 'SYSTEM',
+            target_id: userId,
+            log_type: 'config_change',
+            description: logDesc,
+          });
+          await queryRunnerLog.manager.save(log);
+          await queryRunnerLog.commitTransaction();
+        } catch (e) {
+          console.log('[Process Leave]', e.message);
+          await queryRunnerLog.rollbackTransaction();
+        } finally {
+          await queryRunnerLog.release();
+        }
+      } else {
+        finalStackStr = heroSeat.stack;
+      }
     }
 
     const finalStack = BigInt(finalStackStr);
@@ -1023,6 +1067,8 @@ export class PokerLobbyService {
       big_blind: bb,
     });
 
+    this.gameService?.clearTableMetaCache(roomId);
+
     return {
       success: true,
       small_blind: sb,
@@ -1050,6 +1096,7 @@ export class PokerLobbyService {
     }
 
     await table.save();
+    this.gameService?.clearTableMetaCache(roomId);
 
     return {
       success: true,
@@ -1271,62 +1318,157 @@ export class PokerLobbyService {
       );
     }
 
-    const amt = BigInt(body.amount);
-    let currentRedisStack = BigInt(targetSeat.stack);
-
-    if (body.action === 'add') {
-      currentRedisStack += amt;
-    } else {
-      currentRedisStack =
-        currentRedisStack < amt ? BigInt(0) : currentRedisStack - amt;
+    if (!Number.isInteger(body.amount) || body.amount <= 0) {
+      throw new BadRequestException(
+        'Số tiền điều chỉnh phải là số nguyên dương.',
+      );
     }
 
-    const newStack = currentRedisStack.toString();
+    const tableState = await this.stateService.getTableState(roomId);
+    const isHandInProgress =
+      tableState &&
+      tableState.game_stage &&
+      tableState.game_stage !== 'waiting' &&
+      tableState.game_stage !== 'ended';
 
-    // Wrap DB session update + AuditLog in a single transaction with pessimistic lock
-    await withTransaction(this.dataSource, async (qr) => {
-      const session = await qr.manager.findOne(TableSession, {
-        where: [
-          {
-            table_id: roomId,
-            user_id: body.target_user_id,
-            member_status: 'active',
-          },
-          {
-            table_id: roomId,
-            user_id: body.target_user_id,
-            member_status: 'sitting_out',
-          },
-        ],
-        lock: { mode: 'pessimistic_write' },
-      });
+    const currentStack = parseInt(targetSeat.stack || '0', 10);
+    const pendingAdd = parseInt(
+      String(targetSeat.pending_add_amount || '0'),
+      10,
+    );
+    const pendingRemove = parseInt(
+      String(targetSeat.pending_remove_amount || '0'),
+      10,
+    );
 
-      if (!session) {
-        throw new NotFoundException('Người chơi không ở tại ghế chơi.');
+    let potentialStack = currentStack + pendingAdd - pendingRemove;
+    if (body.action === 'add') {
+      potentialStack += body.amount;
+      const maxBuyin = parseInt(table.max_buyin || '0', 10);
+      if (maxBuyin > 0 && potentialStack > maxBuyin) {
+        throw new BadRequestException(
+          `Tổng stack của người chơi sau khi điều chỉnh không được vượt quá giới hạn Buy-in tối đa của bàn (${maxBuyin}).`,
+        );
+      }
+    } else {
+      potentialStack -= body.amount;
+      if (potentialStack < 0) {
+        throw new BadRequestException(
+          'Stack dự kiến của người chơi không thể nhỏ hơn 0.',
+        );
+      }
+    }
+
+    if (isHandInProgress) {
+      // Hand in progress: do not change active stack, save as pending adjustment
+      let newPendingAdd = pendingAdd;
+      let newPendingRemove = pendingRemove;
+      if (body.action === 'add') {
+        newPendingAdd += body.amount;
+      } else {
+        newPendingRemove += body.amount;
       }
 
-      session.chips_at_table = newStack;
-      await qr.manager.save(session);
-
-      const log = qr.manager.create(RoomAdminLog, {
-        room_id: roomId,
-        actor_id: userId,
-        target_id: body.target_user_id,
-        log_type: 'config_change',
-        description: `Chủ phòng ${body.action === 'add' ? 'cộng' : 'trừ'} ${body.amount} phỉnh cho user ${body.target_user_id}. Stack mới: ${newStack}`,
+      await this.stateService.setSeat(roomId, targetSeat.seat_number, {
+        pending_add_amount: newPendingAdd.toString(),
+        pending_remove_amount: newPendingRemove.toString(),
       });
-      await qr.manager.save(log);
-    });
 
-    // Update Redis after DB commit succeeds
-    await this.stateService.setSeat(roomId, targetSeat.seat_number, {
-      stack: newStack,
-    });
+      // Send socket notifications to target player
+      const typeStr = body.action === 'add' ? 'thêm' : 'rút';
+      const typeAction = body.action === 'add' ? 'cộng' : 'trừ';
+      const notifMsg = `Chủ phòng đã lên lịch ${typeStr} ${body.amount} phỉnh vào/khỏi stack của bạn. Thay đổi sẽ có hiệu lực từ ván sau.`;
 
-    return {
-      success: true,
-      new_stack: newStack,
-    };
+      this.gameService.server
+        .to(`user_${body.target_user_id}`)
+        .emit('table:stack-adjustment-created', {
+          message: notifMsg,
+          amount: body.amount,
+          type: body.action.toUpperCase(),
+        });
+
+      // Also create administrative audit log for the pending event
+      await withTransaction(this.dataSource, async (qr) => {
+        const log = qr.manager.create(RoomAdminLog, {
+          room_id: roomId,
+          actor_id: userId,
+          target_id: body.target_user_id,
+          log_type: 'config_change',
+          description: `Chủ phòng tạo yêu cầu chờ duyệt ${typeAction} ${body.amount} phỉnh cho user ${body.target_user_id}.`,
+        });
+        await qr.manager.save(log);
+      });
+
+      // Broadcast state to all clients
+      await this.gameService.broadcastTableState(roomId);
+
+      return {
+        success: true,
+        pending: true,
+        new_stack: currentStack.toString(),
+      };
+    } else {
+      // No active hand: apply immediately
+      const newStack = potentialStack.toString();
+
+      await withTransaction(this.dataSource, async (qr) => {
+        const session = await qr.manager.findOne(TableSession, {
+          where: [
+            {
+              table_id: roomId,
+              user_id: body.target_user_id,
+              member_status: 'active',
+            },
+            {
+              table_id: roomId,
+              user_id: body.target_user_id,
+              member_status: 'sitting_out',
+            },
+          ],
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!session) {
+          throw new NotFoundException('Người chơi không ở tại ghế chơi.');
+        }
+
+        session.chips_at_table = newStack;
+        await qr.manager.save(session);
+
+        const log = qr.manager.create(RoomAdminLog, {
+          room_id: roomId,
+          actor_id: userId,
+          target_id: body.target_user_id,
+          log_type: 'config_change',
+          description: `Chủ phòng ${body.action === 'add' ? 'cộng' : 'trừ'} ${body.amount} phỉnh trực tiếp cho user ${body.target_user_id}. Trước: ${currentStack}, Sau: ${newStack}`,
+        });
+        await qr.manager.save(log);
+      });
+
+      // Update Redis after DB commit succeeds
+      await this.stateService.setSeat(roomId, targetSeat.seat_number, {
+        stack: newStack,
+      });
+
+      // Send socket notifications to target player
+      const typeStr = body.action === 'add' ? 'thêm' : 'rút';
+      const notifMsg = `Chủ phòng đã ${typeStr} ${body.amount} phỉnh vào/khỏi stack của bạn.`;
+
+      this.gameService.server
+        .to(`user_${body.target_user_id}`)
+        .emit('table:stack-updated', {
+          message: notifMsg,
+          new_stack: potentialStack,
+        });
+
+      // Broadcast state to all clients
+      await this.gameService.broadcastTableState(roomId);
+
+      return {
+        success: true,
+        new_stack: newStack,
+      };
+    }
   }
 
   /**
@@ -1345,31 +1487,47 @@ export class PokerLobbyService {
     const redis = this.stateService.getRedisClient();
     const seats = await this.stateService.getAllSeats(roomId);
 
+    // Group sessions by user_id
+    const userSessionMap = new Map<string, TableSession[]>();
+    for (const sess of sessions) {
+      const list = userSessionMap.get(sess.user_id) || [];
+      list.push(sess);
+      userSessionMap.set(sess.user_id, list);
+    }
+
     const players = await Promise.all(
-      sessions.map(async (sess) => {
+      Array.from(userSessionMap.entries()).map(async ([sessUserId, list]) => {
+        // Find if there is an active session
+        const activeSess = list.find((s) => s.member_status === 'active');
+        const repSess = activeSess || list[0];
+
         const user = await PokerTable.getRepository().manager.findOne(User, {
-          where: { id: sess.user_id },
+          where: { id: sessUserId },
         });
         const username =
           user?.user_name || user?.email?.split('@')[0] || 'Guest';
 
-        const currentSeat = seats.find((s) => s.user_id === sess.user_id);
+        const currentSeat = seats.find((s) => s.user_id === sessUserId);
         const seat_number = currentSeat
           ? currentSeat.seat_number
-          : sess.seat_number;
-        const status = sess.member_status;
+          : repSess.seat_number;
+        const status = currentSeat ? 'active' : 'left';
 
-        const statsKey = `table:${roomId}:player:${sess.user_id}:stats`;
+        const statsKey = `table:${roomId}:player:${sessUserId}:stats`;
         const redisStats = await redis.hgetall(statsKey);
 
+        const totalChipsAtTable = list.reduce(
+          (sum, s) => sum + (parseInt(s.chips_at_table) || 0),
+          0,
+        );
         const purchase_count =
-          parseInt(redisStats.purchase_count || sess.chips_at_table) || 0;
+          parseInt(redisStats.purchase_count) || totalChipsAtTable;
         const cashout_chips = parseInt(redisStats.cashout_chips || '0') || 0;
         const current_chips = currentSeat ? parseInt(currentSeat.stack) : 0;
         const net_pnl = current_chips + cashout_chips - purchase_count;
 
         return {
-          user_id: sess.user_id,
+          user_id: sessUserId,
           username,
           seat_number,
           status,
@@ -1698,5 +1856,128 @@ export class PokerLobbyService {
       table_id: s.table_id,
       table_name: s.table?.name || 'Vegas Room',
     }));
+  }
+
+  async shuffleSeats(userId: string, roomId: string) {
+    const table = await PokerTable.findOne({ where: { id: roomId } });
+    if (!table) {
+      throw new NotFoundException('Bàn chơi không tồn tại.');
+    }
+
+    if (table.owner_id !== userId) {
+      throw new BadRequestException('Chỉ chủ phòng mới có quyền tráo ghế.');
+    }
+
+    const seats = await this.stateService.getAllSeats(roomId);
+    const occupiedSeats = seats.filter((s) => s && s.user_id);
+    if (occupiedSeats.length < 2) {
+      throw new BadRequestException(
+        'Bàn chơi phải có ít nhất 2 người ngồi để tráo ghế.',
+      );
+    }
+
+    const tableState = await this.stateService.getTableState(roomId);
+    const isHandRunning =
+      tableState &&
+      tableState.game_stage &&
+      tableState.game_stage !== 'ended' &&
+      tableState.game_stage !== 'waiting';
+
+    if (isHandRunning) {
+      // Set flag to pending shuffle
+      await this.stateService.setTableState(roomId, {
+        pending_shuffle_seats: '1',
+      });
+
+      // Broadcast and emit table notifications
+      const notifMsg =
+        'Chủ phòng đã lên lịch tráo đổi vị trí ghế ngồi khi ván bài kết thúc.';
+      this.gameService.server.to(`table_${roomId}`).emit('table:notification', {
+        message: notifMsg,
+      });
+
+      return {
+        success: true,
+        pending: true,
+      };
+    }
+
+    const seatNumbers = occupiedSeats.map((s) => s.seat_number);
+
+    // Shuffle seats
+    const shuffledSeats = [...occupiedSeats];
+    for (let i = shuffledSeats.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledSeats[i], shuffledSeats[j]] = [
+        shuffledSeats[j],
+        shuffledSeats[i],
+      ];
+    }
+
+    // Clear old Redis seat states
+    const redis = this.stateService.getRedisClient();
+    const pipeline = redis.pipeline();
+    for (const seatNum of seatNumbers) {
+      pipeline.del(`table:${roomId}:seat:${seatNum}`);
+      this.stateService.clearSeatFromSnapshot(pipeline, roomId, seatNum);
+    }
+    await pipeline.exec();
+
+    // Update DB & Redis
+    await withTransaction(this.dataSource, async (qr) => {
+      for (let k = 0; k < shuffledSeats.length; k++) {
+        const playerSeat = shuffledSeats[k];
+        const newSeatNum = seatNumbers[k];
+
+        // Update DB
+        const session = await qr.manager.findOne(TableSession, {
+          where: [
+            {
+              table_id: roomId,
+              user_id: playerSeat.user_id,
+              member_status: 'active',
+            },
+            {
+              table_id: roomId,
+              user_id: playerSeat.user_id,
+              member_status: 'sitting_out',
+            },
+          ],
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (session) {
+          session.seat_number = newSeatNum;
+          await qr.manager.save(session);
+        }
+
+        // Set Redis seat
+        const { seat_number, ...seatData } = playerSeat;
+        console.log('[Shuffle Seat] seat_number', seat_number);
+        console.log('[Shuffle Seat] newSeatNum', newSeatNum);
+        console.log('[Shuffle Seat] seatData', seatData);
+        await this.stateService.setSeat(roomId, newSeatNum, {
+          ...seatData,
+        });
+      }
+
+      // Audit Log
+      const log = qr.manager.create(RoomAdminLog, {
+        room_id: roomId,
+        actor_id: userId,
+        log_type: 'config_change',
+        description: `Chủ phòng đã tráo đổi vị trí ghế ngồi của tất cả người chơi.`,
+      });
+      await qr.manager.save(log);
+    });
+
+    // Broadcast updated state to all clients
+    await this.gameService.broadcastTableState(roomId);
+
+    this.gameService.server.to(`table_${roomId}`).emit('table:notification', {
+      message: 'Vị trí ghế ngồi đã được tráo đổi ngẫu nhiên.',
+    });
+
+    return { success: true, pending: false };
   }
 }

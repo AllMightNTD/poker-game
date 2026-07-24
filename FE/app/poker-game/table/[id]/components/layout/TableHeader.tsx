@@ -58,6 +58,7 @@ export const TableHeader = () => {
     roomStatus,
     togglePause,
     leaveTable,
+    toggleSitOut,
   } = usePokerGame();
 
   const [hostSettingsOpen, setHostSettingsOpen] = useState(false);
@@ -66,6 +67,8 @@ export const TableHeader = () => {
 
   const activePlayers = players.filter((p) => !p.isFolded).length;
   const isHost = currentUser?.id === ownerId;
+  const myPlayer = players.find((p) => p && String(p.id) === String(currentUser?.id));
+  const isSeated = !!myPlayer;
 
   const handleOpenSettings = () => {
     setDraftTableBg(tableBackground);
@@ -97,6 +100,19 @@ export const TableHeader = () => {
           <ChevronLeft size={16} />
           {!isMobile && <span className="text-[10px] font-bold uppercase tracking-wider">Rời bàn</span>}
         </button>
+
+        {isSeated && (
+          <button
+            onClick={toggleSitOut}
+            className={`flex items-center justify-center px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 border cursor-pointer shrink-0
+              ${myPlayer?.isSittingOut
+                ? "bg-amber-600/10 border-amber-500/30 text-amber-400 hover:bg-amber-600/20 shadow-[0_0_10px_rgba(245,158,11,0.1)] animate-pulse"
+                : "bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700"
+              }`}
+          >
+            {myPlayer?.isSittingOut ? "BACK" : "AWAY"}
+          </button>
+        )}
 
         <div className="h-5 w-px bg-slate-800 shrink-0 hidden sm:block" />
 

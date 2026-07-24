@@ -7,7 +7,135 @@ import { PokerTableState, PokerSeatState } from '../types/poker.types';
 export class PokerStateService implements OnModuleInit {
   private redis: Redis;
 
+  static readonly SNAPSHOT_SEAT_FIELDS = [
+    'user_id',
+    'username',
+    'avatar',
+    'stack',
+    'current_bet',
+    'status',
+    'has_used_extra_time',
+    'is_bot',
+    'pending_add_amount',
+    'pending_remove_amount',
+  ];
+
+  static readonly SNAPSHOT_TABLE_FIELDS = [
+    'game_stage',
+    'total_pot',
+    'current_highest_bet',
+    'current_turn_seat',
+    'dealer_seat',
+    'small_blind_seat',
+    'big_blind_seat',
+    'community_cards',
+    'last_full_raise_size',
+    'pending_shuffle_seats',
+  ];
+
   constructor(private readonly configService: ConfigService) {}
+
+  /**
+   * Helper private: Ánh xạ seats và table fields thành snapshot phẳng
+   */
+  private buildSnapshotFields(
+    seats: PokerSeatState[],
+    tableFields: Record<string, string | number>,
+  ): Record<string, string | number> {
+    const snapshot: Record<string, string | number> = {};
+
+    // Map table fields
+    for (const field of PokerStateService.SNAPSHOT_TABLE_FIELDS) {
+      if (tableFields[field] !== undefined && tableFields[field] !== null) {
+        snapshot[field] = tableFields[field];
+      }
+    }
+
+    // Map seats
+    for (const seat of seats) {
+      const seatNum = seat.seat_number;
+      for (const field of PokerStateService.SNAPSHOT_SEAT_FIELDS) {
+        if (seat[field] !== undefined && seat[field] !== null) {
+          snapshot[`seat_${seatNum}_${field}`] = seat[field] as string | number;
+        }
+      }
+    }
+
+    return snapshot;
+  }
+
+  /**
+   * Thêm lệnh HSET ghi toàn bộ snapshot vào pipeline
+   */
+  buildSnapshotFromSeatsAndState(
+    pipeline: any,
+    tableId: string,
+    seats: PokerSeatState[],
+    tableFields: Record<string, string | number>,
+  ): void {
+    const fields = this.buildSnapshotFields(seats, tableFields);
+    if (Object.keys(fields).length > 0) {
+      pipeline.hset(`table:${tableId}:snapshot`, fields);
+    }
+  }
+
+  /**
+   * Cập nhật một phần fields của ghế ngồi vào snapshot
+   */
+  updateSnapshotSeatFields(
+    pipeline: any,
+    tableId: string,
+    seatNumber: number,
+    fields: Record<string, string | number>,
+  ): void {
+    const updateFields: Record<string, string | number> = {};
+    const prefix = `seat_${seatNumber}_`;
+    for (const field of PokerStateService.SNAPSHOT_SEAT_FIELDS) {
+      if (fields[field] !== undefined && fields[field] !== null) {
+        updateFields[`${prefix}${field}`] = fields[field];
+      }
+    }
+    // Default is_bot to '0' if user_id is set but is_bot is undefined
+    if (fields.user_id && fields.is_bot === undefined) {
+      updateFields[`${prefix}is_bot`] = '0';
+    }
+    if (Object.keys(updateFields).length > 0) {
+      pipeline.hset(`table:${tableId}:snapshot`, updateFields);
+    }
+  }
+
+  /**
+   * Cập nhật một phần fields của bàn chơi vào snapshot
+   */
+  updateSnapshotTableFields(
+    pipeline: any,
+    tableId: string,
+    fields: Record<string, string | number>,
+  ): void {
+    const updateFields: Record<string, string | number> = {};
+    for (const field of PokerStateService.SNAPSHOT_TABLE_FIELDS) {
+      if (fields[field] !== undefined && fields[field] !== null) {
+        updateFields[field] = fields[field];
+      }
+    }
+    if (Object.keys(updateFields).length > 0) {
+      pipeline.hset(`table:${tableId}:snapshot`, updateFields);
+    }
+  }
+
+  /**
+   * Xóa các fields liên quan đến ghế ngồi khỏi snapshot
+   */
+  clearSeatFromSnapshot(
+    pipeline: any,
+    tableId: string,
+    seatNumber: number,
+  ): void {
+    const fieldsToDel = PokerStateService.SNAPSHOT_SEAT_FIELDS.map(
+      (f) => `seat_${seatNumber}_${f}`,
+    );
+    pipeline.hdel(`table:${tableId}:snapshot`, ...fieldsToDel);
+  }
 
   onModuleInit() {
     const host = this.configService.get<string>('REDIS_HOST', 'localhost');
@@ -62,15 +190,63 @@ export class PokerStateService implements OnModuleInit {
     return Object.keys(data).length > 0 ? data : null;
   }
 
+  async getTableSnapshot(
+    tableId: string,
+    maxPlayers = 9,
+  ): Promise<{ tableState: PokerTableState | null; seats: PokerSeatState[] }> {
+    const key = `table:${tableId}:snapshot`;
+    const data = await this.redis.hgetall(key);
+
+    if (Object.keys(data).length === 0) {
+      return { tableState: null, seats: [] };
+    }
+
+    // Parse table state fields
+    const tableState: PokerTableState = {};
+    for (const field of PokerStateService.SNAPSHOT_TABLE_FIELDS) {
+      if (data[field] !== undefined) {
+        tableState[field] = data[field];
+      }
+    }
+
+    // Parse seats
+    const seats: PokerSeatState[] = [];
+    for (let i = 1; i <= maxPlayers; i++) {
+      const seatPrefix = `seat_${i}_`;
+      const seatData: Record<string, any> = {};
+      let hasSeatData = false;
+
+      for (const field of PokerStateService.SNAPSHOT_SEAT_FIELDS) {
+        const keyInSnapshot = `${seatPrefix}${field}`;
+        if (data[keyInSnapshot] !== undefined) {
+          seatData[field] = data[keyInSnapshot];
+          hasSeatData = true;
+        }
+      }
+
+      if (hasSeatData) {
+        seats.push({
+          ...seatData,
+          seat_number: i,
+        } as unknown as PokerSeatState);
+      }
+    }
+
+    return { tableState, seats };
+  }
+
   async setTableState(
     tableId: string,
     fields: Record<string, string | number>,
   ): Promise<void> {
     const key = `table:${tableId}:state`;
-    await this.redis.hset(key, {
+    const pipeline = this.redis.pipeline();
+    pipeline.hset(key, {
       ...fields,
       last_activity: Date.now().toString(),
     });
+    this.updateSnapshotTableFields(pipeline, tableId, fields);
+    await pipeline.exec();
   }
 
   async deleteTableState(tableId: string): Promise<void> {
@@ -98,12 +274,18 @@ export class PokerStateService implements OnModuleInit {
     fields: Record<string, string | number>,
   ): Promise<void> {
     const key = `table:${tableId}:seat:${seatNumber}`;
-    await this.redis.hset(key, fields);
+    const pipeline = this.redis.pipeline();
+    pipeline.hset(key, fields);
+    this.updateSnapshotSeatFields(pipeline, tableId, seatNumber, fields);
+    await pipeline.exec();
   }
 
   async deleteSeat(tableId: string, seatNumber: number): Promise<void> {
     const key = `table:${tableId}:seat:${seatNumber}`;
-    await this.redis.del(key);
+    const pipeline = this.redis.pipeline();
+    pipeline.del(key);
+    this.clearSeatFromSnapshot(pipeline, tableId, seatNumber);
+    await pipeline.exec();
   }
 
   async getAllSeats(
@@ -143,6 +325,7 @@ export class PokerStateService implements OnModuleInit {
     const pipeline = this.redis.pipeline();
     for (const [seatNumber, fields] of updates.entries()) {
       pipeline.hset(`table:${tableId}:seat:${seatNumber}`, fields);
+      this.updateSnapshotSeatFields(pipeline, tableId, seatNumber, fields);
     }
     await pipeline.exec();
   }
@@ -165,6 +348,7 @@ export class PokerStateService implements OnModuleInit {
     // Write all seat updates
     for (const [seatNumber, fields] of seatUpdates.entries()) {
       pipeline.hset(`table:${tableId}:seat:${seatNumber}`, fields);
+      this.updateSnapshotSeatFields(pipeline, tableId, seatNumber, fields);
     }
 
     // Write table state atomically alongside seat updates
@@ -173,6 +357,7 @@ export class PokerStateService implements OnModuleInit {
         ...tableStateFields,
         last_activity: now,
       });
+      this.updateSnapshotTableFields(pipeline, tableId, tableStateFields);
     }
 
     // Append action log if provided

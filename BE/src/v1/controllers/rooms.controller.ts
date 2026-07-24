@@ -557,6 +557,25 @@ export class RoomsController {
     return this.lobbyService.modifyStack(req.user.sub, id, body);
   }
 
+  @Post(':id/shuffle-seats')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Tráo đổi vị trí ghế ngồi (Chủ phòng)',
+    description: 'Xáo trộn ngẫu nhiên tất cả người chơi đang ngồi tại bàn đấu.',
+  })
+  @ApiParam({ name: 'id', type: String, description: 'ID của phòng' })
+  @ApiResponse({
+    status: 200,
+    description: 'Tráo ghế thành công hoặc đã lên lịch tráo ghế',
+    schema: { example: { success: true, pending: true } },
+  })
+  @BadRequest400()
+  @Auth401()
+  @NotFound404()
+  async shuffleSeats(@Request() req, @Param('id') id: string) {
+    return this.lobbyService.shuffleSeats(req.user.sub, id);
+  }
+
   @Get(':id/stats')
   @ApiOperation({
     summary: 'Thống kê P&L toàn bàn',

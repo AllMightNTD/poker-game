@@ -122,6 +122,8 @@ interface PokerGameContextProps {
   forceSitOut: (seatIndex: number) => Promise<void>;
   modifyPlayerStack: (seatIndex: number, amount: number, action: "add" | "subtract") => Promise<void>;
   fetchStats: () => Promise<unknown>;
+  toggleSitOut: () => Promise<void>;
+  shuffleSeats: () => Promise<void>;
 
   // Sit Down Requests & Start game
   sitRequests: SocketTypes.SitRequest[];
@@ -509,6 +511,9 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               isHero,
               isBot: s.isBot,
               cards: defaultCards,
+              isSittingOut: s.status === "sitting_out" || s.status === "waiting_for_next_hand",
+              pending_add_amount: s.pending_add_amount ? parseInt(s.pending_add_amount.toString()) : 0,
+              pending_remove_amount: s.pending_remove_amount ? parseInt(s.pending_remove_amount.toString()) : 0,
               gamification_level: s.gamification_level,
               gamification_xp: s.gamification_xp,
             };
@@ -978,6 +983,22 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       ]);
     });
 
+    socket.on("table:stack-adjustment-created", (data: { message: string }) => {
+      showToast(data.message, "info");
+    });
+
+    socket.on("table:stack-adjustment-applied", (data: { message: string }) => {
+      showToast(data.message, "success");
+    });
+
+    socket.on("table:stack-updated", (data: { message: string }) => {
+      showToast(data.message, "success");
+    });
+
+    socket.on("table:notification", (data: { message: string }) => {
+      showToast(data.message, "info");
+    });
+
     socket.on("table:chat-history-loaded", (data: { room_id: string; history: any[]; offset: number; limit: number; hasMore: boolean }) => {
       setIsLoadingHistory(false);
       setHasMoreChats(data.hasMore);
@@ -1156,6 +1177,19 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     showToast("Player's chips adjusted.", "success");
   };
 
+  const shuffleSeats = async () => {
+    try {
+      const res = await httpClient.post(`/api/v1/rooms/${tableId}/shuffle-seats`);
+      if (res.data?.pending) {
+        showToast("Đã lên lịch tráo ghế khi ván bài kết thúc.", "info");
+      } else {
+        showToast("Vị trí ghế ngồi đã được tráo đổi ngẫu nhiên.", "success");
+      }
+    } catch (e: any) {
+      showToast(e?.response?.data?.message || "Không thể tráo ghế lúc này.", "error");
+    }
+  };
+
   const fetchStats = async () => {
     const res = await httpClient.get(`/api/v1/rooms/${tableId}/stats`);
     return res.data;
@@ -1180,6 +1214,24 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } finally {
       socket?.disconnect();
       router.push('/poker-game');
+    }
+  };
+
+  const toggleSitOut = async () => {
+    const myPlayer = players.find(
+      (p) => p && String(p.id) === String(currentUser?.id)
+    );
+    if (!myPlayer) return;
+
+    const action = myPlayer.isSittingOut ? "sit_back" : "sit_out";
+    try {
+      await httpClient.post("/api/v1/rooms/sit-action", {
+        room_id: tableId,
+        action,
+      });
+    } catch (error) {
+      console.error("Toggle sit out error:", error);
+      showToast("Không thể đổi trạng thái lúc này.", "error");
     }
   };
 
@@ -1304,6 +1356,8 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         isLoadingHistory,
         pendingOptimisticSeatsRef,
         isStartingHand,
+        toggleSitOut,
+        shuffleSeats,
       }}
     >
       {children}

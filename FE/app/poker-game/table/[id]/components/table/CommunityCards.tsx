@@ -42,18 +42,18 @@ export const CommunityCards = memo(function CommunityCards() {
                   damping: 18,
                   delay: idx * 0.1,
                 }}
-                className="relative shadow-[0_5px_15px_rgba(0,0,0,0.5)] rounded-lg"
+                className="relative shadow-[0_5px_15px_rgba(0,0,0,0.5)] rounded-[10px] sm:rounded-[12px] md:rounded-[16px]"
               >
                 <PokerCard
                   suit={card.suit}
                   rank={card.rank}
                   isFaceUp={true}
-                  size="lg"
+                  size="responsive"
                   deckStyle={cardDeckStyle}
                   className="hover:scale-110 transition-transform duration-150"
                 />
                 {/* Subtle glow on community cards */}
-                <div className="absolute inset-0 rounded-lg shadow-[0_0_8px_rgba(245,158,11,0.15)] pointer-events-none" />
+                <div className="absolute inset-0 rounded-[10px] sm:rounded-[12px] md:rounded-[16px] shadow-[0_0_8px_rgba(245,158,11,0.15)] pointer-events-none" />
               </motion.div>
             ))}
 
@@ -67,13 +67,13 @@ export const CommunityCards = memo(function CommunityCards() {
                     initial={{ opacity: 0, scale: 0.5 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.15 + 0.3 }}
-                    className="relative shadow-lg rounded-lg opacity-60 grayscale hover:grayscale-0 transition-all duration-300"
+                    className="relative shadow-lg rounded-[10px] sm:rounded-[12px] md:rounded-[16px] opacity-60 grayscale hover:grayscale-0 transition-all duration-300"
                   >
                     <PokerCard
                       suit={rabbitCard.suit}
                       rank={rabbitCard.rank}
                       isFaceUp={true}
-                      size="lg"
+                      size="responsive"
                       deckStyle={cardDeckStyle}
                     />
                     <div className="absolute -top-3 -right-3 text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded-full border border-slate-700 shadow shadow-black">
@@ -85,7 +85,7 @@ export const CommunityCards = memo(function CommunityCards() {
               return (
                 <div
                   key={`empty-${i}`}
-                  className="w-[48px] h-[68px] sm:w-[56px] sm:h-[80px] md:w-[72px] md:h-[102px] rounded-lg border border-[#FDF1BA]/20 bg-black/25 flex items-center justify-center backdrop-blur-sm transition-all"
+                  className="w-[48px] h-[68px] rounded-[10px] sm:w-[56px] sm:h-[80px] sm:rounded-[12px] md:w-[72px] md:h-[102px] md:rounded-[16px] border border-[#FDF1BA]/20 bg-black/25 flex items-center justify-center backdrop-blur-sm transition-all"
                 />
               );
             })}
@@ -94,7 +94,7 @@ export const CommunityCards = memo(function CommunityCards() {
             {(!rabbitCards || rabbitCards.length === 0) && Array.from({ length: emptyCount }).map((_, i) => (
               <div
                 key={`empty-${i}`}
-                className="w-[48px] h-[68px] sm:w-[56px] sm:h-[80px] md:w-[72px] md:h-[102px] rounded-lg border border-[#FDF1BA]/20 bg-black/25 shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] flex items-center justify-center backdrop-blur-sm transition-all"
+                className="w-[48px] h-[68px] rounded-[10px] sm:w-[56px] sm:h-[80px] sm:rounded-[12px] md:w-[72px] md:h-[102px] md:rounded-[16px] border border-[#FDF1BA]/20 bg-black/25 shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] flex items-center justify-center backdrop-blur-sm transition-all"
               />
             ))}
           </AnimatePresence>

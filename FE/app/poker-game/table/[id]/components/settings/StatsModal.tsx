@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { X, FileText, Download, TrendingUp, TrendingDown } from "lucide-react";
 import { usePokerGame } from "../hooks/usePokerGame";
+import { httpClient } from "@/core/api/http-client";
 
 interface StatsModalProps {
   isOpen: boolean;
@@ -20,16 +21,23 @@ interface PlayerStats {
 }
 
 export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
-  const { tableId, fetchStats } = usePokerGame();
+  const { tableId, fetchStats, players, gameStage } = usePokerGame();
   const [stats, setStats] = useState<PlayerStats[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Group key for player seats at table
+  const playerIdsKey = players.map((p) => p?.id).filter(Boolean).join(",");
+  const isHandEnded = gameStage === "ended";
 
   useEffect(() => {
     if (!isOpen) return;
 
     const loadStats = async () => {
       try {
-        setLoading(true);
+        setStats((prev) => {
+          if (prev.length === 0) setLoading(true);
+          return prev;
+        });
         const data = (await fetchStats()) as { players?: PlayerStats[] };
         if (data && Array.isArray(data.players)) {
           setStats(data.players);
@@ -41,25 +49,38 @@ export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
       }
     };
     loadStats();
-  }, [isOpen, fetchStats]);
+  }, [isOpen, fetchStats, playerIdsKey, isHandEnded]);
 
   if (!isOpen) return null;
 
-  const handleExportCsv = () => {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003";
-    window.open(`${apiBase}/api/v1/rooms/${tableId}/stats/export`, "_blank");
+  const handleExportCsv = async () => {
+    try {
+      const res = await httpClient.get(`/api/v1/rooms/${tableId}/stats/export`, {
+        responseType: "blob",
+      });
+      const blob = new Blob([res.data], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `poker_stats_room_${tableId}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error("Export CSV error:", e);
+    }
   };
 
   return (
     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-5 border-b border-slate-800/60 flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-slate-800/60 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileText className="text-emerald-500 w-5 h-5" />
-            <h3 className="text-base font-black text-slate-100 uppercase tracking-wider">
+            <FileText className="text-emerald-500 w-4 h-4 sm:w-5 sm:h-5" />
+            <h3 className="text-xs sm:text-base font-black text-slate-100 uppercase tracking-wider">
               Financial Statistics & Session Reports
-                                      </h3>
+            </h3>
           </div>
           <button
             onClick={onClose}
@@ -70,33 +91,33 @@ export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[70vh] space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest">
               Player Profit/Loss Details
-                                      </span>
+            </span>
             <button
               onClick={handleExportCsv}
-              className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-colors flex items-center gap-2 shadow-lg shadow-emerald-950/40"
+              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-slate-950 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40"
             >
-              <Download size={14} /> Export CSV Report
-                                      </button>
+              <Download size={12} /> Export CSV Report
+            </button>
           </div>
 
           {loading ? (
             <div className="text-center py-10 text-xs text-slate-500 animate-pulse">
               Loading report from server...
-                                      </div>
+            </div>
           ) : (
-            <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950/40">
-              <table className="w-full text-left border-collapse text-xs">
+            <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950/40 overflow-x-auto">
+              <table className="w-full text-left border-collapse text-[11px] sm:text-xs min-w-[450px] sm:min-w-0">
                 <thead>
-                  <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
-                    <th className="p-3">Seat</th>
+                  <tr className="bg-slate-950 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider text-[10px] sm:text-xs">
+                    <th className="p-3 hidden sm:table-cell">Seat</th>
                     <th className="p-3">Player Name</th>
                     <th className="p-3 text-right">Total Buy-in</th>
                     <th className="p-3 text-right">Stack</th>
-                    <th className="p-3 text-right">Cashout</th>
+                    <th className="p-3 text-right hidden sm:table-cell">Cashout</th>
                     <th className="p-3 text-right">Net P&L</th>
                   </tr>
                 </thead>
@@ -105,22 +126,30 @@ export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                     <tr>
                       <td colSpan={6} className="p-4 text-center text-slate-600">
                         No stats available.
-                                                                        </td>
+                      </td>
                     </tr>
                   ) : (
                     stats.map((s) => {
-                      const isProfit = s.net_pnl >= 0;
+                      const livePlayer = players.find(
+                        (p) => p && String(p.id) === String(s.user_id)
+                      );
+                      const current_chips = livePlayer
+                        ? parseInt(livePlayer.chips || "0")
+                        : s.current_chips;
+                      const net_pnl = current_chips + s.cashout_chips - s.purchase_count;
+                      const isProfit = net_pnl >= 0;
+
                       return (
-                        <tr key={s.user_id} className="hover:bg-slate-900/30 transition-colors">
-                          <td className="p-3 font-mono text-slate-500">#{s.seat_number}</td>
-                          <td className="p-3 font-black text-slate-300 uppercase">{s.username}</td>
+                        <tr key={s.user_id} className="hover:bg-slate-900/30 transition-colors text-[11px] sm:text-xs">
+                          <td className="p-3 font-mono text-slate-500 hidden sm:table-cell">#{s.seat_number}</td>
+                          <td className="p-3 font-black text-slate-300 uppercase truncate max-w-[80px] sm:max-w-none">{s.username}</td>
                           <td className="p-3 text-right font-bold text-slate-400">
                             {s.purchase_count.toLocaleString()}
                           </td>
                           <td className="p-3 text-right font-bold text-amber-500">
-                            {s.current_chips.toLocaleString()}
+                            {current_chips.toLocaleString()}
                           </td>
-                          <td className="p-3 text-right font-bold text-slate-400">
+                          <td className="p-3 text-right font-bold text-slate-400 hidden sm:table-cell">
                             {s.cashout_chips.toLocaleString()}
                           </td>
                           <td
@@ -134,7 +163,7 @@ export const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                               <TrendingDown size={12} className="inline animate-pulse" />
                             )}
                             {isProfit ? "+" : ""}
-                            {s.net_pnl.toLocaleString()}
+                            {net_pnl.toLocaleString()}
                           </td>
                         </tr>
                       );

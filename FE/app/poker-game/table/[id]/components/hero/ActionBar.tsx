@@ -90,6 +90,15 @@ export const ActionBar: React.FC = () => {
 
   const canRabbitHunt = gameStage === "ended" && communityCards.length > 0 && communityCards.length < 5 && !rabbitCards;
 
+  if (hero.isSittingOut) return (
+    <div className="w-full flex flex-col gap-2">
+      <div className="flex justify-end items-center px-2">
+        {muckOptionBar}
+      </div>
+      <TableStatusBanner variant="away" />
+    </div>
+  );
+
   if (hero.isFolded) return (
     <div className="w-full flex flex-col gap-2">
       <div className="flex justify-between items-center px-2">

@@ -1,5 +1,4 @@
 import { HandStage } from '../entities/game_hand.entity';
-import { PokerTable } from '../entities/poker_table.entity';
 import { TableSession } from '../entities/table_session.entity';
 import { PokerGameService } from '../services/poker-game.service';
 import { PokerGameEngine } from './poker-game.engine';
@@ -17,6 +16,17 @@ export class PokerActionProcessor {
       await this.gameService.stateService.getTableState(roomId);
     const seats = await this.gameService.stateService.getAllSeats(roomId);
     const activeSeat = seats.find((s) => s.seat_number === seatNumber);
+    if (!activeSeat) {
+      throw new Error('Ghế không tồn tại hoặc không hợp lệ.');
+    }
+    if (
+      activeSeat.status === 'sitting_out' &&
+      actionType?.toLowerCase() !== 'fold'
+    ) {
+      throw new Error(
+        'Bạn đang ở trạng thái ngồi nghỉ (Away), không thể thực hiện hành động.',
+      );
+    }
 
     const currentStage = tableState?.game_stage || 'waiting';
     const activeBettingStages = ['preflop', 'flop', 'turn', 'river'];
@@ -46,7 +56,7 @@ export class PokerActionProcessor {
     let highestBet = parseInt(tableState.current_highest_bet || '0');
     const originalHighestBet = highestBet;
     let lastFullRaiseSize = parseInt(tableState.last_full_raise_size || '0');
-    const dbTableForBB = await PokerTable.findOne({ where: { id: roomId } });
+    const dbTableForBB = await this.gameService.getCachedTableMeta(roomId);
     const bbAmount = dbTableForBB
       ? parseInt(dbTableForBB.big_blind || '100')
       : 100;
@@ -241,7 +251,7 @@ export class PokerActionProcessor {
 
     const seats = await this.gameService.stateService.getAllSeats(roomId);
     const currentTurnSeat = parseInt(tableState.current_turn_seat || '0');
-    const dbTable = await PokerTable.findOne({ where: { id: roomId } });
+    const dbTable = await this.gameService.getCachedTableMeta(roomId);
     const maxPlayers = dbTable ? dbTable.max_players : 9;
 
     const activePlayers = seats.filter((s) => s.status === 'active');
@@ -355,7 +365,7 @@ export class PokerActionProcessor {
       (s) => parseInt(s.stack || '0') > 0,
     );
 
-    const dbTable = await PokerTable.findOne({ where: { id: roomId } });
+    const dbTable = await this.gameService.getCachedTableMeta(roomId);
     const maxPlayers = dbTable ? dbTable.max_players : 9;
 
     const isAutoRunBoard =
@@ -517,7 +527,7 @@ export class PokerActionProcessor {
 
       let action = currentBet >= highestBet ? 'check' : 'fold';
 
-      const dbTable = await PokerTable.findOne({ where: { id: roomId } });
+      const dbTable = await this.gameService.getCachedTableMeta(roomId);
       if (dbTable?.custom_settings?.table_timeout_action === 'AUTO_FOLD') {
         action = 'fold';
       }

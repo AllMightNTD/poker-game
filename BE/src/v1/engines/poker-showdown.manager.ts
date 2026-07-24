@@ -1,5 +1,4 @@
 import { UserStatus } from '../../constants/user-status';
-import { PokerTable } from '../entities/poker_table.entity';
 import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
 import { TableSession } from '../entities/table_session.entity';
 import { User } from '../entities/user.entity';
@@ -14,6 +13,67 @@ import { PokerGameEngine } from './poker-game.engine';
 export class PokerShowdownManager {
   constructor(private readonly gameService: PokerGameService) {}
 
+  async determineRevealOrder(
+    roomId: string,
+    handId: string,
+    seats: PokerSeatState[],
+    dealerSeat: number,
+    maxPlayers = 9,
+  ): Promise<number[]> {
+    const activeSeats = seats.filter(
+      (s) => s.status !== 'folded' && parseInt(s.total_contributed || '0') > 0,
+    );
+
+    if (activeSeats.length <= 1) {
+      return activeSeats.map((s) => s.seat_number);
+    }
+
+    // Try to find last aggressor on River
+    let lastAggressorSeat: number | null = null;
+    try {
+      const logsRaw = await this.gameService.stateService.getActionLogs(handId);
+      const logs = logsRaw.map((l) => JSON.parse(l));
+
+      // Filter actions in the 'river' stage
+      const riverActions = logs.filter(
+        (log) => log.stage?.toLowerCase() === 'river',
+      );
+
+      // Find the last aggressive action (bet, raise)
+      for (let i = riverActions.length - 1; i >= 0; i--) {
+        const action = riverActions[i];
+        if (action.action_type === 'bet' || action.action_type === 'raise') {
+          lastAggressorSeat = action.seat_number;
+          break;
+        }
+      }
+    } catch (e) {
+      this.gameService.logger.error(
+        `Failed to parse action logs for reveal order: ${e.message}`,
+      );
+    }
+
+    let startingSeat: number;
+    if (
+      lastAggressorSeat !== null &&
+      activeSeats.some((s) => s.seat_number === lastAggressorSeat)
+    ) {
+      startingSeat = lastAggressorSeat;
+    } else {
+      // Checked through or no aggressor on River: first active player left of Dealer
+      startingSeat = (dealerSeat % maxPlayers) + 1;
+    }
+
+    // Sort active players clockwise starting from startingSeat
+    const sortedSeats = [...activeSeats].sort((a, b) => {
+      const distA = (a.seat_number - startingSeat + maxPlayers) % maxPlayers;
+      const distB = (b.seat_number - startingSeat + maxPlayers) % maxPlayers;
+      return distA - distB;
+    });
+
+    return sortedSeats.map((s) => s.seat_number);
+  }
+
   async processShowdown(roomId: string) {
     this.gameService.logger.log(`[SHOWDOWN] START roomId=${roomId}`);
 
@@ -21,7 +81,7 @@ export class PokerShowdownManager {
       await this.gameService.stateService.getTableState(roomId);
     const seats = await this.gameService.stateService.getAllSeats(roomId);
 
-    const dbTable = await PokerTable.findOne({ where: { id: roomId } });
+    const dbTable = await this.gameService.getCachedTableMeta(roomId);
     const maxPlayers = dbTable ? dbTable.max_players : 9;
 
     const activePlayers = seats.filter(
@@ -270,10 +330,7 @@ export class PokerShowdownManager {
     }
 
     // 1. Khấu trừ Rake (mặc định 0 cho Home Game)
-    const dbTable = await PokerTable.findOne({
-      where: { id: roomId },
-      relations: ['club'],
-    });
+    const dbTable = await this.gameService.getCachedTableMeta(roomId);
     const rakeRate =
       dbTable?.club?.club_rake_rate !== undefined
         ? Number(dbTable.club.club_rake_rate)
@@ -602,6 +659,18 @@ export class PokerShowdownManager {
     // 8. Phát sự kiện hand-ended
     // Gửi bài của TẤT CẢ player không fold để FE có thể reveal đúng
     const winnerUserIds = winnersLog.map((w) => w.user_id);
+    const dealerSeatNum = parseInt(tableState.dealer_seat || '1');
+    const maxPlayers = dbTable ? dbTable.max_players : 9;
+
+    const revealOrder = await this.determineRevealOrder(
+      roomId,
+      tableState.current_hand_id || '0',
+      seats,
+      dealerSeatNum,
+      maxPlayers,
+    );
+
+    const allowMuck = dbTable?.custom_settings?.allow_muck === true;
 
     const allHandsForBroadcast = await Promise.all(
       seats
@@ -620,11 +689,7 @@ export class PokerShowdownManager {
           const isAllIn =
             parseInt(seat.stack || '0') === 0 &&
             parseInt(seat.total_contributed || '0') > 0;
-          const shouldMuck =
-            !isWinner &&
-            !isAllIn &&
-            autoMuck &&
-            dbTable?.custom_settings?.allow_muck;
+          const shouldMuck = !isWinner && !isAllIn && autoMuck && allowMuck;
           return {
             user_id: seat.user_id,
             seat_number: seat.seat_number,
@@ -633,6 +698,15 @@ export class PokerShowdownManager {
           };
         }),
     );
+
+    // Sort allHandsForBroadcast according to revealOrder sequence
+    allHandsForBroadcast.sort((a, b) => {
+      const indexA = revealOrder.indexOf(a.seat_number);
+      const indexB = revealOrder.indexOf(b.seat_number);
+      const valA = indexA === -1 ? 999 : indexA;
+      const valB = indexB === -1 ? 999 : indexB;
+      return valA - valB;
+    });
 
     const playerResults = seats
       .map((seat) => {
@@ -678,6 +752,7 @@ export class PokerShowdownManager {
     this.gameService.server.to(`table_${roomId}`).emit('table:hand-ended', {
       winners: winnersLog,
       all_hands: allHandsForBroadcast,
+      reveal_order: revealOrder,
       total_pot: totalPotAmount,
       rake_amount: rakeCalculated.toString(),
       player_results: playerResults,
