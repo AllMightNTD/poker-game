@@ -147,3 +147,20 @@
 - **Status**: Fixed
 
 ---
+
+## [2026-07-24 15:39] - Lỗi trùng lặp Key (Duplicate Key) trong WinnerHighlight component của AnimationManager.tsx
+
+- **Type**: Logic/Runtime
+- **Severity**: Low
+- **File**: `FE/app/poker-game/table/[id]/components/effects/AnimationManager.tsx:28`
+- **Agent**: AgentGame
+- **Root Cause**: Khi người chơi thắng nhiều pot cùng lúc (ví dụ: Main Pot và Side Pot), hàm `handleHandEnded` tạo ra nhiều bản ghi winner có cùng `userId` cho mỗi pot. Khi truyền danh sách này vào `WinnerHighlight` và vẽ bằng `winners.map`, component sử dụng `winner.userId` làm React key, dẫn đến lỗi trùng lặp key và hiển thị lặp chồng chéo các vòng animation highlight trên cùng một ghế ngồi.
+- **Error Message**: 
+  ```
+  Encountered two children with the same key, `bot-f85628c9-6137-4224-864a-c39c95223906`. Keys should be unique so that components maintain their identity across updates.
+  ```
+- **Fix Applied**: Sử dụng `React.useMemo` trong component `WinnerHighlight` để lọc các người chơi duy nhất theo `userId` (deduplicate), đảm bảo React key là duy nhất và không bị lặp đè các hiệu ứng animation lên cùng một ghế ngồi.
+- **Prevention**: Luôn đảm bảo các phần tử trong danh sách truyền vào React map để render ra giao diện có key là duy nhất. Với các dữ liệu có thể lặp lại (như danh sách thắng nhiều pot), cần lọc trùng (deduplicate) trước khi render nếu chỉ cần hiển thị hiệu ứng một lần duy nhất cho mỗi đối tượng (mỗi ghế ngồi).
+- **Status**: Fixed
+
+---

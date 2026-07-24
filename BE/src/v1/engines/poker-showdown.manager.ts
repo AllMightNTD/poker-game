@@ -764,9 +764,9 @@ export class PokerShowdownManager {
       },
     });
 
-    // 9. Reset Table State sang stage ended
+    // 9. Reset Table State sang stage INTERMISSION (Nghỉ 4s xem kết quả)
     await this.gameService.stateService.setTableState(roomId, {
-      game_stage: 'ended',
+      game_stage: 'INTERMISSION',
       total_pot: '0',
       current_highest_bet: '0',
       current_turn_seat: '0',
@@ -806,19 +806,23 @@ export class PokerShowdownManager {
       await this.gameService.broadcastTableState(roomId);
     }
 
-    // Auto-start ván mới sau 5s (giảm từ 11s để UX mượt hơn)
+    // sau 4s Nghỉ (INTERMISSION) -> Đưa stage về WAITING & trigger AutoHandScheduler
     setTimeout(async () => {
       try {
-        this.gameService.logger.log(
-          `[Auto-starting new hand] for room ${roomId} after delay.`,
-        );
-        await this.gameService.startNewHand(roomId);
+        await this.gameService.stateService.setTableState(roomId, {
+          game_stage: 'WAITING',
+        });
+        await this.gameService.broadcastTableState(roomId);
+
+        if (this.gameService.autoHandScheduler) {
+          await this.gameService.autoHandScheduler.evaluateRoomPipeline(roomId);
+        }
       } catch (e) {
         this.gameService.logger.error(
-          `[Auto-starting new hand] Failed to auto-start new hand: ${e.message}`,
+          `[Intermission transition] Failed to evaluate room ${roomId}: ${e.message}`,
           e.stack,
         );
       }
-    }, 5000);
+    }, 4000);
   }
 }

@@ -1,5 +1,11 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  forwardRef,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Queue } from 'bullmq';
 import { randomBytes, randomUUID } from 'crypto';
@@ -14,11 +20,13 @@ import { PokerTable } from '../entities/poker_table.entity';
 import { ProvablyFairAudit } from '../entities/provably_fair_audit.entity';
 import { RoomAdminLog } from '../entities/room_admin_log.entity';
 import { TableSession } from '../entities/table_session.entity';
+import { CloseReason } from '../enums/close-reason.enum';
 import {
   PokerSeatState,
   PokerTableState,
   WinnerLog,
 } from '../types/poker.types';
+import { AutoHandScheduler } from './auto-hand-scheduler.service';
 import { PokerLobbyService } from './poker-lobby.service';
 import { PokerStateService } from './poker-state.service';
 import { PokerStreamService } from './poker-stream.service';
@@ -52,6 +60,12 @@ export class PokerGameService implements OnModuleDestroy {
   // Quản lý Auto-Start Timers (Key: roomId)
   readonly autoStartTimers = new Map<string, NodeJS.Timeout>();
 
+  // Quản lý Room Closing Countdown Timers (Key: roomId)
+  readonly closingTimers = new Map<
+    string,
+    { timeout: NodeJS.Timeout; interval?: NodeJS.Timeout }
+  >();
+
   private idleCleanupInterval: NodeJS.Timeout;
   // Stack-change audit trail is now handled by PokerStreamService (Redis Streams)
 
@@ -67,6 +81,8 @@ export class PokerGameService implements OnModuleDestroy {
     readonly provablyFairService: ProvablyFairService,
     readonly dataSource: DataSource,
     @InjectQueue('poker-game-history') readonly historyQueue: Queue,
+    @Inject(forwardRef(() => AutoHandScheduler))
+    readonly autoHandScheduler?: AutoHandScheduler,
   ) {
     this.startIdleCleanupInterval();
     // PokerStreamService starts its own consumer via OnModuleInit lifecycle hook
@@ -318,11 +334,22 @@ export class PokerGameService implements OnModuleDestroy {
     }
   }
 
-  async destroyRoom(roomId: string) {
-    this.logger.log(`Destroying room ${roomId}...`);
+  async destroyRoom(roomId: string, reason?: string) {
+    this.logger.log(
+      `Destroying room ${roomId} (Reason: ${reason || 'MANUAL'})...`,
+    );
 
     this.clearAllTableTimers(roomId);
     this.cancelEmptyRoomTimer(roomId);
+    this.clearClosingTimer(roomId);
+
+    if (this.server) {
+      this.server.to(`table_${roomId}`).emit('RoomClosed', {
+        roomId,
+        reason: reason || CloseReason.EMPTY_ROOM,
+      });
+      this.server.to(`table_${roomId}`).emit('table:destroyed', { roomId });
+    }
 
     // Lấy thông tin hand hiện tại để xoá action logs nếu có
     const tableState = await this.stateService.getTableState(roomId);
@@ -360,13 +387,26 @@ export class PokerGameService implements OnModuleDestroy {
     try {
       const table = await PokerTable.findOne({ where: { id: roomId } });
       if (table) {
-        table.is_active = false;
-        table.status = 'closed';
+        if (table.owner_id === 'system') {
+          table.is_active = true;
+          table.status = 'waiting';
+          table.current_hand_id = null;
+          table.is_closing = false;
+          table.closing_reason = null;
+          table.closing_started_at = null;
+          this.logger.log(
+            `Table ${roomId} (System) has been reset to waiting state in database.`,
+          );
+        } else {
+          table.is_active = false;
+          table.status = 'closed';
+          table.close_at = new Date();
+          this.logger.log(
+            `Table ${roomId} (Private) marked as inactive/closed in database.`,
+          );
+        }
         await table.save();
         this.clearTableMetaCache(roomId);
-        this.logger.log(
-          `Table ${roomId} marked as inactive/closed in database.`,
-        );
       }
     } catch (e) {
       this.logger.error(
@@ -374,9 +414,184 @@ export class PokerGameService implements OnModuleDestroy {
       );
     }
 
-    this.server.to(`table_${roomId}`).emit('table:destroyed', { roomId });
     await this.broadcastTableState(roomId);
     await this.broadcastLobbyRoomStatus(roomId);
+  }
+
+  // --- Auto Close / Activity Tracking Helpers ---
+
+  async touchRoomActivity(roomId: string): Promise<void> {
+    const now = Date.now().toString();
+    await this.stateService.setTableState(roomId, {
+      last_activity: now,
+    });
+
+    const state = await this.stateService.getTableState(roomId);
+    if (state && state.is_closing === '1') {
+      await this.cancelRoomClosing(roomId);
+    }
+  }
+
+  async startRoomClosing(
+    roomId: string,
+    reason: CloseReason | string,
+    remainSeconds: number,
+  ): Promise<void> {
+    if (this.closingTimers.has(roomId)) {
+      return; // Already closing countdown in progress
+    }
+
+    const now = Date.now();
+    const expiresAt = now + remainSeconds * 1000;
+
+    await this.stateService.setTableState(roomId, {
+      is_closing: '1',
+      closing_reason: reason,
+      closing_started_at: now.toString(),
+      closing_timer_end: expiresAt.toString(),
+    });
+
+    try {
+      const table = await PokerTable.findOne({ where: { id: roomId } });
+      if (table) {
+        table.is_closing = true;
+        table.closing_reason = reason;
+        table.closing_started_at = new Date(now);
+        table.status = 'closing';
+        await table.save();
+        this.clearTableMetaCache(roomId);
+      }
+    } catch (e) {
+      this.logger.error(
+        `Error updating table closing state in DB: ${e.message}`,
+      );
+    }
+
+    // Broadcast initial countdown event
+    if (this.server) {
+      this.server.to(`table_${roomId}`).emit('RoomClosingCountdown', {
+        roomId,
+        reason,
+        remainSeconds,
+      });
+    }
+
+    let secondsLeft = remainSeconds;
+    const interval = setInterval(() => {
+      secondsLeft -= 1;
+      if (secondsLeft > 0 && this.server) {
+        this.server.to(`table_${roomId}`).emit('RoomClosingCountdown', {
+          roomId,
+          reason,
+          remainSeconds: secondsLeft,
+        });
+      }
+    }, 1000);
+
+    const timeout = setTimeout(async () => {
+      this.clearClosingTimer(roomId);
+      this.logger.warn(
+        `Room closing countdown finished for room ${roomId} (Reason: ${reason}). Destroying room...`,
+      );
+      await this.destroyRoom(roomId, reason);
+    }, remainSeconds * 1000);
+
+    this.closingTimers.set(roomId, { timeout, interval });
+  }
+
+  async cancelRoomClosing(roomId: string): Promise<void> {
+    this.clearClosingTimer(roomId);
+
+    await this.stateService.setTableState(roomId, {
+      is_closing: '0',
+      closing_reason: '',
+      closing_started_at: '0',
+      closing_timer_end: '0',
+    });
+
+    try {
+      const table = await PokerTable.findOne({ where: { id: roomId } });
+      if (table && table.status === 'closing') {
+        table.is_closing = false;
+        table.closing_reason = null;
+        table.closing_started_at = null;
+        table.status = 'waiting';
+        await table.save();
+        this.clearTableMetaCache(roomId);
+      }
+    } catch (e) {
+      this.logger.error(
+        `Error resetting table closing state in DB: ${e.message}`,
+      );
+    }
+
+    if (this.server) {
+      this.server.to(`table_${roomId}`).emit('RoomClosingCancelled', {
+        roomId,
+      });
+    }
+    this.logger.log(`Room closing cancelled for table ${roomId}`);
+  }
+
+  clearClosingTimer(roomId: string): void {
+    if (this.closingTimers.has(roomId)) {
+      const timerObj = this.closingTimers.get(roomId);
+      if (timerObj?.timeout) clearTimeout(timerObj.timeout);
+      if (timerObj?.interval) clearInterval(timerObj.interval);
+      this.closingTimers.delete(roomId);
+    }
+  }
+
+  async isUserConnectedToRoom(
+    roomId: string,
+    userId: string,
+  ): Promise<boolean> {
+    if (!this.server) return false;
+    try {
+      const sockets = await this.server.in(`table_${roomId}`).fetchSockets();
+      return sockets.some((s) => s.data?.user?.id === userId);
+    } catch (err) {
+      console.log('err', err.message);
+      return false;
+    }
+  }
+
+  async tryTransferHost(roomId: string): Promise<boolean> {
+    try {
+      const activeSessions = await TableSession.find({
+        where: { table_id: roomId, member_status: 'active' },
+        order: { joined_at: 'ASC' },
+      });
+      const seats = await this.stateService.getAllSeats(roomId);
+      const eligibleSession = activeSessions.find((s) => {
+        const seat = seats.find((st) => st.user_id === s.user_id);
+        return seat && seat.is_bot !== '1';
+      });
+
+      if (eligibleSession) {
+        const newOwnerId = eligibleSession.user_id;
+        const table = await PokerTable.findOne({ where: { id: roomId } });
+        if (table) {
+          table.owner_id = newOwnerId;
+          await table.save();
+          this.clearTableMetaCache(roomId);
+        }
+        await this.stateService.setTableState(roomId, {
+          owner_id: newOwnerId,
+        });
+        this.logger.log(
+          `Host transferred for room ${roomId} to user ${newOwnerId}`,
+        );
+        await this.broadcastTableState(roomId);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      this.logger.error(
+        `Error transferring host for room ${roomId}: ${e.message}`,
+      );
+      return false;
+    }
   }
 
   async broadcastLobbyRoomStatus(roomId: string) {
@@ -403,16 +618,25 @@ export class PokerGameService implements OnModuleDestroy {
     this.idleCleanupInterval = setInterval(async () => {
       try {
         const tables = await PokerTable.find({ where: { is_active: true } });
+        const now = Date.now();
+        const timeoutLimit = 10 * 60 * 1000; // 10 minutes default
+
         for (const table of tables) {
           const state = await this.stateService.getTableState(table.id);
           if (state) {
             const lastActivity = parseInt(state.last_activity || '0');
-            if (
-              lastActivity > 0 &&
-              Date.now() - lastActivity > 10 * 60 * 1000
-            ) {
+            if (lastActivity > 0 && now - lastActivity > timeoutLimit) {
               this.logger.warn(
                 `Table ${table.id} has been idle for over 10 minutes. Destroying...`,
+              );
+              await this.destroyRoom(table.id);
+            }
+          } else {
+            // Ghost table: active in DB but no state in Redis
+            const createdAt = new Date(table.created_at).getTime();
+            if (now - createdAt > timeoutLimit) {
+              this.logger.warn(
+                `Table ${table.id} has no active state in Redis and is older than 10 minutes. Cleaning up...`,
               );
               await this.destroyRoom(table.id);
             }
@@ -531,6 +755,7 @@ export class PokerGameService implements OnModuleDestroy {
       room_name: dbTable.name || tableState.room_name || 'Bàn Poker',
       status: dbTable.status || 'waiting',
       owner_id: dbTable.owner_id || '',
+      max_players: maxPlayers,
       min_buyin: dbTable.min_buyin ? Number(dbTable.min_buyin) : 0,
       max_buyin: dbTable.max_buyin ? Number(dbTable.max_buyin) : 0,
       small_blind: dbTable.small_blind ? Number(dbTable.small_blind) : 50,
@@ -548,6 +773,10 @@ export class PokerGameService implements OnModuleDestroy {
       current_turn_seat: parseInt(tableState.current_turn_seat || '0'),
       remaining_time: remainingTimer,
       expires_at: timer ? timer.expiresAt : 0,
+      manual_start_required: tableState.manual_start_required !== '0',
+      can_manual_start: tableState.can_manual_start === '1',
+      auto_start_status: tableState.auto_start_status || 'IDLE',
+      countdown_end_at: parseInt(tableState.countdown_end_at || '0', 10),
       seats: sanitizedSeats,
     };
 
@@ -722,6 +951,9 @@ export class PokerGameService implements OnModuleDestroy {
     await this.broadcastTableState(roomId);
     await this.broadcastLobbyRoomStatus(roomId);
     await this.checkAndNotifyWaitingState(roomId);
+    if (this.autoHandScheduler) {
+      await this.autoHandScheduler.evaluateRoomPipeline(roomId);
+    }
   }
 
   async startNewHand(roomId: string, clientSeedOverride?: string) {
@@ -750,6 +982,20 @@ export class PokerGameService implements OnModuleDestroy {
         );
         return;
       }
+
+      if (tableStateBefore?.is_expired === '1') {
+        this.logger.warn(
+          `Table ${roomId} has expired (> 24h lifetime). Destroying room...`,
+        );
+        await this.destroyRoom(roomId, CloseReason.ROOM_EXPIRED);
+        return;
+      }
+
+      const nowTs = Date.now().toString();
+      await this.stateService.setTableState(roomId, {
+        last_hand_at: nowTs,
+        last_activity: nowTs,
+      });
 
       // Check if pending seat shuffle is requested
       const tableState = await this.stateService.getTableState(roomId);

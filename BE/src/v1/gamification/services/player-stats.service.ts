@@ -83,20 +83,29 @@ export class PlayerStatsService {
           stats = this.statsRepo.create({ user_id: userId });
         }
 
+        const toBigInt = (val: any): bigint => {
+          if (val === undefined || val === null || val === '') return BigInt(0);
+          try {
+            return BigInt(val);
+          } catch {
+            return BigInt(0);
+          }
+        };
+
         // Calculate gains
         const isWinner = payload.winners.some((w) => w.user_id === userId);
         const winAmount = isWinner
           ? payload.winners
               .filter((w) => w.user_id === userId)
-              .reduce((acc, val) => acc + BigInt(val.win_amount), BigInt(0))
+              .reduce((acc, val) => acc + toBigInt(val.win_amount), BigInt(0))
           : BigInt(0);
-        const rakePaid = BigInt(
-          userShares.find((s) => s.userId === userId)?.rakePaid || 0,
+        const rakePaid = toBigInt(
+          userShares.find((s) => s.userId === userId)?.rakePaid,
         );
 
-        stats.hands_played += 1;
+        stats.hands_played = (stats.hands_played || 0) + 1;
         if (isWinner) {
-          stats.hands_won += 1;
+          stats.hands_won = (stats.hands_won || 0) + 1;
 
           // Check FIRST_WIN achievement
           if (stats.hands_won === 1) {
@@ -115,13 +124,13 @@ export class PlayerStatsService {
         }
 
         stats.total_chips_won = (
-          BigInt(stats.total_chips_won) + winAmount
+          toBigInt(stats.total_chips_won) + winAmount
         ).toString();
         stats.total_rake_paid = (
-          BigInt(stats.total_rake_paid) + rakePaid
+          toBigInt(stats.total_rake_paid) + rakePaid
         ).toString();
 
-        if (winAmount > BigInt(stats.biggest_pot)) {
+        if (winAmount > toBigInt(stats.biggest_pot)) {
           stats.biggest_pot = winAmount.toString();
         }
 
@@ -129,7 +138,7 @@ export class PlayerStatsService {
         let xpGained = 10;
         if (isWinner) xpGained += 50;
 
-        stats.current_xp += xpGained;
+        stats.current_xp = (stats.current_xp || 0) + xpGained;
 
         // Level Up Check
         for (const level of LEVEL_THRESHOLDS) {

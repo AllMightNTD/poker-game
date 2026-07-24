@@ -161,3 +161,63 @@ PASS src/v1/services/poker-sit-out.spec.ts
 Test Suites: 20 passed, 20 total | Tests: 72 passed, 72 total ✅
 ```
 
+---
+
+# Báo cáo Nghiệm thu: Khắc phục lỗi trùng lặp Key (Duplicate Key) trong WinnerHighlight
+
+> **DNA_REF**: Khắc phục lỗi trùng lặp key React trong component `WinnerHighlight` khi người chơi thắng nhiều pot đồng thời.
+
+## 1. Mục tiêu đã hoàn thành
+
+- [x] **Deduplicate Winners**: Lọc trùng lặp danh sách winners theo `userId` (sử dụng `React.useMemo`) trước khi render ra các phần tử `<motion.div>` trong `WinnerHighlight`.
+- [x] **Fix Console Warning**: Giải quyết triệt để lỗi `Encountered two children with the same key` khi người chơi nhận thưởng từ nhiều pot (ví dụ: Main Pot & Side Pot).
+- [x] **Avoid Redundant Animations**: Ngăn chặn tình trạng hiển thị đè chéo (overlapping) nhiều vòng sáng highlight ring và nhiều popup số tiền thắng (`+$netGainLoss`) trên cùng một vị trí ghế ngồi của người chơi.
+- [x] **TypeScript & Lint Safety**: Xác nhận biên dịch và linting hoàn toàn sạch sẽ (`npm run lint` -> SUCCESS).
+
+## 2. Ảnh hưởng & Hướng dẫn kiểm tra
+
+- Khi một người chơi thắng nhiều pot trong một ván đấu (Main Pot + Side Pot 1, 2...), UI sẽ chỉ vẽ một vòng tròn highlight và một hiệu ứng bay số tiền thắng duy nhất cho ghế đó (với tổng số tiền thắng ròng `net_result` tương ứng), thay vì tạo ra nhiều bản sao xếp chồng lên nhau làm mờ và lag hiệu ứng.
+- Phía chip animations (`FLY_CHIPS_TO_WINNERS` và `COLLECT_POT_TO_CENTER`) vẫn nhận đầy đủ thông tin chi tiết từng pot từ payload nên hiệu ứng bay chíp riêng biệt cho từng pot vẫn diễn ra bình thường, sinh động và chính xác về mặt vật lý.
+
+---
+
+# Báo cáo Nghiệm thu: Cơ chế tự động đóng phòng chơi nhàn rỗi (Inactivity Timeout)
+
+> **DNA_REF**: Triển khai hoàn thiện cơ chế tự động dọn dẹp các phòng chơi nhàn rỗi (idle tables) và phòng rác (ghost tables) cho game Poker.
+
+## 1. Mục tiêu đã hoàn thành
+
+- [x] **Phân biệt loại bàn chơi trong `destroyRoom`**:
+  - Đối với các bàn chơi do hệ thống quản lý (`owner_id === 'system'`), khi hết thời gian chờ (inactivity timeout) hoặc phòng trống, hệ thống sẽ thực hiện dọn dẹp bộ nhớ Redis nhưng **giữ nguyên trạng thái hoạt động trong database** (`is_active = true`, `status = 'waiting'`). Điều này đảm bảo bàn chơi hệ thống luôn hiển thị ở sảnh chờ (lobby) để người chơi mới có thể ngồi vào.
+  - Đối với các bàn chơi cá nhân/tùy chỉnh (`owner_id !== 'system'`), hệ thống sẽ hoàn toàn đóng bàn (`is_active = false`, `status = 'closed'`) và ẩn khỏi sảnh chờ.
+- [x] **Dọn dẹp Bàn ma (Ghost Tables)**:
+  - Bổ sung logic kiểm tra các bàn chơi không có trạng thái trong Redis (`state` trả về `null`). Nếu bàn chơi đó được tạo quá **10 phút** (`created_at`) nhưng không có kết nối socket hay hoạt động nào, hệ thống sẽ tự động dọn dẹp để giải phóng dung lượng DB.
+- [x] **Unit Testing đầy đủ**:
+  - Tạo tệp kiểm thử chuyên biệt [poker-cleanup.spec.ts](file:///home/dev_ntd/Know_Block/Know_Ledge_Block/BE/src/v1/services/poker-cleanup.spec.ts) bao phủ tất cả các tình huống:
+    - Bàn hệ thống (`system`) được đưa về trạng thái `waiting` sau khi dọn dẹp.
+    - Bàn cá nhân (`user_123`) được đóng (`closed`) hoàn toàn sau khi dọn dẹp.
+    - Các bàn ma (không có state trong Redis) được dọn dẹp nếu thời gian tạo > 10 phút.
+    - Các bàn ma mới tạo (< 10 phút) được giữ nguyên không dọn dẹp.
+
+## 2. Kết quả kiểm thử (Test Results)
+
+Chạy riêng lẻ test suite:
+```
+PASS src/v1/services/poker-cleanup.spec.ts
+  Poker Table Inactivity Cleanup Test Suite
+    destroyRoom logic
+      ✓ should reset system tables (owner_id = system) to active/waiting instead of closing them (9 ms)
+      ✓ should close private tables (owner_id != system) completely (2 ms)
+    startIdleCleanupInterval logic
+      ✓ should cleanup tables that have been idle for > 10 mins (state.last_activity) (2 ms)
+      ✓ should cleanup ghost tables (no Redis state) older than 10 minutes (1 ms)
+      ✓ should NOT cleanup ghost tables younger than 10 minutes (2 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        3.985 s
+```
+
+
+

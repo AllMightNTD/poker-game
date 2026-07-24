@@ -16,6 +16,11 @@ export interface PokerTableState {
   last_full_raise_size?: string;
   last_activity?: string;
   is_bomb_pot?: string; // '1' or '0'
+  manual_start_required?: string; // '1' or '0'
+  can_manual_start?: string; // '1' or '0'
+  auto_start_status?: string; // 'IDLE' | 'COUNTDOWN' | 'STARTING' | 'PLAYING'
+  countdown_end_at?: string; // UNIX timestamp in MS
+  event_seq?: string; // Monotonically increasing sequence number
   [key: string]: string | undefined;
 }
 

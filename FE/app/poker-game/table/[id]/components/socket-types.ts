@@ -22,6 +22,10 @@ export interface TableStatePayload {
   min_raise: number | string;
   last_full_raise_size?: number | string;
   is_bomb_pot?: boolean | string;
+  manual_start_required?: boolean;
+  can_manual_start?: boolean;
+  auto_start_status?: string;
+  countdown_end_at?: number;
   rit_board2_cards?: string[] | string;
   expires_at?: number;
   seats: Array<{
@@ -124,4 +128,19 @@ export interface SitRequest {
 
 export interface SitRequestsListPayload {
   requests: SitRequest[];
+}
+
+export interface RoomClosingCountdownPayload {
+  roomId: string;
+  reason: string;
+  remainSeconds: number;
+}
+
+export interface RoomClosingCancelledPayload {
+  roomId: string;
+}
+
+export interface RoomClosedPayload {
+  roomId: string;
+  reason: string;
 }

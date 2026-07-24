@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class Migration1783936616291 implements MigrationInterface {
-  name = 'Migration1783936616291';
+export class Migration1784883693736 implements MigrationInterface {
+  name = 'Migration1784883693736';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
@@ -11,13 +11,16 @@ export class Migration1783936616291 implements MigrationInterface {
       `CREATE TABLE \`clubs\` (\`id\` varchar(36) NOT NULL, \`name\` varchar(100) NOT NULL, \`code\` varchar(10) NOT NULL, \`owner_id\` varchar(255) NOT NULL, \`description\` text NULL, \`max_members\` int NOT NULL DEFAULT '50', \`club_rake_rate\` decimal(4,2) NOT NULL DEFAULT '5.00', \`credit_pool\` bigint NOT NULL DEFAULT '0', \`status\` enum ('active', 'suspended', 'closed') NOT NULL DEFAULT 'active', \`settings\` json NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), UNIQUE INDEX \`IDX_23d07c54a2769ed7e6edba0321\` (\`code\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
     );
     await queryRunner.query(
-      `CREATE TABLE \`tables\` (\`id\` bigint NOT NULL AUTO_INCREMENT, \`name\` varchar(50) NOT NULL, \`game_type\` varchar(20) NOT NULL, \`owner_id\` varchar(255) NOT NULL, \`small_blind\` bigint NOT NULL DEFAULT '0', \`big_blind\` bigint NOT NULL DEFAULT '0', \`ante\` bigint NOT NULL DEFAULT '0', \`max_players\` int NOT NULL DEFAULT '9', \`min_buyin\` bigint NOT NULL DEFAULT '0', \`max_buyin\` bigint NOT NULL DEFAULT '0', \`rake_rate\` decimal(4,2) NOT NULL DEFAULT '5.00', \`rake_cap\` bigint NOT NULL DEFAULT '0', \`mode\` varchar(20) NOT NULL DEFAULT 'CUSTOM', \`custom_settings\` json NULL, \`tournament_settings\` json NULL, \`status\` varchar(20) NOT NULL DEFAULT 'waiting', \`current_hand_id\` bigint NULL, \`is_active\` tinyint NOT NULL DEFAULT 1, \`auto_approve\` tinyint NOT NULL DEFAULT 0, \`club_id\` varchar(255) NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
+      `CREATE TABLE \`tables\` (\`id\` bigint NOT NULL AUTO_INCREMENT, \`name\` varchar(50) NOT NULL, \`game_type\` varchar(20) NOT NULL, \`owner_id\` varchar(255) NOT NULL, \`small_blind\` bigint NOT NULL DEFAULT '0', \`big_blind\` bigint NOT NULL DEFAULT '0', \`ante\` bigint NOT NULL DEFAULT '0', \`max_players\` int NOT NULL DEFAULT '9', \`min_buyin\` bigint NOT NULL DEFAULT '0', \`max_buyin\` bigint NOT NULL DEFAULT '0', \`rake_rate\` decimal(4,2) NOT NULL DEFAULT '5.00', \`rake_cap\` bigint NOT NULL DEFAULT '0', \`mode\` varchar(20) NOT NULL DEFAULT 'CUSTOM', \`custom_settings\` json NULL, \`tournament_settings\` json NULL, \`status\` varchar(20) NOT NULL DEFAULT 'waiting', \`current_hand_id\` bigint NULL, \`is_active\` tinyint NOT NULL DEFAULT 1, \`auto_approve\` tinyint NOT NULL DEFAULT 0, \`last_activity_at\` datetime NULL, \`last_hand_at\` datetime NULL, \`closing_started_at\` datetime NULL, \`closing_reason\` varchar(50) NULL, \`close_at\` datetime NULL, \`is_closing\` tinyint NOT NULL DEFAULT 0, \`club_id\` varchar(255) NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
     );
     await queryRunner.query(
-      `CREATE TABLE \`audit_logs\` (\`id\` varchar(36) NOT NULL, \`event_type\` varchar(50) NOT NULL, \`user_id\` varchar(255) NULL, \`room_id\` varchar(255) NULL, \`description\` text NOT NULL, \`level\` enum ('INFO', 'WARNING', 'ERROR', 'CRITICAL') NOT NULL DEFAULT 'INFO', \`metadata\` json NULL, \`ip_address\` varchar(255) NULL, \`user_agent\` text NULL, \`actor_id\` varchar(255) NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`userId\` varchar(36) NULL, \`roomId\` bigint NULL, \`actorId\` varchar(36) NULL, INDEX \`IDX_2cd10fda8276bb995288acfbfb\` (\`created_at\`), INDEX \`IDX_b7bcf678ce319b50261be9a8d0\` (\`room_id\`), INDEX \`IDX_bd2726fd31b35443f2245b93ba\` (\`user_id\`), INDEX \`IDX_d4bbd861731298b2b1488683d4\` (\`event_type\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
+      `CREATE TABLE \`audit_logs\` (\`id\` varchar(36) NOT NULL, \`event_type\` varchar(50) NOT NULL, \`user_id\` varchar(255) NULL, \`room_id\` bigint NULL, \`description\` text NOT NULL, \`level\` enum ('INFO', 'WARNING', 'ERROR', 'CRITICAL') NOT NULL DEFAULT 'INFO', \`metadata\` json NULL, \`ip_address\` varchar(255) NULL, \`user_agent\` text NULL, \`actor_id\` varchar(255) NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), INDEX \`IDX_2cd10fda8276bb995288acfbfb\` (\`created_at\`), INDEX \`IDX_b7bcf678ce319b50261be9a8d0\` (\`room_id\`), INDEX \`IDX_bd2726fd31b35443f2245b93ba\` (\`user_id\`), INDEX \`IDX_d4bbd861731298b2b1488683d4\` (\`event_type\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
     );
     await queryRunner.query(
-      `CREATE TABLE \`users\` (\`id\` varchar(36) NOT NULL, \`user_name\` varchar(255) NOT NULL, \`email\` varchar(255) NOT NULL, \`password\` varchar(255) NOT NULL, \`avatar_url\` varchar(255) NULL, \`status\` enum ('ACTIVE', 'INACTIVE', 'BANNED') NOT NULL DEFAULT 'ACTIVE', \`is_active_status\` tinyint NOT NULL DEFAULT 0, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), UNIQUE INDEX \`IDX_074a1f262efaca6aba16f7ed92\` (\`user_name\`), UNIQUE INDEX \`IDX_97672ac88f789774dd47f7c8be\` (\`email\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
+      `CREATE TABLE \`user_settings\` (\`id\` varchar(36) NOT NULL, \`game_volume\` int NOT NULL DEFAULT '50', \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`user_id\` varchar(36) NULL, UNIQUE INDEX \`REL_4ed056b9344e6f7d8d46ec4b30\` (\`user_id\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE \`users\` (\`id\` varchar(36) NOT NULL, \`user_name\` varchar(255) NOT NULL, \`email\` varchar(255) NOT NULL, \`password\` varchar(255) NOT NULL, \`avatar_url\` varchar(255) NULL, \`status\` enum ('ACTIVE', 'INACTIVE', 'BANNED', 'MEMORIALIZED') NOT NULL DEFAULT 'ACTIVE', \`is_active_status\` tinyint NOT NULL DEFAULT 0, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), UNIQUE INDEX \`IDX_074a1f262efaca6aba16f7ed92\` (\`user_name\`), UNIQUE INDEX \`IDX_97672ac88f789774dd47f7c8be\` (\`email\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
     );
     await queryRunner.query(
       `CREATE TABLE \`ws_connections\` (\`id\` varchar(36) NOT NULL, \`user_id\` varchar(255) NOT NULL, \`socket_id\` varchar(255) NOT NULL, \`server_id\` varchar(255) NOT NULL, \`device_type\` enum ('web', 'ios', 'android') NOT NULL, \`last_ping_at\` datetime NOT NULL, \`connected_at\` datetime NOT NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), UNIQUE INDEX \`IDX_b84c7743b69783ceabc65b5592\` (\`socket_id\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
@@ -41,10 +44,13 @@ export class Migration1783936616291 implements MigrationInterface {
       `CREATE TABLE \`user_roles\` (\`user_id\` varchar(255) NOT NULL, \`role_id\` varchar(255) NOT NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), PRIMARY KEY (\`user_id\`, \`role_id\`)) ENGINE=InnoDB`,
     );
     await queryRunner.query(
-      `CREATE TABLE \`table_sessions\` (\`id\` bigint NOT NULL AUTO_INCREMENT, \`table_id\` bigint NOT NULL, \`user_id\` varchar(255) NOT NULL, \`seat_number\` int NOT NULL, \`chips_at_table\` bigint NOT NULL DEFAULT '0', \`member_status\` varchar(20) NOT NULL DEFAULT 'active', \`chat_muted\` tinyint NOT NULL DEFAULT 0, \`is_dealer\` tinyint NOT NULL DEFAULT 0, \`is_small_blind\` tinyint NOT NULL DEFAULT 0, \`is_big_blind\` tinyint NOT NULL DEFAULT 0, \`joined_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`left_at\` datetime NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
+      `CREATE TABLE \`transactions\` (\`id\` varchar(36) NOT NULL, \`user_id\` varchar(255) NOT NULL, \`type\` enum ('DEPOSIT', 'WITHDRAW', 'TRANSFER', 'GAME_WIN', 'GAME_LOSS') NOT NULL, \`amount\` bigint NOT NULL, \`status\` enum ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'FAILED') NOT NULL DEFAULT 'PENDING', \`payment_method\` varchar(255) NULL, \`proof_image\` varchar(255) NULL, \`notes\` text NULL, \`processed_by\` varchar(255) NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), INDEX \`IDX_e9acc6efa76de013e8c1553ed2\` (\`user_id\`), INDEX \`IDX_2d5fa024a84dceb158b2b95f34\` (\`type\`), INDEX \`IDX_da87c55b3bbbe96c6ed88ea7ee\` (\`status\`), INDEX \`IDX_450a5294dfde65588ff285fcff\` (\`created_at\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
     );
     await queryRunner.query(
-      `CREATE TABLE \`game_hands\` (\`id\` bigint NOT NULL AUTO_INCREMENT, \`table_id\` bigint NOT NULL, \`dealer_seat\` int NULL, \`small_blind_seat\` int NOT NULL DEFAULT '0', \`big_blind_seat\` int NOT NULL DEFAULT '0', \`community_cards\` varchar(30) NULL, \`remaining_deck\` text NULL, \`total_pot\` bigint NOT NULL DEFAULT '0', \`rake_amount\` bigint NOT NULL DEFAULT '0', \`side_pots_json\` json NULL, \`hand_stage\` varchar(12) NOT NULL DEFAULT 'preflop', \`server_seed\` varchar(255) NULL, \`client_seed\` varchar(255) NULL, \`shuffled_deck\` text NULL, \`current_turn_user_id\` varchar(255) NULL, \`rake_taken\` bigint NOT NULL DEFAULT '0', \`started_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`ended_at\` datetime NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
+      `CREATE TABLE \`table_sessions\` (\`id\` bigint NOT NULL AUTO_INCREMENT, \`table_id\` bigint NOT NULL, \`user_id\` varchar(255) NOT NULL, \`seat_number\` int NOT NULL, \`chips_at_table\` bigint NOT NULL DEFAULT '0', \`member_status\` varchar(20) NOT NULL DEFAULT 'active', \`chat_muted\` tinyint NOT NULL DEFAULT 0, \`is_dealer\` tinyint NOT NULL DEFAULT 0, \`is_small_blind\` tinyint NOT NULL DEFAULT 0, \`is_big_blind\` tinyint NOT NULL DEFAULT 0, \`joined_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`left_at\` datetime NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), INDEX \`IDX_73328bc5dcedce124fa829375b\` (\`table_id\`), INDEX \`IDX_4c4b324799e2564f42bb49f41b\` (\`user_id\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE \`game_hands\` (\`id\` bigint NOT NULL AUTO_INCREMENT, \`table_id\` bigint NOT NULL, \`dealer_seat\` int NULL, \`small_blind_seat\` int NOT NULL DEFAULT '0', \`big_blind_seat\` int NOT NULL DEFAULT '0', \`community_cards\` varchar(30) NULL, \`remaining_deck\` text NULL, \`total_pot\` bigint NOT NULL DEFAULT '0', \`rake_amount\` bigint NOT NULL DEFAULT '0', \`side_pots_json\` json NULL, \`hand_stage\` varchar(12) NOT NULL DEFAULT 'preflop', \`server_seed\` varchar(255) NULL, \`client_seed\` varchar(255) NULL, \`shuffled_deck\` text NULL, \`current_turn_user_id\` varchar(255) NULL, \`rake_taken\` bigint NOT NULL DEFAULT '0', \`started_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`ended_at\` datetime NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), \`ai_analysis\` json NULL, \`replay_json\` json NULL, PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
     );
     await queryRunner.query(
       `CREATE TABLE \`system_revenue\` (\`id\` bigint NOT NULL AUTO_INCREMENT, \`room_id\` bigint NOT NULL, \`hand_id\` bigint NOT NULL, \`revenue_amount\` bigint NOT NULL DEFAULT '0', \`rake_rate_applied\` decimal(4,2) NOT NULL DEFAULT '5.00', \`pot_total\` bigint NOT NULL DEFAULT '0', \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
@@ -71,10 +77,25 @@ export class Migration1783936616291 implements MigrationInterface {
       `CREATE TABLE \`hand_actions\` (\`id\` bigint NOT NULL AUTO_INCREMENT, \`hand_id\` bigint NOT NULL, \`user_id\` varchar(255) NOT NULL, \`seat_number\` int NOT NULL, \`stage\` varchar(10) NOT NULL, \`action_type\` varchar(15) NOT NULL, \`amount\` bigint NOT NULL DEFAULT '0', \`action_order\` int NOT NULL DEFAULT '0', \`is_all_in\` tinyint NOT NULL DEFAULT 0, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
     );
     await queryRunner.query(
+      `CREATE TABLE \`crawl_logs\` (\`id\` varchar(36) NOT NULL, \`title\` varchar(255) NOT NULL, \`source_url\` varchar(255) NOT NULL, \`status\` varchar(255) NOT NULL, \`attempt_count\` int NOT NULL DEFAULT '0', \`error_message\` text NULL, \`blog_id\` varchar(255) NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), UNIQUE INDEX \`IDX_ac2dcc387fa4cd98f26086390e\` (\`title\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
+    );
+    await queryRunner.query(
       `CREATE TABLE \`promo_events\` (\`id\` varchar(36) NOT NULL, \`title\` varchar(255) NOT NULL, \`subtitle\` varchar(255) NOT NULL, \`description\` text NOT NULL, \`badge\` varchar(100) NOT NULL, \`color_gradient\` varchar(255) NOT NULL, \`icon_type\` varchar(50) NOT NULL, \`link_url\` varchar(255) NULL, \`is_active\` tinyint NOT NULL DEFAULT 1, \`start_date\` timestamp NULL, \`end_date\` timestamp NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
     );
     await queryRunner.query(
+      `CREATE TABLE \`admins\` (\`id\` varchar(36) NOT NULL, \`user_name\` varchar(255) NOT NULL, \`email\` varchar(255) NOT NULL, \`password\` varchar(255) NOT NULL, \`is_active\` tinyint NOT NULL DEFAULT 1, \`two_factor_secret\` varchar(255) NULL, \`is_two_factor_enabled\` tinyint NOT NULL DEFAULT 0, \`role\` enum ('ADMIN', 'SUPER_ADMIN') NOT NULL DEFAULT 'ADMIN', \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), UNIQUE INDEX \`IDX_f6c068d1489100b8ea30e10f00\` (\`user_name\`), UNIQUE INDEX \`IDX_051db7d37d478a69a7432df147\` (\`email\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE \`blogs\` (\`id\` varchar(36) NOT NULL, \`title\` varchar(255) NOT NULL, \`slug\` varchar(255) NOT NULL, \`thumbnail\` varchar(500) NULL, \`content\` text NOT NULL, \`excerpt\` varchar(500) NULL, \`category\` varchar(100) NOT NULL DEFAULT 'News', \`tags\` json NULL, \`author_id\` varchar(36) NULL, \`views_count\` int NOT NULL DEFAULT '0', \`is_published\` tinyint NOT NULL DEFAULT 1, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), UNIQUE INDEX \`IDX_7b18faaddd461656ff66f32e2d\` (\`slug\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
+    );
+    await queryRunner.query(
       `CREATE TABLE \`agent_rakebacks\` (\`id\` varchar(36) NOT NULL, \`club_id\` varchar(255) NOT NULL, \`agent_id\` varchar(255) NOT NULL, \`period\` varchar(7) NOT NULL, \`total_rake\` bigint NOT NULL DEFAULT '0', \`rakeback_pct\` decimal(4,2) NOT NULL DEFAULT '10.00', \`rakeback_amount\` bigint NOT NULL DEFAULT '0', \`status\` enum ('pending', 'paid') NOT NULL DEFAULT 'pending', \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE \`admin_refresh_tokens\` (\`id\` varchar(36) NOT NULL, \`admin_id\` varchar(255) NOT NULL, \`token_hash\` varchar(500) NOT NULL, \`expires_at\` datetime NOT NULL, \`revoked_at\` datetime NULL, \`device_info\` varchar(255) NULL, \`ip_address\` varchar(45) NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), UNIQUE INDEX \`IDX_2e410bc860adf1f2c9d679a53b\` (\`token_hash\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE \`admin_audit_logs\` (\`id\` varchar(36) NOT NULL, \`admin_id\` varchar(255) NOT NULL, \`action\` varchar(255) NOT NULL, \`resource\` varchar(255) NOT NULL, \`old_value\` text NULL, \`new_value\` text NULL, \`ip_address\` varchar(255) NULL, \`user_agent\` varchar(255) NULL, \`created_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), INDEX \`IDX_01a78e07962ed72eaf9ccae990\` (\`admin_id\`), INDEX \`IDX_5d49c245604bbfa780a30ae97d\` (\`action\`), INDEX \`IDX_ee43923e8ce21dbe10bccaba85\` (\`created_at\`), PRIMARY KEY (\`id\`)) ENGINE=InnoDB`,
     );
     await queryRunner.query(
       `CREATE TABLE \`player_stats\` (\`user_id\` varchar(255) NOT NULL, \`hands_played\` int NOT NULL DEFAULT '0', \`hands_won\` int NOT NULL DEFAULT '0', \`total_chips_won\` bigint NOT NULL DEFAULT '0', \`total_rake_paid\` bigint NOT NULL DEFAULT '0', \`biggest_pot\` bigint NOT NULL DEFAULT '0', \`current_xp\` int NOT NULL DEFAULT '0', \`level\` varchar(20) NOT NULL DEFAULT 'bronze', \`updated_at\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6), PRIMARY KEY (\`user_id\`)) ENGINE=InnoDB`,
@@ -98,13 +119,13 @@ export class Migration1783936616291 implements MigrationInterface {
       `ALTER TABLE \`tables\` ADD CONSTRAINT \`FK_389756d75398e1d653b4993bb4a\` FOREIGN KEY (\`club_id\`) REFERENCES \`clubs\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`,
     );
     await queryRunner.query(
-      `ALTER TABLE \`audit_logs\` ADD CONSTRAINT \`FK_cfa83f61e4d27a87fcae1e025ab\` FOREIGN KEY (\`userId\`) REFERENCES \`users\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`,
+      `ALTER TABLE \`audit_logs\` ADD CONSTRAINT \`FK_bd2726fd31b35443f2245b93ba0\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`,
     );
     await queryRunner.query(
-      `ALTER TABLE \`audit_logs\` ADD CONSTRAINT \`FK_3c868775b83bc1eaa72de9251a6\` FOREIGN KEY (\`roomId\`) REFERENCES \`tables\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`,
+      `ALTER TABLE \`audit_logs\` ADD CONSTRAINT \`FK_b7bcf678ce319b50261be9a8d07\` FOREIGN KEY (\`room_id\`) REFERENCES \`tables\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`,
     );
     await queryRunner.query(
-      `ALTER TABLE \`audit_logs\` ADD CONSTRAINT \`FK_2dc33f7f3c22e2e7badafca1d12\` FOREIGN KEY (\`actorId\`) REFERENCES \`users\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`,
+      `ALTER TABLE \`audit_logs\` ADD CONSTRAINT \`FK_177183f29f438c488b5e8510cdb\` FOREIGN KEY (\`actor_id\`) REFERENCES \`users\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`,
     );
     await queryRunner.query(
       `ALTER TABLE \`user_settings\` ADD CONSTRAINT \`FK_4ed056b9344e6f7d8d46ec4b302\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`,
@@ -185,13 +206,16 @@ export class Migration1783936616291 implements MigrationInterface {
       `ALTER TABLE \`hand_actions\` ADD CONSTRAINT \`FK_3422386f0f59957df8ca89461af\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`,
     );
     await queryRunner.query(
-      `ALTER TABLE \`blogs\` ADD CONSTRAINT \`FK_b324119dcb71e877cee411f7929\` FOREIGN KEY (\`author_id\`) REFERENCES \`users\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`,
+      `ALTER TABLE \`blogs\` ADD CONSTRAINT \`FK_b324119dcb71e877cee411f7929\` FOREIGN KEY (\`author_id\`) REFERENCES \`admins\`(\`id\`) ON DELETE SET NULL ON UPDATE NO ACTION`,
     );
     await queryRunner.query(
       `ALTER TABLE \`agent_rakebacks\` ADD CONSTRAINT \`FK_1775ae56c5fc49c4e643bb3bbc8\` FOREIGN KEY (\`club_id\`) REFERENCES \`clubs\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`,
     );
     await queryRunner.query(
       `ALTER TABLE \`agent_rakebacks\` ADD CONSTRAINT \`FK_14fcca9b0328ccea158500edb55\` FOREIGN KEY (\`agent_id\`) REFERENCES \`users\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`admin_refresh_tokens\` ADD CONSTRAINT \`FK_1bd01666a593d39ddf07f011405\` FOREIGN KEY (\`admin_id\`) REFERENCES \`admins\`(\`id\`) ON DELETE CASCADE ON UPDATE NO ACTION`,
     );
     await queryRunner.query(
       `ALTER TABLE \`player_stats\` ADD CONSTRAINT \`FK_f6d777852a4a0e0416afbcdf6a5\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON DELETE NO ACTION ON UPDATE NO ACTION`,
@@ -213,6 +237,9 @@ export class Migration1783936616291 implements MigrationInterface {
     );
     await queryRunner.query(
       `ALTER TABLE \`player_stats\` DROP FOREIGN KEY \`FK_f6d777852a4a0e0416afbcdf6a5\``,
+    );
+    await queryRunner.query(
+      `ALTER TABLE \`admin_refresh_tokens\` DROP FOREIGN KEY \`FK_1bd01666a593d39ddf07f011405\``,
     );
     await queryRunner.query(
       `ALTER TABLE \`agent_rakebacks\` DROP FOREIGN KEY \`FK_14fcca9b0328ccea158500edb55\``,
@@ -302,13 +329,13 @@ export class Migration1783936616291 implements MigrationInterface {
       `ALTER TABLE \`user_settings\` DROP FOREIGN KEY \`FK_4ed056b9344e6f7d8d46ec4b302\``,
     );
     await queryRunner.query(
-      `ALTER TABLE \`audit_logs\` DROP FOREIGN KEY \`FK_2dc33f7f3c22e2e7badafca1d12\``,
+      `ALTER TABLE \`audit_logs\` DROP FOREIGN KEY \`FK_177183f29f438c488b5e8510cdb\``,
     );
     await queryRunner.query(
-      `ALTER TABLE \`audit_logs\` DROP FOREIGN KEY \`FK_3c868775b83bc1eaa72de9251a6\``,
+      `ALTER TABLE \`audit_logs\` DROP FOREIGN KEY \`FK_b7bcf678ce319b50261be9a8d07\``,
     );
     await queryRunner.query(
-      `ALTER TABLE \`audit_logs\` DROP FOREIGN KEY \`FK_cfa83f61e4d27a87fcae1e025ab\``,
+      `ALTER TABLE \`audit_logs\` DROP FOREIGN KEY \`FK_bd2726fd31b35443f2245b93ba0\``,
     );
     await queryRunner.query(
       `ALTER TABLE \`tables\` DROP FOREIGN KEY \`FK_389756d75398e1d653b4993bb4a\``,
@@ -328,8 +355,37 @@ export class Migration1783936616291 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE \`achievements\``);
     await queryRunner.query(`DROP TABLE \`leaderboard_entries\``);
     await queryRunner.query(`DROP TABLE \`player_stats\``);
+    await queryRunner.query(
+      `DROP INDEX \`IDX_ee43923e8ce21dbe10bccaba85\` ON \`admin_audit_logs\``,
+    );
+    await queryRunner.query(
+      `DROP INDEX \`IDX_5d49c245604bbfa780a30ae97d\` ON \`admin_audit_logs\``,
+    );
+    await queryRunner.query(
+      `DROP INDEX \`IDX_01a78e07962ed72eaf9ccae990\` ON \`admin_audit_logs\``,
+    );
+    await queryRunner.query(`DROP TABLE \`admin_audit_logs\``);
+    await queryRunner.query(
+      `DROP INDEX \`IDX_2e410bc860adf1f2c9d679a53b\` ON \`admin_refresh_tokens\``,
+    );
+    await queryRunner.query(`DROP TABLE \`admin_refresh_tokens\``);
     await queryRunner.query(`DROP TABLE \`agent_rakebacks\``);
+    await queryRunner.query(
+      `DROP INDEX \`IDX_7b18faaddd461656ff66f32e2d\` ON \`blogs\``,
+    );
+    await queryRunner.query(`DROP TABLE \`blogs\``);
+    await queryRunner.query(
+      `DROP INDEX \`IDX_051db7d37d478a69a7432df147\` ON \`admins\``,
+    );
+    await queryRunner.query(
+      `DROP INDEX \`IDX_f6c068d1489100b8ea30e10f00\` ON \`admins\``,
+    );
+    await queryRunner.query(`DROP TABLE \`admins\``);
     await queryRunner.query(`DROP TABLE \`promo_events\``);
+    await queryRunner.query(
+      `DROP INDEX \`IDX_ac2dcc387fa4cd98f26086390e\` ON \`crawl_logs\``,
+    );
+    await queryRunner.query(`DROP TABLE \`crawl_logs\``);
     await queryRunner.query(`DROP TABLE \`hand_actions\``);
     await queryRunner.query(`DROP TABLE \`hand_players\``);
     await queryRunner.query(`DROP TABLE \`hand_positions\``);
@@ -345,7 +401,26 @@ export class Migration1783936616291 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE \`room_admin_logs\``);
     await queryRunner.query(`DROP TABLE \`system_revenue\``);
     await queryRunner.query(`DROP TABLE \`game_hands\``);
+    await queryRunner.query(
+      `DROP INDEX \`IDX_4c4b324799e2564f42bb49f41b\` ON \`table_sessions\``,
+    );
+    await queryRunner.query(
+      `DROP INDEX \`IDX_73328bc5dcedce124fa829375b\` ON \`table_sessions\``,
+    );
     await queryRunner.query(`DROP TABLE \`table_sessions\``);
+    await queryRunner.query(
+      `DROP INDEX \`IDX_450a5294dfde65588ff285fcff\` ON \`transactions\``,
+    );
+    await queryRunner.query(
+      `DROP INDEX \`IDX_da87c55b3bbbe96c6ed88ea7ee\` ON \`transactions\``,
+    );
+    await queryRunner.query(
+      `DROP INDEX \`IDX_2d5fa024a84dceb158b2b95f34\` ON \`transactions\``,
+    );
+    await queryRunner.query(
+      `DROP INDEX \`IDX_e9acc6efa76de013e8c1553ed2\` ON \`transactions\``,
+    );
+    await queryRunner.query(`DROP TABLE \`transactions\``);
     await queryRunner.query(`DROP TABLE \`user_roles\``);
     await queryRunner.query(
       `DROP INDEX \`IDX_648e3f5447f725579d7d4ffdfb\` ON \`roles\``,
@@ -369,6 +444,10 @@ export class Migration1783936616291 implements MigrationInterface {
       `DROP INDEX \`IDX_074a1f262efaca6aba16f7ed92\` ON \`users\``,
     );
     await queryRunner.query(`DROP TABLE \`users\``);
+    await queryRunner.query(
+      `DROP INDEX \`REL_4ed056b9344e6f7d8d46ec4b30\` ON \`user_settings\``,
+    );
+    await queryRunner.query(`DROP TABLE \`user_settings\``);
     await queryRunner.query(
       `DROP INDEX \`IDX_d4bbd861731298b2b1488683d4\` ON \`audit_logs\``,
     );

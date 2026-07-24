@@ -83,9 +83,9 @@ export class SeedService {
 
       this.logger.log('Users and wallets generated successfully.');
 
-      const users = await userRepo.find();
-      const userIds = users.map((u) => u.id);
-      await this.seedBlogs(userIds);
+      const admins = await adminRepo.find();
+      const adminIds = admins.map((a) => a.id);
+      await this.seedBlogs(adminIds);
     } catch (err) {
       this.logger.error('Error during seeding', err);
     } finally {
@@ -93,7 +93,7 @@ export class SeedService {
     }
   }
 
-  private async seedBlogs(userIds: string[]) {
+  private async seedBlogs(adminIds: string[]) {
     this.logger.log('Starting seed 10,000 blogs...');
     const blogRepo = this.dataSource.getRepository(Blog);
 
@@ -112,7 +112,7 @@ export class SeedService {
       const batch = [];
       for (let j = 0; j < BATCH_SIZE; j++) {
         const index = i + j + 1;
-        const authorId = userIds[Math.floor(Math.random() * userIds.length)];
+        const authorId = adminIds[Math.floor(Math.random() * adminIds.length)];
         const category =
           categories[Math.floor(Math.random() * categories.length)];
         const thumbnail =

@@ -134,6 +134,9 @@ interface PokerGameContextProps {
   leaveTable: () => Promise<void>;
   pendingOptimisticSeatsRef: React.MutableRefObject<Set<number>>;
   isStartingHand: boolean;
+  roomClosing: SocketTypes.RoomClosingCountdownPayload | null;
+  manualStartRequired: boolean;
+  canManualStart: boolean;
 }
 
 const PokerGameContext = createContext<PokerGameContextProps | undefined>(undefined);
@@ -194,6 +197,8 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [ritVotesNoCount, setRitVotesNoCount] = useState(0);
   const [muckOption, _setMuckOption] = useState(false);
   const [rabbitCards, setRabbitCards] = useState<Card[] | null>(null);
+  const [manualStartRequired, setManualStartRequired] = useState(true);
+  const [canManualStart, setCanManualStart] = useState(false);
 
   const voteRit = (agree: boolean) => {
     if (!socket) return;
@@ -245,6 +250,9 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [sitRequests, setSitRequests] = useState<SocketTypes.SitRequest[]>([]);
   const [minBuyin, setMinBuyin] = useState(0);
   const [maxBuyin, setMaxBuyin] = useState(0);
+
+  // Auto Close Room State
+  const [roomClosing, setRoomClosing] = useState<SocketTypes.RoomClosingCountdownPayload | null>(null);
 
   // Refs to prevent infinite resubscription loop in socket useEffect
   const currentUserRef = useRef(currentUser);
@@ -457,6 +465,13 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setSmallBlind(data.small_blind ? data.small_blind.toString() : "50");
       setBigBlind(data.big_blind ? data.big_blind.toString() : "100");
 
+      if (data.manual_start_required !== undefined) {
+        setManualStartRequired(!!data.manual_start_required);
+      }
+      if (data.can_manual_start !== undefined) {
+        setCanManualStart(!!data.can_manual_start);
+      }
+
       setIsBombPot(!!data.is_bomb_pot);
       if (data.rit_board2_cards) {
         if (typeof data.rit_board2_cards === 'string') {
@@ -505,13 +520,13 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               isSmallBlind: s.seatIndex === data.small_blind_seat,
               isBigBlind: s.seatIndex === data.big_blind_seat,
               isActive: s.seatIndex === data.current_turn_seat,
-              lastAction: (s.chips === "0" || s.chips === 0) && s.status === "active" ? "All-In" : s.status === "folded" ? "Fold" : s.status === "sitting_out" ? "Sit Out" : s.status === "disconnected" ? "Disconnected" : "",
+              lastAction: (s.chips === "0" || s.chips === 0) && s.status === "active" ? "All-In" : s.status === "folded" ? "Fold" : s.status === "sitting_out" ? "Sit Out" : s.status === "disconnected" ? "Disconnected" : s.status === "waiting_for_next_hand" ? "Waiting" : "",
               isFolded: s.status === "folded",
               hasAllIn: (s.chips === "0" || s.chips === 0) && s.status === "active",
               isHero,
               isBot: s.isBot,
               cards: defaultCards,
-              isSittingOut: s.status === "sitting_out" || s.status === "waiting_for_next_hand",
+              isSittingOut: s.status === "sitting_out",
               pending_add_amount: s.pending_add_amount ? parseInt(s.pending_add_amount.toString()) : 0,
               pending_remove_amount: s.pending_remove_amount ? parseInt(s.pending_remove_amount.toString()) : 0,
               gamification_level: s.gamification_level,
@@ -652,6 +667,18 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setBigBlind(data.big_blind.toString());
       showToast(`Mức mù tự động tăng lên: ${data.small_blind} / ${data.big_blind}`, "info");
       setHandHistory((prev) => [...prev, `Mức blinds tăng lên: ${data.small_blind} / ${data.big_blind}`]);
+    });
+
+    socket.on("table:auto-start-countdown", (data: { seconds: number; countdown_end_at: number }) => {
+      setWaitingMessage({
+        text: `Ván đấu tự động bắt đầu sau ${data.seconds}s...`,
+        starting: true,
+      });
+    });
+
+    socket.on("table:auto-start-cancelled", (data: { reason: string }) => {
+      console.log('data', data);
+      setWaitingMessage(null);
     });
 
     socket.on("table:hand-started", (data: SocketTypes.HandStartedPayload) => {
@@ -962,6 +989,23 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     socket.on("table:destroyed", () => {
       showToast("The table has been dissolved due to prolonged inactivity.", "warning");
+      setTimeout(() => {
+        router.push("/poker-game");
+      }, 2000);
+    });
+
+    socket.on("RoomClosingCountdown", (data: SocketTypes.RoomClosingCountdownPayload) => {
+      setRoomClosing(data);
+    });
+
+    socket.on("RoomClosingCancelled", () => {
+      setRoomClosing(null);
+      showToast("Tự động đóng bàn chơi đã bị hủy do có hoạt động mới.", "success");
+    });
+
+    socket.on("RoomClosed", (data: SocketTypes.RoomClosedPayload) => {
+      setRoomClosing(null);
+      showToast(`Bàn chơi đã đóng. Lý do: ${data.reason}`, "warning");
       setTimeout(() => {
         router.push("/poker-game");
       }, 2000);
@@ -1358,6 +1402,9 @@ export const PokerGameProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         isStartingHand,
         toggleSitOut,
         shuffleSeats,
+        roomClosing,
+        manualStartRequired,
+        canManualStart,
       }}
     >
       {children}

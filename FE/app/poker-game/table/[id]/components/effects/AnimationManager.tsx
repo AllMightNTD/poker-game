@@ -18,9 +18,20 @@ const WinnerHighlight: React.FC<{ winners: WinnerData[]; maxPlayers: number; her
   heroSeatNumber,
 }) => {
   const positions = getSeatPositions(maxPlayers, heroSeatNumber);
+
+  // Deduplicate winners by userId to avoid duplicate keys and overlapping highlights
+  const uniqueWinners = React.useMemo(() => {
+    const seen = new Set<string>();
+    return winners.filter((w) => {
+      if (seen.has(w.userId)) return false;
+      seen.add(w.userId);
+      return true;
+    });
+  }, [winners]);
+
   return (
     <div className="absolute inset-0 pointer-events-none z-30">
-      {winners.map((winner) => {
+      {uniqueWinners.map((winner) => {
         const pos = positions[winner.seatNumber - 1];
         if (!pos) return null;
         return (

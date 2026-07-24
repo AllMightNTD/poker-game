@@ -18,12 +18,15 @@ import { PokerLobbyGateway } from '../gateways/poker-lobby.gateway';
 import { AntiCollusionService } from '../services/anti-collusion.service';
 import { AuditService } from '../services/audit.service';
 import { PokerGameService } from '../services/poker-game.service';
+import { AutoHandScheduler } from '../services/auto-hand-scheduler.service';
 import { PokerLobbyService } from '../services/poker-lobby.service';
 import { PokerStateService } from '../services/poker-state.service';
 import { PokerStreamService } from '../services/poker-stream.service';
 import { ProvablyFairService } from '../services/provably-fair.service';
 import { TournamentService } from '../services/tournament.service';
 import { WalletService } from '../services/wallet.service';
+
+import { RoomCleanupService } from '../services/poker-cleanup.service';
 
 @Module({
   imports: [
@@ -53,6 +56,8 @@ import { WalletService } from '../services/wallet.service';
     PokerStateService,
     PokerStreamService,
     PokerGameService,
+    AutoHandScheduler,
+    RoomCleanupService,
     WalletService,
     AuditService,
     TournamentService,
@@ -66,6 +71,8 @@ import { WalletService } from '../services/wallet.service';
     PokerStateService,
     PokerStreamService,
     PokerGameService,
+    AutoHandScheduler,
+    RoomCleanupService,
     WalletService,
     AuditService,
     TournamentService,

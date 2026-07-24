@@ -1,13 +1,14 @@
 import {
+  Inject,
   Logger,
   UseGuards,
   UsePipes,
   ValidationPipe,
-  Inject,
   forwardRef,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { OnEvent } from '@nestjs/event-emitter';
+import { JwtService } from '@nestjs/jwt';
+import { Throttle } from '@nestjs/throttler';
 import {
   ConnectedSocket,
   MessageBody,
@@ -19,17 +20,16 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { CustomThrottlerGuard } from '../../common/guards/custom-throttler.guard';
+import { corsOriginFn } from '../../config/cors.config';
+import { BotService } from '../bots/services/bot.service';
 import { PokerTable } from '../entities/poker_table.entity';
-import { User } from '../entities/user.entity';
 import { TableSession } from '../entities/table_session.entity';
+import { User } from '../entities/user.entity';
 import { Wallet } from '../entities/wallet.entity';
+import { PokerGameService } from '../services/poker-game.service';
 import { PokerLobbyService } from '../services/poker-lobby.service';
 import { PokerStateService } from '../services/poker-state.service';
-import { PokerGameService } from '../services/poker-game.service';
-import { BotService } from '../bots/services/bot.service';
-import { corsOriginFn } from '../../config/cors.config';
-import { Throttle } from '@nestjs/throttler';
-import { CustomThrottlerGuard } from '../../common/guards/custom-throttler.guard';
 
 @WebSocketGateway({
   cors: {
@@ -136,6 +136,7 @@ export class PokerLobbyGateway
     this.logger.log(
       `[SIT-BACK] User ${payload.userId} at seat ${payload.seatNumber} → status: ${payload.status} on table ${payload.roomId}`,
     );
+    this.gameService.touchRoomActivity(payload.roomId);
   }
 
   async handleConnection(client: Socket) {
@@ -249,6 +250,7 @@ export class PokerLobbyGateway
       await client.join(`user_${userId}`);
       this.gameService.cancelEmptyRoomTimer(roomId); // Có người reconnect -> hủy Empty Room Timer
       this.gameService.cancelDisconnectTimeout(roomId, userId);
+      await this.gameService.touchRoomActivity(roomId);
 
       // Khôi phục trạng thái active nếu đang disconnected trên Redis
       const seats = await this.stateService.getAllSeats(roomId);
@@ -256,7 +258,12 @@ export class PokerLobbyGateway
       if (mySeat && mySeat.disconnected_at && mySeat.disconnected_at !== '0') {
         const updateData: Record<string, string> = { disconnected_at: '0' };
         if (mySeat.status === 'disconnected') {
-          updateData.status = 'active';
+          const tableState = await this.stateService.getTableState(roomId);
+          const isWaiting =
+            !tableState ||
+            tableState.game_stage === 'waiting' ||
+            tableState.game_stage === 'ended';
+          updateData.status = isWaiting ? 'waiting_for_next_hand' : 'active';
         }
         await this.stateService.setSeat(roomId, mySeat.seat_number, updateData);
 
@@ -327,6 +334,7 @@ export class PokerLobbyGateway
         data.action_type,
         data.amount || 0,
       );
+      await this.gameService.touchRoomActivity(roomId);
     } catch (err) {
       client.emit('error', { message: err.message });
       await this.gameService.broadcastTableState(roomId);
@@ -670,44 +678,15 @@ export class PokerLobbyGateway
     if (!roomId || !userId) return;
 
     try {
-      const table = await PokerTable.findOne({
-        where: { id: roomId, is_active: true },
-      });
-      if (!table) {
-        throw new Error('Bàn chơi không tồn tại.');
-      }
-
-      if (table.owner_id !== userId) {
-        throw new Error('Chỉ chủ phòng mới có quyền bắt đầu ván đấu.');
-      }
-
-      if (table.status === 'paused') {
-        throw new Error('Phòng đang được tạm dừng, không thể bắt đầu ván mới.');
-      }
-
-      const tableState = await this.stateService.getTableState(roomId);
-      const stage = tableState?.game_stage || 'waiting';
-      if (stage !== 'waiting' && stage !== 'ended') {
-        throw new Error('Ván bài đã bắt đầu rồi.');
-      }
-
-      const seats = await this.stateService.getAllSeats(roomId);
-      const readyPlayers = seats.filter(
-        (s) =>
-          (s.status === 'active' ||
-            s.status === 'waiting_for_next_hand' ||
-            s.status === 'ready' ||
-            s.status === 'sitting') &&
-          parseInt(s.stack) > 0,
-      );
-
-      if (readyPlayers.length < 2) {
-        throw new Error(
-          'Cần tối thiểu 2 người chơi có phỉnh để bắt đầu ván bài.',
+      if (this.gameService.autoHandScheduler) {
+        await this.gameService.autoHandScheduler.handleManualStart(
+          roomId,
+          userId,
+          data.client_seed,
         );
+      } else {
+        await this.gameService.startNewHand(roomId, data.client_seed);
       }
-
-      await this.gameService.startNewHand(roomId, data.client_seed);
     } catch (err) {
       client.emit('error', { message: err.message });
     }
@@ -781,6 +760,7 @@ export class PokerLobbyGateway
       };
 
       await this.stateService.pushChatMessage(roomId, JSON.stringify(payload));
+      await this.gameService.touchRoomActivity(roomId);
 
       this.server
         .to(`table_${roomId}`)

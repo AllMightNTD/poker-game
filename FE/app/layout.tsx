@@ -14,28 +14,49 @@ const roboto = Roboto({
   variable: "--font-roboto",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL
+  ? (process.env.NEXT_PUBLIC_APP_URL.startsWith("http") ? process.env.NEXT_PUBLIC_APP_URL : `https://${process.env.NEXT_PUBLIC_APP_URL}`)
+  : process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "https://poker-game-git-main-ntd-company.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
-    default: "PKCG - Vietnam's Leading Online Poker Portal",
+    default: "PKCG - Cổng Game Poker Online Hàng Đầu Việt Nam",
     template: "%s | PKCG",
   },
-  description: "Experience PKCG - The ultimate online Poker portal. Join thrilling Texas Hold'em and Omaha tables with thousands of players. Fast transactions, absolute security.",
+  description: "Trải nghiệm PKCG - Cổng game Poker online hàng đầu. Tham gia các bàn đấu Texas Hold'em và Omaha gay cấn với hàng ngàn người chơi. Giao dịch nhanh chóng, bảo mật tuyệt đối.",
   keywords: ["poker online", "poker viet nam", "texas holdem", "omaha plo", "game bai poker", "pkcg", "poker cg"],
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
   alternates: {
-    canonical: "https://pkcg.com",
+    canonical: siteUrl,
   },
   openGraph: {
-    title: "PKCG - Vietnam's Leading Online Poker Portal",
-    description: "Experience PKCG - The ultimate online Poker portal. Join thrilling Texas Hold'em and Omaha tables with thousands of players.",
-    url: "https://pkcg.com",
+    title: "PKCG - Cổng Game Poker Online Hàng Đầu Việt Nam",
+    description: "Trải nghiệm PKCG - Cổng game Poker online hàng đầu. Tham gia các bàn đấu Texas Hold'em và Omaha gay cấn với hàng ngàn người chơi.",
+    url: siteUrl,
     siteName: "PKCG",
     locale: "vi_VN",
     type: "website",
+    images: [
+      {
+        url: "/logo.png",
+        width: 1200,
+        height: 630,
+        alt: "PKCG Poker Logo",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "PKCG - Vietnam's Leading Online Poker Portal",
-    description: "Experience PKCG - The ultimate online Poker portal. Join thrilling Texas Hold'em and Omaha tables with thousands of players.",
+    title: "PKCG - Cổng Game Poker Online Hàng Đầu Việt Nam",
+    description: "Trải nghiệm PKCG - Cổng game Poker online hàng đầu. Tham gia các bàn đấu Texas Hold'em và Omaha gay cấn với hàng ngàn người chơi.",
+    images: ["/logo.png"],
   },
 };
 
@@ -48,22 +69,22 @@ const jsonLd = {
   "@graph": [
     {
       "@type": "Organization",
-      "@id": "https://pkcg.com/#organization",
+      "@id": `${siteUrl}/#organization`,
       "name": "PKCG",
-      "url": "https://pkcg.com",
+      "url": siteUrl,
       "logo": {
         "@type": "ImageObject",
-        "url": "https://pkcg.com/favicon.ico",
+        "url": `${siteUrl}/logo.png`,
         "caption": "PKCG Logo"
       }
     },
     {
       "@type": "WebSite",
-      "@id": "https://pkcg.com/#website",
-      "url": "https://pkcg.com",
-      "name": "PKCG - Online Poker Portal",
+      "@id": `${siteUrl}/#website`,
+      "url": siteUrl,
+      "name": "PKCG - Cổng Game Poker Online",
       "publisher": {
-        "@id": "https://pkcg.com/#organization"
+        "@id": `${siteUrl}/#organization`
       }
     }
   ]

@@ -6,6 +6,7 @@ import { PokerGameProvider } from "./components/hooks/usePokerGame";
 import { TableBackground } from "./components/layout/TableBackground";
 import { PokerTable } from "./components/table/PokerTable";
 import { RitVoteModal } from "./components/ui/RitVoteModal";
+import { RoomClosingModal } from "./components/ui/RoomClosingModal";
 import { Toast } from "./components/ui/Toast";
 
 // Lazily load large components/modals only when client-side environment is ready to reduce initial bundle size and speed up FCP
@@ -30,6 +31,9 @@ function PokerTableRoom() {
     <div className="h-[100dvh] bg-slate-950 text-slate-100 flex flex-col overflow-hidden select-none font-sans">
       {/* 🔔 Toast */}
       <Toast />
+
+      {/* ⏰ Room Closing Countdown Modal */}
+      <RoomClosingModal />
 
       {/* 🗳️ RIT Vote Modal */}
       <RitVoteModal />

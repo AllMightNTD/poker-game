@@ -75,6 +75,25 @@ export class PokerTable extends BaseEntity {
   @Column({ type: 'boolean', default: false })
   auto_approve: boolean;
 
+  // --- Auto Close / Activity Tracking ---
+  @Column({ type: 'datetime', nullable: true })
+  last_activity_at: Date | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  last_hand_at: Date | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  closing_started_at: Date | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  closing_reason: string | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  close_at: Date | null;
+
+  @Column({ type: 'boolean', default: false })
+  is_closing: boolean;
+
   /** null = public table, set = club-only table */
   @Column({ type: 'uuid', nullable: true })
   club_id: string | null;
